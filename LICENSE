@@ -65,26 +65,47 @@ redistribute any Java source code, compiled bytecode, Mixins, GLSL shader code,
 or procedural rendering/build scripts.
 
 ================================================================================
-4. THIRD-PARTY EXCEPTIONS — ASTRONOMICAL & COSMIC TEXTURES (textures/cosmic)
+4. THIRD-PARTY EXCEPTIONS — COSMIC TEXTURES, PLATFORMS & LIBRARIES
 ================================================================================
 
-The terms above do not override third-party licenses for the astronomical and
-planetary textures located in:
-  src/main/resources/assets/zoltraak_cinematic/textures/cosmic/
+A. Astronomical & Cosmic Textures (assets/zoltraak_cinematic/textures/cosmic/):
+  The terms above do not override third-party licenses for the astronomical and
+  planetary textures located in:
+    assets/zoltraak_cinematic/textures/cosmic/
 
-Those files remain governed strictly by their respective Public Domain and
-Creative Commons licenses (attribution required where applicable):
-  - NASA Earth Observatory / Goddard Space Flight Center / SVS:
-    Public Domain (17 U.S.C. § 105)
-  - European Southern Observatory (ESO / S. Brunier & R. Hurt):
-    Creative Commons Attribution 4.0 International (CC BY 4.0)
-    https://creativecommons.org/licenses/by/4.0/
-  - Solar System Scope / INOVE:
-    Creative Commons Attribution 4.0 International (CC BY 4.0)
-    https://creativecommons.org/licenses/by/4.0/
+  Those files remain governed strictly by their respective Public Domain and
+  Creative Commons licenses (attribution required where applicable):
+    - NASA Earth Observatory / Goddard Space Flight Center / SVS:
+      Public Domain (17 U.S.C. § 105)
+    - European Southern Observatory (ESO / S. Brunier & R. Hurt):
+      Creative Commons Attribution 4.0 International (CC BY 4.0)
+      https://creativecommons.org/licenses/by/4.0/
+    - Solar System Scope / INOVE:
+      Creative Commons Attribution 4.0 International (CC BY 4.0)
+      https://creativecommons.org/licenses/by/4.0/
 
-Full source URLs and required attributions are preserved in:
-  assets/zoltraak_cinematic/textures/cosmic/CREDITS.txt and NOTICE.txt.
+  Full source URLs and required attributions are preserved in:
+    assets/zoltraak_cinematic/textures/cosmic/CREDITS.txt and NOTICE.txt.
+
+B. Third-Party Platforms, Game Files, Dependencies & Mapping Data:
+  This All Rights Reserved license applies EXCLUSIVELY to original code and
+  assets authored by Aling7788565 for Zoltraak: Cinematic Edition. It claims NO
+  ownership, copyright, or rights over any third-party software, game files,
+  APIs, or data, including without limitation:
+    - Minecraft game files, assets, code, and obfuscation mappings
+      (Copyright (c) Mojang AB / Microsoft Corporation)
+    - NeoForge, Minecraft Forge, Iron's Spells 'n Spellbooks, GeckoLib, Curios,
+      Sodium, and Iris / Oculus
+    - External dependency libraries, remapping tools, and SRG/intermediary
+      mapping tables (e.g., tiny-remapper, ASM, mapping-io, mappings-srg.tiny),
+      which are NOT distributed in this repository and remain governed solely by
+      their respective owners' licenses and terms (including the Minecraft EULA).
+
+C. Non-Commercial Fan Work Disclaimer:
+  Zoltraak: Cinematic Edition is a free, non-commercial fan modification
+  inspired by "Sousou no Frieren" created by Kanehito Yamada and Tsukasa Abe.
+  All underlying franchise intellectual property belongs to its respective
+  copyright holders.
 
 ================================================================================
 5. DISCLAIMER OF WARRANTY
@@ -115,6 +136,10 @@ Copyright (c) 2026 Aling7788565. All Rights Reserved.
   โค้ดไปใช้ซ้ำ แก้ไขดัดแปลง หรือเผยแพร่ซ้ำซึ่ง code ของม็อด (รวมถึงโค้ด Java,
   bytecode, Mixins, GLSL Shaders และสคริปต์ต่าง ๆ) รวมถึงห้ามอัปโหลดหรือ
   เผยแพร่ตัวม็อด/ซอร์สโค้ดแบบเดี่ยวซ้ำโดยไม่ได้รับอนุญาตเป็นลายลักษณ์อักษร
+- ขอบเขตสิทธิ์ของบุคคลที่สาม: ลิขสิทธิ์ All Rights Reserved นี้ครอบคลุมเฉพาะโค้ด
+  และไฟล์ต้นฉบับที่สร้างโดย Aling7788565 เท่านั้น ไม่ได้ครอบคลุมหรืออ้างสิทธิ์ใด ๆ
+  เหนือไฟล์/โค้ด/API/mapping ของ Minecraft (Mojang AB), NeoForge, Forge,
+  ม็อดอื่น หรือไลบรารีภายนอกแต่อย่างใด
 
 (หมายเหตุ: ส่วนภาษาไทยนี้จัดทำขึ้นเพื่อความชัดเจนในการสื่อสาร โดยมีข้อความภาษาอังกฤษ
 ด้านบนเป็นข้อกำหนดหลักของสัญญาอนุญาตฉบับนี้)
