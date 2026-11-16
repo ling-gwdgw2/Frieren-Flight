@@ -1,0 +1,50 @@
+================================================================================
+ASTRONOMICAL & COSMIC ASSETS CREDITS
+================================================================================
+All cosmic and celestial textures included in this directory originate from
+official scientific space agencies and open educational institutions under
+Public Domain or Creative Commons Attribution 4.0 International (CC BY 4.0).
+These files are excluded from the mod's All Rights Reserved license terms and
+remain subject to their original respective licenses listed below.
+
+1. NASA (U.S. PUBLIC DOMAIN)
+-----------------------------
+Under 17 U.S.C. § 105, works produced by the United States Government / NASA
+are in the worldwide Public Domain.
+
+* earth_day.jpg:
+    NASA Earth Observatory, Blue Marble: Next Generation with topography and
+    bathymetry (June 2004), Reto Stöckli.
+    https://science.nasa.gov/earth/earth-observatory/blue-marble-next-generation/
+
+* moon_color.jpg:
+    NASA's Scientific Visualization Studio, CGI Moon Kit (LRO LROC WAC colour mosaic, LOLA elevation).
+    https://svs.gsfc.nasa.gov/4720/
+
+
+2. EUROPEAN SOUTHERN OBSERVATORY (ESO - CC BY 4.0)
+---------------------------------------------------
+Licensed under Creative Commons Attribution 4.0 International (CC BY 4.0):
+https://creativecommons.org/licenses/by/4.0/
+
+* milky_way.jpg:
+    ESO/S. Brunier — The Milky Way panorama (eso0932a).
+    Credit: ESO/S. Brunier
+    https://www.eso.org/public/images/eso0932a/
+
+* milky_way_top.jpg:
+    NASA/JPL-Caltech/ESO/R. Hurt — Artist's impression of the Milky Way (eso1339g).
+    Credit: ESO/NASA/JPL-Caltech/R. Hurt
+    https://www.eso.org/public/images/eso1339g/
+
+
+3. SOLAR SYSTEM SCOPE / INOVE (CC BY 4.0)
+------------------------------------------
+Licensed under Creative Commons Attribution 4.0 International (CC BY 4.0):
+https://creativecommons.org/licenses/by/4.0/
+
+* jupiter.jpg:
+    Solar System Scope (INOVE), planetary texture map based on NASA imagery.
+    Credit: Solar System Scope / INOVE
+    https://www.solarsystemscope.com/textures/
+================================================================================

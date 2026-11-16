@@ -1,0 +1,30 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "key": {
+    "B": {
+      "item": "irons_spellbooks:diamond_spell_book"
+    },
+    "R": {
+      "item": "irons_spellbooks:arcane_rune"
+    },
+    "I": {
+      "item": "irons_spellbooks:arcane_ingot"
+    },
+    "A": {
+      "item": "minecraft:amethyst_shard"
+    },
+    "C": {
+      "item": "irons_spellbooks:magic_cloth"
+    }
+  },
+  "pattern": [
+    "ARA",
+    "IBI",
+    "ACA"
+  ],
+  "result": {
+    "count": 1,
+    "id": "zoltraak_cinematic:ordinary_grimoire"
+  }
+}

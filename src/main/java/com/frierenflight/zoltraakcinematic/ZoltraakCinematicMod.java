@@ -1,0 +1,69 @@
+// Copyright (c) 2026 Aling7788565. All Rights Reserved.
+package com.frierenflight.zoltraakcinematic;
+
+import com.frierenflight.zoltraakcinematic.client.ZoltraakCinematicClientEvents;
+import com.frierenflight.zoltraakcinematic.registry.ModCinematicEntities;
+import com.frierenflight.zoltraakcinematic.registry.ModCinematicItems;
+import com.frierenflight.zoltraakcinematic.registry.ModCinematicSounds;
+import com.frierenflight.zoltraakcinematic.registry.ModCinematicSpells;
+import io.redspace.ironsspellbooks.registries.CreativeTabRegistry;
+import net.minecraft.world.item.CreativeModeTabs;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.loading.FMLEnvironment;
+import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
+
+import net.neoforged.fml.ModContainer;
+import net.neoforged.fml.config.ModConfig;
+import com.frierenflight.zoltraakcinematic.config.ZoltraakCinematicConfig;
+
+@Mod(ZoltraakCinematicMod.MODID)
+public class ZoltraakCinematicMod {
+    public static final String MODID = "zoltraak_cinematic";
+    public static final String MOD_NAME = "Zoltraak: Cinematic Edition";
+
+    public ZoltraakCinematicMod(IEventBus modEventBus, ModContainer container) {
+        container.registerConfig(ModConfig.Type.COMMON, ZoltraakCinematicConfig.SPEC, "zoltraak_cinematic-common.toml");
+        if (FMLEnvironment.dist == Dist.CLIENT) {
+            container.registerConfig(ModConfig.Type.CLIENT, com.frierenflight.zoltraakcinematic.config.ZoltraakCinematicClientConfig.SPEC, "zoltraak_cinematic-client.toml");
+            container.registerExtensionPoint(net.neoforged.neoforge.client.gui.IConfigScreenFactory.class,
+                    (modContainer, parentScreen) -> new com.frierenflight.zoltraakcinematic.client.gui.ZoltraakConfigScreen(parentScreen));
+        }
+
+        com.frierenflight.zoltraakcinematic.registry.ModCinematicAttributes.register(modEventBus);
+        com.frierenflight.zoltraakcinematic.registry.ModCinematicSchools.register(modEventBus);
+        com.frierenflight.zoltraakcinematic.registry.ModCinematicBlocks.register(modEventBus);
+        ModCinematicItems.register(modEventBus);
+        ModCinematicSounds.register(modEventBus);
+        com.frierenflight.zoltraakcinematic.registry.ModCinematicMobEffects.register(modEventBus);
+        ModCinematicEntities.register(modEventBus);
+        ModCinematicSpells.register(modEventBus);
+        com.frierenflight.zoltraakcinematic.event.DefenseEvents.register();
+        com.frierenflight.zoltraakcinematic.event.FlightEvents.register();
+        com.frierenflight.zoltraakcinematic.command.GargantuaCommands.register();
+        modEventBus.addListener(com.frierenflight.zoltraakcinematic.network.ModCinematicNetworking::register);
+
+        modEventBus.addListener(this::buildCreativeModeTabContents);
+
+        if (FMLEnvironment.dist == Dist.CLIENT) {
+            ZoltraakCinematicClientEvents.register(modEventBus);
+        }
+    }
+
+    private void buildCreativeModeTabContents(BuildCreativeModeTabContentsEvent event) {
+        if (event.getTabKey() == CreativeTabRegistry.EQUIPMENT_TAB.getKey()) {
+            event.accept(ModCinematicItems.FRIEREN_STAFF.get());
+            event.accept(ModCinematicItems.MIRROR_LOTUS_RING.get());
+            event.accept(ModCinematicItems.MANA_CONCEALMENT_PENDANT.get());
+            event.accept(ModCinematicItems.ORDINARY_GRIMOIRE.get());
+            event.accept(ModCinematicItems.ELDER_SAGE_GRIMOIRE.get());
+            event.accept(ModCinematicItems.HORN_OF_CORRUPTION.get());
+            event.accept(ModCinematicItems.CORRUPTION_CORE.get());
+            event.accept(ModCinematicItems.CHRONOS_DILATATION_WATCH.get());
+            event.accept(ModCinematicItems.GARGANTUA_SCROLL.get().getDefaultInstance());
+            event.accept(ModCinematicItems.QUAL_SEALING_STONE.get());
+            event.accept(ModCinematicItems.QUAL_SPAWN_EGG.get());
+        }
+    }
+}

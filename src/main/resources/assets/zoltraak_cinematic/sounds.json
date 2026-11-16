@@ -1,0 +1,134 @@
+{
+  "zoltraak_charge": {
+    "subtitle": "subtitles.zoltraak_cinematic.zoltraak_charge",
+    "sounds": [
+      {
+        "name": "zoltraak_cinematic:cinematic_charge",
+        "stream": false
+      }
+    ]
+  },
+  "zoltraak_fire": {
+    "subtitle": "subtitles.zoltraak_cinematic.zoltraak_fire",
+    "sounds": [
+      {
+        "name": "zoltraak_cinematic:cinematic_fire",
+        "attenuation_distance": 48
+      }
+    ]
+  },
+  "zoltraak_impact": {
+    "subtitle": "subtitles.zoltraak_cinematic.zoltraak_impact",
+    "sounds": [
+      {
+        "name": "zoltraak_cinematic:cinematic_impact",
+        "attenuation_distance": 48
+      }
+    ]
+  },
+  "zoltraak_great_fire": {
+    "subtitle": "subtitles.zoltraak_cinematic.zoltraak_great_fire",
+    "sounds": [
+      {
+        "name": "zoltraak_cinematic:cinematic_great_fire",
+        "attenuation_distance": 80
+      }
+    ]
+  },
+  "qual_spawn": {
+    "subtitle": "subtitles.zoltraak_cinematic.qual_spawn",
+    "sounds": [
+      {
+        "name": "zoltraak_cinematic:qual_spawn",
+        "attenuation_distance": 64
+      }
+    ]
+  },
+  "qual_ambient": {
+    "subtitle": "subtitles.zoltraak_cinematic.qual_ambient",
+    "sounds": [
+      {
+        "name": "zoltraak_cinematic:qual_ambient",
+        "attenuation_distance": 32
+      }
+    ]
+  },
+  "qual_hurt": {
+    "subtitle": "subtitles.zoltraak_cinematic.qual_hurt",
+    "sounds": [
+      {
+        "name": "zoltraak_cinematic:qual_hurt",
+        "attenuation_distance": 32
+      }
+    ]
+  },
+  "qual_death": {
+    "subtitle": "subtitles.zoltraak_cinematic.qual_death",
+    "sounds": [
+      {
+        "name": "zoltraak_cinematic:qual_death",
+        "attenuation_distance": 64
+      }
+    ]
+  },
+  "qual_phase_transition": {
+    "subtitle": "subtitles.zoltraak_cinematic.qual_phase_transition",
+    "sounds": [
+      {
+        "name": "zoltraak_cinematic:qual_phase_transition",
+        "attenuation_distance": 64
+      }
+    ]
+  },
+  "qual_cataclysmic_charge": {
+    "subtitle": "subtitles.zoltraak_cinematic.qual_cataclysmic_charge",
+    "sounds": [
+      {
+        "name": "zoltraak_cinematic:qual_cataclysmic_charge",
+        "attenuation_distance": 64
+      }
+    ]
+  },
+  "qual_teleport": {
+    "subtitle": "subtitles.zoltraak_cinematic.qual_teleport",
+    "sounds": [
+      {
+        "name": "zoltraak_cinematic:qual_teleport",
+        "attenuation_distance": 32
+      }
+    ]
+  },
+  "singularity_charge": {
+    "subtitle": "subtitles.zoltraak_cinematic.singularity_charge",
+    "sounds": [
+      {
+        "name": "zoltraak_cinematic:astral_singularity_charge",
+        "attenuation_distance": 64
+      }
+    ]
+  },
+  "singularity_active": {
+    "subtitle": "subtitles.zoltraak_cinematic.singularity_active",
+    "sounds": [
+      {
+        "name": "zoltraak_cinematic:astral_singularity_active",
+        "attenuation_distance": 64
+      }
+    ]
+  },
+  "singularity_explode": {
+    "subtitle": "subtitles.zoltraak_cinematic.singularity_explode",
+    "sounds": [
+      {
+        "name": "zoltraak_cinematic:astral_singularity_collapse",
+        "attenuation_distance": 128
+      }
+    ]
+  },
+  "tinnitus": {
+    "subtitle": "subtitles.zoltraak_cinematic.tinnitus",
+    "sounds": [
+      "zoltraak_cinematic:astral_singularity_tinnitus"
+    ]
+  }
+}

@@ -1,0 +1,120 @@
+Zoltraak: Cinematic Edition
+Copyright (c) 2026 Aling7788565. All Rights Reserved.
+
+================================================================================
+1. PROPRIETARY SOFTWARE LICENSE — ALL RIGHTS RESERVED
+================================================================================
+
+Except as expressly permitted in Sections 2, 3, and 4 below, all rights are
+reserved by the copyright holder, Aling7788565.
+
+This license governs Zoltraak: Cinematic Edition (NeoForge 1.21.1 & Forge 1.20.1).
+
+Sole Strict Restriction — Code & Standalone Redistribution Prohibited:
+  You MAY NOT copy, imitate, clone, modify, create derivative works from,
+  decompile or reverse-engineer for reuse, sublicense, sell, or redistribute/
+  republish any part of the mod's code or software, including without limitation:
+    - Java source code and compiled bytecode (NeoForge & Forge targets, mixins,
+      networking, entity AI, camera rig, and procedural geometry systems)
+    - GLSL 150 core shaders and shader pipeline definitions
+      (assets/zoltraak_cinematic/shaders/core/*)
+    - Build scripts, tooling scripts, and internal non-image/non-audio mod
+      definitions (such as 3D geometry/animation definitions and data configs)
+
+  You MAY NOT re-upload, mirror, or redistribute standalone copies of this mod
+  (source code or compiled JAR archives) outside authorized official channels
+  or permitted modpack distributions described in Section 2.
+
+================================================================================
+2. GENERAL PLAYER ACCESS & MODPACK PERMISSIONS
+================================================================================
+
+Full Free Access for General Players:
+  - All general players and end users are granted full, unrestricted, free
+    access to every in-game feature, spell, boss, item, visual effect, and
+    gameplay content in Zoltraak: Cinematic Edition. No gameplay features or
+    content are locked behind paywalls.
+  - Gameplay showcasing, video creation, livestreaming, screenshots, and usage
+    on public or private multiplayer servers are fully permitted.
+
+Modpack Inclusion Permitted:
+  - Including unmodified official compiled mod JAR releases inside public or
+    private Minecraft modpacks (such as on CurseForge, Modrinth, or private
+    servers/packs) is explicitly permitted, provided the mod JAR and its code
+    are not altered, extracted for code reuse, or re-hosted as a standalone
+    download.
+
+================================================================================
+3. PERMISSION FOR ORIGINAL SOUND & IMAGE ASSETS
+================================================================================
+
+Notwithstanding the All Rights Reserved restriction on the mod's code above,
+the copyright holder explicitly permits anyone to extract, use, reuse, modify,
+adapt, and redistribute the mod's ORIGINAL sound and image files freely as
+desired (for resource packs, creative works, videos, or other projects),
+subject only to the third-party exceptions in Section 4:
+  - Original sound effects and audio files:
+    assets/zoltraak_cinematic/sounds/*.ogg
+  - Original textures, spell icons, item/entity/block textures, and UI/logo images:
+    assets/zoltraak_cinematic/textures/**/*.png and logo.png
+    (EXCLUDING files under assets/zoltraak_cinematic/textures/cosmic/)
+
+This permission applies ONLY to the mod's original audio (.ogg) and image/
+texture (.png) files. It does NOT grant permission to copy, imitate, or
+redistribute any Java source code, compiled bytecode, Mixins, GLSL shader code,
+or procedural rendering/build scripts.
+
+================================================================================
+4. THIRD-PARTY EXCEPTIONS — ASTRONOMICAL & COSMIC TEXTURES (textures/cosmic)
+================================================================================
+
+The terms above do not override third-party licenses for the astronomical and
+planetary textures located in:
+  src/main/resources/assets/zoltraak_cinematic/textures/cosmic/
+
+Those files remain governed strictly by their respective Public Domain and
+Creative Commons licenses (attribution required where applicable):
+  - NASA Earth Observatory / Goddard Space Flight Center / SVS:
+    Public Domain (17 U.S.C. § 105)
+  - European Southern Observatory (ESO / S. Brunier & R. Hurt):
+    Creative Commons Attribution 4.0 International (CC BY 4.0)
+    https://creativecommons.org/licenses/by/4.0/
+  - Solar System Scope / INOVE:
+    Creative Commons Attribution 4.0 International (CC BY 4.0)
+    https://creativecommons.org/licenses/by/4.0/
+
+Full source URLs and required attributions are preserved in:
+  assets/zoltraak_cinematic/textures/cosmic/CREDITS.txt and NOTICE.txt.
+
+================================================================================
+5. DISCLAIMER OF WARRANTY
+================================================================================
+
+THIS SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY ARISING
+FROM THE USE OF THIS SOFTWARE.
+
+================================================================================
+6. THAI SUMMARY / สรุปสิทธิ์การใช้งาน (ภาษาไทย)
+================================================================================
+
+Zoltraak: Cinematic Edition
+Copyright (c) 2026 Aling7788565. All Rights Reserved.
+
+- ผู้เล่นทั่วไป: เข้าถึงฟีเจอร์และเนื้อหาในเกมได้เต็มรูปแบบ (ฟรี) ไม่มีระบบล็อกเนื้อหา
+  และสามารถเล่นบนเซิร์ฟเวอร์ ทำวิดีโอ หรือสตรีมได้ตามปกติ
+- การนำไปรวมใน Modpack: อนุญาตให้นำไฟล์ JAR ทางการที่ไม่ได้แก้ไขดัดแปลงไปรวมใน
+  Modpack ทั้งแบบสาธารณะและส่วนตัวได้ (เช่น CurseForge / Modrinth)
+- ไฟล์เสียงและรูปภาพ: อนุญาตให้สามารถนำไฟล์เสียง (.ogg) และไฟล์รูปภาพ/เท็กซ์เจอร์
+  ต้นฉบับของม็อด (.png และ logo.png) ไปใช้งาน ดัดแปลง หรือเผยแพร่ต่อได้ตามต้องการ
+  (ยกเว้นภาพถ่ายอวกาศใน textures/cosmic/ ที่ยังคงอยู่ภายใต้ Public Domain และ
+  CC BY 4.0 ซึ่งต้องระบุเครดิตตาม CREDITS.txt)
+- ข้อแม้เพียงประการเดียว (Code): ไม่อนุญาตให้คัดลอก code ลอกเลียน ถอดรหัสเพื่อนำ
+  โค้ดไปใช้ซ้ำ แก้ไขดัดแปลง หรือเผยแพร่ซ้ำซึ่ง code ของม็อด (รวมถึงโค้ด Java,
+  bytecode, Mixins, GLSL Shaders และสคริปต์ต่าง ๆ) รวมถึงห้ามอัปโหลดหรือ
+  เผยแพร่ตัวม็อด/ซอร์สโค้ดแบบเดี่ยวซ้ำโดยไม่ได้รับอนุญาตเป็นลายลักษณ์อักษร
+
+(หมายเหตุ: ส่วนภาษาไทยนี้จัดทำขึ้นเพื่อความชัดเจนในการสื่อสาร โดยมีข้อความภาษาอังกฤษ
+ด้านบนเป็นข้อกำหนดหลักของสัญญาอนุญาตฉบับนี้)

@@ -1,0 +1,46 @@
+modLoader="javafml"
+loaderVersion="[4,)"
+license="All Rights Reserved"
+
+[[mods]]
+modId="zoltraak_cinematic"
+version="2.0.0"
+displayName="Zoltraak: Cinematic Edition"
+logoFile="logo.png"
+authors="Aling7788565"
+credits="Inspired by Sousou no Frieren. Powered by Iron's Spells 'n Spellbooks."
+description='''Frieren-inspired Zoltraak (一般攻撃魔法 - ゾルトラーク) Ultra Realistic & Cinematic Edition. Powered by 100% Standalone Procedural Vector Geometry Engine and Dedicated GLSL 150 Core Shaders.'''
+
+[[dependencies.zoltraak_cinematic]]
+modId="neoforge"
+type="required"
+versionRange="[21.1,)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.zoltraak_cinematic]]
+modId="minecraft"
+type="required"
+versionRange="[1.21.1,1.21.2)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.zoltraak_cinematic]]
+modId="irons_spellbooks"
+type="required"
+versionRange="[1.21.1,)"
+ordering="AFTER"
+side="BOTH"
+
+[[dependencies.zoltraak_cinematic]]
+modId="sodium"
+type="optional"
+versionRange="[0.6,)"
+ordering="AFTER"
+side="CLIENT"
+
+[[mixins]]
+config="zoltraak_cinematic.mixins.json"
+
+[modproperties.zoltraak_cinematic]
+"sodium:config_api_user" = "com.frierenflight.zoltraakcinematic.compat.sodium.ZoltraakSodiumConfig"

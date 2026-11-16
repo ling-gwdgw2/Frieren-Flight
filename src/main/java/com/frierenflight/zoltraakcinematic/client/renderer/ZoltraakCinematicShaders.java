@@ -1,0 +1,76 @@
+// Copyright (c) 2026 Aling7788565. All Rights Reserved.
+package com.frierenflight.zoltraakcinematic.client.renderer;
+
+import com.frierenflight.zoltraakcinematic.ZoltraakCinematicMod;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import net.minecraft.client.renderer.ShaderInstance;
+import net.minecraft.resources.ResourceLocation;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.client.event.RegisterShadersEvent;
+
+import java.io.IOException;
+
+public final class ZoltraakCinematicShaders {
+
+   public static ShaderInstance corona;
+   public static ShaderInstance zoltraak;
+   public static ShaderInstance blackZoltraak;
+   public static ShaderInstance greatBlack;
+   public static ShaderInstance greatWhite;
+   public static ShaderInstance greatPlume;
+   public static ShaderInstance magicCircle;
+   public static ShaderInstance blackMagicCircle;
+   public static ShaderInstance defenseBarrier;
+   public static ShaderInstance unsealingMagicCircle;
+   public static ShaderInstance unsealingFireColumn;
+   public static ShaderInstance cinematicFlare;
+   public static ShaderInstance zoltraakImpact;
+   public static ShaderInstance barrageFx;
+   public static ShaderInstance rapidBullet;
+   public static ShaderInstance gargantua;
+   public static ShaderInstance gargantuaDiskPreview;
+   public static ShaderInstance gargantuaSpherePreview;
+
+   @SubscribeEvent
+   /**
+    * Registers all 18 custom Core GLSL 150 shaders for the Zoltraak Cinematic rendering pipeline.
+    */
+   public static void onRegisterShaders(RegisterShadersEvent e) {
+      registerSafe(e, "cinematic_singularity_corona", s -> corona = s);
+      registerSafe(e, "cinematic_photon_beam", s -> zoltraak = s);
+      registerSafe(e, "cinematic_abyssal_beam", s -> blackZoltraak = s);
+      registerSafe(e, "cinematic_great_abyssal", s -> greatBlack = s);
+      registerSafe(e, "cinematic_great_photon", s -> greatWhite = s);
+      registerSafe(e, "cinematic_plasma_plume", s -> greatPlume = s);
+      registerSafe(e, "magic_circle", s -> magicCircle = s);
+      registerSafe(e, "black_magic_circle", s -> blackMagicCircle = s);
+      registerSafe(e, "defense_barrier", DefaultVertexFormat.POSITION_COLOR, s -> defenseBarrier = s);
+      registerSafe(e, "unsealing_magic_circle", s -> unsealingMagicCircle = s);
+      registerSafe(e, "unsealing_fire_column", s -> unsealingFireColumn = s);
+      registerSafe(e, "cinematic_flare", s -> cinematicFlare = s);
+      registerSafe(e, "zoltraak_impact", s -> zoltraakImpact = s);
+      registerSafe(e, "barrage_fx", s -> barrageFx = s);
+      registerSafe(e, "rapid_zoltraak_bullet", s -> rapidBullet = s);
+      registerSafe(e, "gargantua", DefaultVertexFormat.POSITION_TEX, s -> gargantua = s);
+      registerSafe(e, "gargantua_disk_preview", s -> gargantuaDiskPreview = s);
+      registerSafe(e, "gargantua_sphere_preview", DefaultVertexFormat.POSITION_TEX_COLOR_NORMAL, s -> gargantuaSpherePreview = s);
+   }
+
+   private static void registerSafe(RegisterShadersEvent e, String name, java.util.function.Consumer<ShaderInstance> onLoaded) {
+      registerSafe(e, name, DefaultVertexFormat.POSITION_TEX_COLOR, onLoaded);
+   }
+
+   private static void registerSafe(RegisterShadersEvent e, String name, com.mojang.blaze3d.vertex.VertexFormat format, java.util.function.Consumer<ShaderInstance> onLoaded) {
+      try {
+         e.registerShader(new ShaderInstance(e.getResourceProvider(), id(name), format), onLoaded);
+      } catch (IOException ex) {
+         System.err.println("[ZoltraakCinematic] Failed to register core shader '" + name + "': " + ex.getMessage());
+      }
+   }
+
+   private static ResourceLocation id(String path) {
+      return ResourceLocation.fromNamespaceAndPath(ZoltraakCinematicMod.MODID, path);
+   }
+
+   private ZoltraakCinematicShaders() {}
+}

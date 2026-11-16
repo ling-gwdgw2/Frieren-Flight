@@ -1,0 +1,30 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "key": {
+    "M": {
+      "item": "irons_spellbooks:mana_ring"
+    },
+    "E": {
+      "item": "irons_spellbooks:cast_time_ring"
+    },
+    "S": {
+      "item": "irons_spellbooks:silver_ring"
+    },
+    "R": {
+      "item": "irons_spellbooks:cooldown_ring"
+    },
+    "Q": {
+      "item": "zoltraak_cinematic:horn_of_corruption"
+    }
+  },
+  "pattern": [
+    " M ",
+    "EQS",
+    " R "
+  ],
+  "result": {
+    "count": 1,
+    "id": "zoltraak_cinematic:mirror_lotus_ring"
+  }
+}

@@ -1,0 +1,136 @@
+================================================================================
+Zoltraak: Cinematic Edition (NeoForge 1.21.1 & Forge 1.20.1)
+Copyright (c) 2026 Aling7788565. All Rights Reserved.
+================================================================================
+
+1. LICENSE & USAGE SUMMARY
+--------------------------
+Primary License: All Rights Reserved (see the LICENSE file for full terms).
+
+Summary of Permissions & Sole Restriction:
+  - Full Free Player Access:
+    General players have full, unrestricted, free access to all in-game
+    features, spells, bosses, items, shaders, and content. Gameplay videos,
+    livestreams, screenshots, and multiplayer server usage are permitted.
+  - Modpack Inclusion:
+    Unmodified official compiled mod JAR releases MAY be included in public or
+    private Minecraft modpacks (CurseForge, Modrinth, or private packs).
+  - Sound & Image Assets (Permitted As Desired):
+    Original audio files (assets/zoltraak_cinematic/sounds/*.ogg) and original
+    image/texture files (assets/zoltraak_cinematic/textures/**/*.png and
+    logo.png) MAY be extracted, used, modified, and redistributed freely as
+    desired (subject only to Section 4 for third-party cosmic textures).
+  - Sole Strict Restriction (No Code Copying, Imitation, or Redistribution):
+    Copying, cloning/imitating, reverse-engineering/decompiling for reuse,
+    modifying, or redistributing any part of the mod's CODE (Java source code,
+    compiled bytecode, Mixins, GLSL 150 shaders, procedural geometry/camera-rig
+    implementations, and build/tooling scripts) — or re-uploading standalone
+    copies of the mod JAR or code — is strictly PROHIBITED without prior
+    written permission from the copyright holder.
+
+
+2. CLEAN-ROOM ORIGINALITY STATEMENT
+-----------------------------------
+Zoltraak: Cinematic Edition is authored under All Rights Reserved and built
+with original clean-room implementations across all Java code, keyframe camera
+rig choreography (CinematicRigController, CameraTrack, CameraTransform,
+CameraRigFrame, CameraObstacleSolver), Blaze3D/JOML procedural geometry,
+custom Qual boss model/animations/textures, synthesized audio, and all 18
+GLSL 150 core shaders:
+  - Early pre-1.0.4 spell prototypes were permanently replaced in Version 1.0.4.
+  - gargantua.fsh was rewritten clean-room from first-principles astrophysics
+    (RK2 Schwarzschild null-geodesic raymarching, Planck radiation law, analytic
+    Gaussian slab integration, physical 3D Doppler beaming, Roberts R2 dither,
+    and GLSL 150 integer pcgCellHash3 starfield).
+  - client/cinematic/ was rewritten from scratch around an original keyframe
+    timeline and camera obstacle solver architecture.
+  - qual_boss (.geo.json, .animation.json, .png, _glowmask.png) is a clean-room
+    original creation with zero third-party skins or character models.
+
+Protected Code & GLSL 150 Core Shaders (18 Programs — All Rights Reserved):
+  - barrage_fx (.fsh, .vsh, .json)
+  - black_magic_circle (.fsh, .vsh, .json)
+  - cinematic_abyssal_beam (.fsh, .vsh, .json)
+  - cinematic_flare (.fsh, .vsh, .json)
+  - cinematic_great_abyssal (.fsh, .vsh, .json)
+  - cinematic_great_photon (.fsh, .vsh, .json)
+  - cinematic_photon_beam (.fsh, .vsh, .json)
+  - cinematic_plasma_plume (.fsh, .vsh, .json)
+  - cinematic_singularity_corona (.fsh, .vsh, .json)
+  - defense_barrier (.fsh, .vsh, .json)
+  - gargantua (.fsh, .vsh, .json)
+  - gargantua_disk_preview & gargantua_sphere_preview (.fsh, .vsh, .json)
+  - magic_circle (.fsh, .vsh, .json)
+  - rapid_zoltraak_bullet (.fsh, .vsh, .json)
+  - unsealing_fire_column & unsealing_magic_circle (.fsh, .vsh, .json)
+  - zoltraak_impact (.fsh, .vsh, .json)
+
+Original Image & Audio Assets (Freely Permitted for Use As Desired):
+  - Image / Texture Assets (*.png, logo.png):
+    * Entity, block, item, spell icon, GUI, and effect textures under
+      assets/zoltraak_cinematic/textures/ (except textures/cosmic/)
+    * qual_boss.png, qual_boss_glowmask.png, qual_sealing_stone.png
+    * zoltraak_glow.png, zoltraak_magic_circle.png, zoltraak_white.png,
+      noise_tile.png, defense.png, and all spell/item icons
+  - Synthesized Sound Effects (15 OGG Files under sounds/):
+    * astral_singularity_active.ogg, astral_singularity_charge.ogg,
+      astral_singularity_collapse.ogg, astral_singularity_tinnitus.ogg
+    * cinematic_charge.ogg, cinematic_fire.ogg, cinematic_great_fire.ogg,
+      cinematic_impact.ogg
+    * qual_ambient.ogg, qual_cataclysmic_charge.ogg, qual_death.ogg,
+      qual_hurt.ogg, qual_phase_transition.ogg, qual_spawn.ogg,
+      qual_teleport.ogg
+
+
+3. ECOSYSTEM & HISTORICAL NOTE
+------------------------------
+  - Iron's Spells 'n Spellbooks by Iron431 (Spell framework integration)
+  - NeoForge Team & Minecraft Forge (Mod loaders & APIs)
+  - GeckoLib (Entity animation framework)
+  - Sodium (Optional client configuration API compatibility)
+  - Minecraft (c) Mojang AB / Microsoft Corporation
+  - Third-party dependency libraries (libs/, libs_forge/) and SRG remapping
+    tables/tools (tools/remapper/) remain governed by their respective
+    third-party licenses and terms, and are NOT claimed under this mod's
+    All Rights Reserved license.
+  - Early pre-1.0.4 experimental prototypes drew conceptual inspiration from
+    Frieren Spells by sho09; all early prototypes were deleted in v1.0.4, and
+    zero third-party unlicensed shaderpack or mod code remains in this release.
+
+
+4. ASTRONOMICAL & COSMIC ASSETS EXCEPTION (PUBLIC DOMAIN / CC BY 4.0)
+----------------------------------------------------------------------
+All Rights Reserved and the author's custom asset grant DO NOT override the
+open licenses governing cosmic and celestial textures located in:
+  assets/zoltraak_cinematic/textures/cosmic/
+
+Those files remain subject to their original licenses (attribution required
+for CC BY 4.0 works):
+  - NASA Earth Observatory / SVS (Public Domain under 17 U.S.C. § 105):
+    earth_day.jpg, moon_color.jpg
+  - European Southern Observatory (ESO / S. Brunier & R. Hurt) (CC BY 4.0):
+    milky_way.jpg, milky_way_top.jpg (https://creativecommons.org/licenses/by/4.0/)
+  - Solar System Scope / INOVE (CC BY 4.0):
+    jupiter.jpg (https://creativecommons.org/licenses/by/4.0/)
+Detailed source URLs and attributions are preserved in textures/cosmic/CREDITS.txt.
+
+
+5. NON-COMMERCIAL FAN WORK DISCLAIMER
+-------------------------------------
+Zoltraak: Cinematic Edition is a free, non-commercial fan modification inspired
+by "Sousou no Frieren" (Frieren: Beyond Journey's End) created by Kanehito
+Yamada and Tsukasa Abe. Not an official product of Mojang AB, Microsoft
+Corporation, Shogakukan, or Madhouse.
+
+
+6. THAI SUMMARY / สรุปประกาศสิทธิ์การใช้งาน (ภาษาไทย)
+-----------------------------------------------------
+- สิทธิ์ผู้เล่นทั่วไป: เข้าถึงฟีเจอร์และเนื้อหาในเกมได้เต็มรูปแบบ (ฟรี)
+- Modpack: อนุญาตให้นำไฟล์ JAR ที่คอมไพล์อย่างเป็นทางการ (ไม่แก้ไข) ไปรวมใน Modpack ได้
+- ไฟล์เสียงและรูปภาพ: อนุญาตให้นำไฟล์เสียง (.ogg) และไฟล์รูปภาพ/เท็กซ์เจอร์ต้นฉบับ (.png)
+  ไปใช้ ดัดแปลง หรือเผยแพร่ต่อได้ตามต้องการ (ยกเว้น textures/cosmic/ ต้องคงเครดิตตาม
+  CREDITS.txt)
+- ข้อแม้เพียงประการเดียว: ห้ามคัดลอก code ลอกเลียน หรือเผยแพร่ซ้ำซึ่ง code ของม็อด
+  (Java, bytecode, Mixins, GLSL Shaders, สคริปต์) และห้ามนำไฟล์ม็อดแบบเดี่ยวไปอัปโหลด
+  เผยแพร่ซ้ำโดยไม่ได้รับอนุญาต
+================================================================================

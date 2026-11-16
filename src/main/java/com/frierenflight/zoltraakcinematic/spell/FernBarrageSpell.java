@@ -1,0 +1,308 @@
+// Copyright (c) 2026 Aling7788565. All Rights Reserved.
+package com.frierenflight.zoltraakcinematic.spell;
+
+import com.frierenflight.zoltraakcinematic.ZoltraakCinematicMod;
+import com.frierenflight.zoltraakcinematic.entity.ZoltraakBarrageProjectileEntity;
+import com.frierenflight.zoltraakcinematic.registry.ModCinematicSounds;
+import io.redspace.ironsspellbooks.api.config.DefaultConfig;
+import io.redspace.ironsspellbooks.api.magic.MagicData;
+import io.redspace.ironsspellbooks.api.spells.AbstractSpell;
+import io.redspace.ironsspellbooks.api.spells.CastResult;
+import io.redspace.ironsspellbooks.api.spells.CastSource;
+import io.redspace.ironsspellbooks.api.spells.CastType;
+import io.redspace.ironsspellbooks.api.spells.SpellAnimations;
+import io.redspace.ironsspellbooks.api.spells.SpellRarity;
+import io.redspace.ironsspellbooks.api.util.AnimationHolder;
+import io.redspace.ironsspellbooks.api.util.Utils;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
+
+import java.util.List;
+import java.util.Optional;
+
+/**
+ * Fern's Grand Phalanx Barrage (Ordinary Defensive Magic - Demon Slaying).
+ * Manifests an imposing 24-circle celestial matrix, continuously unleashing converging
+ * guided Zoltraak light lances at the target point.
+ */
+public class FernBarrageSpell extends AbstractSpell {
+    private final ResourceLocation spellId = ResourceLocation.fromNamespaceAndPath(ZoltraakCinematicMod.MODID, "zoltraak_barrage");
+    private final DefaultConfig defaultConfig = new DefaultConfig()
+            .setMinRarity(SpellRarity.EPIC)
+            .setSchoolResource(com.frierenflight.zoltraakcinematic.registry.ModCinematicSchools.ORDINARY_MAGIC_RESOURCE)
+            .setMaxLevel(1)
+            .setCooldownSeconds(1.5)
+            .build();
+
+    public static final int BARRAGE_CIRCLE_COUNT = 24;
+    public static final int BARRAGE_FIRE_INTERVAL = 10; // Rhythmic firing interval: every 10 ticks (0.5s = 2 volleys/sec)
+    public static final int BARRAGE_INITIAL_DELAY = 8;   // 8 ticks (~0.4s) for opening celestial circle blossom
+
+    // 24-Circle Grand Celestial Array (Parabolic Wings & Staggered Diamond Matrix)
+    public static final Vec3[] BARRAGE_CIRCLE_OFFSETS = new Vec3[] {
+        // Row 1: Topmost Crown (5 Circles, Y = +2.05m to +2.40m)
+        new Vec3(-3.75,  2.05,  0.15), // 0: Far Outer Left
+        new Vec3(-1.85,  2.25,  0.25), // 1: Mid Left
+        new Vec3( 0.00,  2.40,  0.30), // 2: Center Apex Crown
+        new Vec3( 1.85,  2.25,  0.25), // 3: Mid Right
+        new Vec3( 3.75,  2.05,  0.15), // 4: Far Outer Right
+
+        // Row 2: Upper-Mid (4 Circles, Y = +1.45m)
+        new Vec3(-2.85,  1.45,  0.25), // 5: Upper Outer Left
+        new Vec3(-1.10,  1.45,  0.35), // 6: Upper Inner Left
+        new Vec3( 1.10,  1.45,  0.35), // 7: Upper Inner Right
+        new Vec3( 2.85,  1.45,  0.25), // 8: Upper Outer Right
+
+        // Row 3: Mid Wings / Primary Battery (6 Circles, Y = +0.50m to +0.55m)
+        new Vec3(-4.25,  0.50,  0.20), // 9: Wingtip Far Left
+        new Vec3(-2.65,  0.55,  0.35), // 10: Mid Left
+        new Vec3(-1.25,  0.55,  0.40), // 11: Inner Left (flanking shoulder)
+        new Vec3( 1.25,  0.55,  0.40), // 12: Inner Right (flanking staff)
+        new Vec3( 2.65,  0.55,  0.35), // 13: Mid Right
+        new Vec3( 4.25,  0.50,  0.20), // 14: Wingtip Far Right
+
+        // Row 4: Lower-Mid (4 Circles, Y = -0.15m)
+        new Vec3(-3.10, -0.15,  0.25), // 15: Lower Outer Left
+        new Vec3(-1.45, -0.15,  0.35), // 16: Lower Inner Left
+        new Vec3( 1.45, -0.15,  0.35), // 17: Lower Inner Right
+        new Vec3( 3.10, -0.15,  0.25), // 18: Lower Outer Right
+
+        // Row 5: Bottom Base (5 Circles, safely elevated above ground Y = -0.75m to -0.80m)
+        new Vec3(-3.60, -0.75,  0.15), // 19: Bottom Outer Left
+        new Vec3(-1.80, -0.80,  0.25), // 20: Bottom Inner Left
+        new Vec3( 0.00, -0.80,  0.30), // 21: Bottom Center (above hotbar)
+        new Vec3( 1.80, -0.80,  0.25), // 22: Bottom Inner Right
+        new Vec3( 3.60, -0.75,  0.15)  // 23: Bottom Outer Right
+    };
+
+    public static final float[] BARRAGE_CIRCLE_SCALES = new float[] {
+        // Row 1 (5 Circles: 0.48 - 0.58)
+        0.48f, 0.52f, 0.58f, 0.52f, 0.48f,
+        // Row 2 (4 Circles: 0.48 - 0.52)
+        0.48f, 0.52f, 0.52f, 0.48f,
+        // Row 3 (6 Circles: 0.46 - 0.54)
+        0.46f, 0.52f, 0.54f, 0.54f, 0.52f, 0.46f,
+        // Row 4 (4 Circles: 0.48 - 0.50)
+        0.48f, 0.50f, 0.50f, 0.48f,
+        // Row 5 (5 Circles: 0.46 - 0.52)
+        0.46f, 0.50f, 0.52f, 0.50f, 0.46f
+    };
+
+    public FernBarrageSpell() {
+        // Note: Iron's Spells deducts continuous mana every 10 ticks (0.5s) and cancels on Tick 0 if
+        // currentMana < getManaCost(level) * 2. 15 mana per 0.5s = 300 total mana over full 10s channel,
+        // while requiring only 30 mana on Tick 0 so default-mana (100) and Creative players can cast!
+        this.baseManaCost = 15;
+        this.manaCostPerLevel = 2;
+        this.baseSpellPower = 5;
+        this.spellPowerPerLevel = 7;
+        this.castTime = 200; // Continuous channel up to 10 seconds (or until released/out of mana)
+    }
+
+    @Override
+    public CastResult canBeCastedBy(int spellLevel, CastSource castSource, MagicData magicData, net.minecraft.world.entity.player.Player player) {
+        if (player != null && player.isCreative()) {
+            return new CastResult(CastResult.Type.SUCCESS);
+        }
+        return super.canBeCastedBy(spellLevel, castSource, magicData, player);
+    }
+
+    @Override
+    public ResourceLocation getSpellResource() {
+        return spellId;
+    }
+
+    @Override
+    public DefaultConfig getDefaultConfig() {
+        return defaultConfig;
+    }
+
+    @Override
+    public CastType getCastType() {
+        return CastType.CONTINUOUS;
+    }
+
+    @Override
+    public Optional<net.minecraft.sounds.SoundEvent> getCastStartSound() {
+        return Optional.of(ModCinematicSounds.ZOLTRAAK_CHARGE.get());
+    }
+
+    @Override
+    public AnimationHolder getCastStartAnimation() {
+        return SpellAnimations.ONE_HANDED_RAY_SHOOT;
+    }
+
+    protected int getColorTheme() {
+        return 0; // 0 = Demon Slaying / Holy White-Cyan
+    }
+
+    @Override
+    public void onServerCastTick(Level level, int spellLevel, LivingEntity entity, MagicData playerMagicData) {
+        super.onServerCastTick(level, spellLevel, entity, playerMagicData);
+
+        if (entity instanceof net.minecraft.world.entity.player.Player player && player.isCreative() && playerMagicData != null) {
+            float minCreativeMana = this.getManaCost(spellLevel) * 4.0f;
+            if (playerMagicData.getMana() < minCreativeMana) {
+                playerMagicData.setMana(minCreativeMana);
+            }
+        }
+
+        int total = playerMagicData.getCastDuration();
+        int remaining = playerMagicData.getCastDurationRemaining();
+        int elapsed = total - remaining;
+
+        // Continuous unrestricted rhythmic barrage while right-click is held down:
+        // After initial circle blossom (8 ticks), fires a simultaneous 24-bullet volley
+        // every barrageFireInterval ticks continuously for as long as mana and channeling last!
+        int fireInterval = Math.max(2, com.frierenflight.zoltraakcinematic.config.ZoltraakCinematicConfig.getBarrageFireInterval());
+        if (elapsed >= BARRAGE_INITIAL_DELAY && (elapsed - BARRAGE_INITIAL_DELAY) % fireInterval == 0) {
+            spawnSimultaneousVolley(level, spellLevel, entity, playerMagicData, getColorTheme());
+        }
+    }
+
+    public static LivingEntity findAutoTarget(Level level, LivingEntity caster, double maxRange) {
+        if (caster == null || level == null) return null;
+
+        Vec3 eyePos = caster.getEyePosition();
+        Vec3 look = caster.getLookAngle().normalize();
+
+        net.minecraft.world.phys.AABB searchBox = caster.getBoundingBox().inflate(maxRange);
+        List<LivingEntity> candidates = level.getEntitiesOfClass(LivingEntity.class, searchBox, target -> {
+            if (target == caster || !target.isAlive()) return false;
+            if (target instanceof net.minecraft.world.entity.decoration.ArmorStand) return false;
+            if (io.redspace.ironsspellbooks.damage.DamageSources.isFriendlyFireBetween(caster, target)) return false;
+            if (target instanceof net.minecraft.world.entity.player.Player player) {
+                if (player.isCreative() || player.isSpectator()) return false;
+            }
+            return true;
+        });
+
+        LivingEntity bestTarget = null;
+        double bestScore = -1.0;
+
+        for (LivingEntity candidate : candidates) {
+            Vec3 toTarget = candidate.getBoundingBox().getCenter().subtract(eyePos);
+            double dist = toTarget.length();
+            if (dist > maxRange || dist < 0.5) continue;
+
+            Vec3 dirToTarget = toTarget.normalize();
+            double dot = look.dot(dirToTarget);
+
+            // Wide forward acquisition cone (~78 degrees from look direction)
+            if (dot < 0.20) continue;
+
+            double score = (dot * 2.5) + (1.0 - (dist / maxRange));
+
+            // Line of sight check to prioritize unoccluded targets
+            HitResult hit = level.clip(new ClipContext(
+                    eyePos, candidate.getEyePosition(),
+                    ClipContext.Block.COLLIDER,
+                    ClipContext.Fluid.NONE,
+                    caster
+            ));
+            if (hit != null && hit.getType() == HitResult.Type.BLOCK) {
+                score *= 0.4;
+            }
+
+            if (score > bestScore) {
+                bestScore = score;
+                bestTarget = candidate;
+            }
+        }
+
+        return bestTarget;
+    }
+
+    protected void spawnSimultaneousVolley(Level level, int spellLevel, LivingEntity entity, MagicData playerMagicData, int colorTheme) {
+        if (!(level instanceof ServerLevel serverLevel)) return;
+
+        Vec3 eyePos = entity.getEyePosition();
+        Vec3 look = entity.getLookAngle();
+        LivingEntity lockedTarget = findAutoTarget(level, entity, 56.0);
+
+        Vec3 targetPos;
+        if (lockedTarget != null) {
+            targetPos = lockedTarget.getBoundingBox().getCenter();
+        } else {
+            targetPos = eyePos.add(look.scale(56.0));
+            // Crash-proof block collision check along aim vector
+            HitResult blockHit = level.clip(new ClipContext(
+                    eyePos, targetPos,
+                    ClipContext.Block.COLLIDER,
+                    ClipContext.Fluid.NONE,
+                    entity
+            ));
+            if (blockHit != null && blockHit.getType() != HitResult.Type.MISS) {
+                targetPos = blockHit.getLocation();
+            }
+        }
+
+        Vec3 flatLook = Vec3.directionFromRotation(0, entity.getYRot());
+        Vec3 right = Vec3.directionFromRotation(0, entity.getYRot() + 90);
+        Vec3 worldUp = new Vec3(0, 1, 0);
+
+        float bulletDamage = getBulletDamage(spellLevel, entity);
+
+        // Spawn all 24 projectiles simultaneously from their individual 3D circles
+        for (int i = 0; i < BARRAGE_CIRCLE_COUNT; i++) {
+            Vec3 localOffset = BARRAGE_CIRCLE_OFFSETS[i];
+            Vec3 spawnPos = eyePos
+                    .add(right.scale(localOffset.x))
+                    .add(worldUp.scale(localOffset.y))
+                    .add(flatLook.scale(localOffset.z));
+
+            // Micro polar spread around the convergence focal point
+            float spreadRadius = 0.012f;
+            float theta = entity.getRandom().nextFloat() * ((float) Math.PI * 2.0f);
+            float r = (float) Math.sqrt(entity.getRandom().nextFloat()) * spreadRadius;
+
+            Vec3 deviatedTarget = targetPos
+                    .add(right.scale(r * 48.0 * Math.cos(theta)))
+                    .add(worldUp.scale(r * 48.0 * Math.sin(theta)));
+
+            Vec3 finalDir = deviatedTarget.subtract(spawnPos).normalize();
+
+            ZoltraakBarrageProjectileEntity bullet = new ZoltraakBarrageProjectileEntity(serverLevel, entity, bulletDamage, colorTheme);
+            bullet.setPos(spawnPos.x, spawnPos.y, spawnPos.z);
+            bullet.setSpawnOrigin(spawnPos);
+            bullet.setCircleIndex(i);
+            bullet.setTargetEntity(lockedTarget); // Guided homing lock-on!
+            double configSpeed = com.frierenflight.zoltraakcinematic.config.ZoltraakCinematicConfig.getBarrageSpeed();
+            double speed = configSpeed + (entity.getRandom().nextDouble() * 0.16); // Organic hypersonic swarm velocity
+            bullet.setDeltaMovement(finalDir.scale(speed));
+
+            serverLevel.addFreshEntity(bullet);
+        }
+
+        // Layered acoustic thunderclap for simultaneous 24-bullet discharge
+        boolean isPurple = colorTheme == 1;
+        float basePitch = isPurple ? 0.76f : 1.0f;
+        level.playSound(null, eyePos.x, eyePos.y, eyePos.z,
+                ModCinematicSounds.ZOLTRAAK_FIRE.get(), SoundSource.PLAYERS, 1.4f, basePitch * 0.94f);
+        level.playSound(null, eyePos.x, eyePos.y, eyePos.z,
+                ModCinematicSounds.ZOLTRAAK_FIRE.get(), SoundSource.PLAYERS, 1.0f, basePitch * 1.28f);
+    }
+
+    public float getBulletDamage(int spellLevel, LivingEntity entity) {
+        return Math.max(0.5f, getSpellPower(spellLevel, entity));
+    }
+
+    @Override
+    public List<MutableComponent> getUniqueInfo(int spellLevel, LivingEntity caster) {
+        float bulletDmg = getBulletDamage(spellLevel, caster);
+        float salvoDmg = bulletDmg * 24.0f;
+        return List.of(
+                Component.translatable("ui.irons_spellbooks.damage", Utils.stringTruncation(salvoDmg, 1) + " (" + Utils.stringTruncation(bulletDmg, 1) + "x24)"),
+                Component.translatable("spell.zoltraak_cinematic.barrage_rate", "24x Guided Light Lances"),
+                Component.translatable("spell.zoltraak_cinematic.fern_barrage.perk")
+        );
+    }
+}

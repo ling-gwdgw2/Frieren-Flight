@@ -1,0 +1,92 @@
+// Copyright (c) 2026 Aling7788565. All Rights Reserved.
+package com.frierenflight.zoltraakcinematic.block;
+
+import com.frierenflight.zoltraakcinematic.block.entity.QualSealingStoneBlockEntity;
+import com.frierenflight.zoltraakcinematic.registry.ModCinematicBlocks;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.EntityBlock;
+import net.minecraft.world.level.block.SoundType;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityTicker;
+import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.Shapes;
+import net.minecraft.world.phys.shapes.VoxelShape;
+import org.jetbrains.annotations.Nullable;
+
+public class QualSealingStoneBlock extends Block implements EntityBlock {
+
+    protected static final VoxelShape SHAPE = Shapes.or(
+            Block.box(0.0D, 0.0D, 0.0D, 16.0D, 7.2D, 16.0D),
+            Block.box(3.0D, 7.2D, 3.0D, 13.0D, 25.0D, 13.0D)
+    );
+
+    public QualSealingStoneBlock() {
+        super(BlockBehaviour.Properties.of()
+                .sound(SoundType.STONE)
+                .strength(-1.0f, 3600000.0f)
+                .noOcclusion()
+                .lightLevel(state -> 6)
+        );
+    }
+
+    @Override
+    public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+        return SHAPE;
+    }
+
+    @Nullable
+    @Override
+    public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
+        return new QualSealingStoneBlockEntity(pos, state);
+    }
+
+    @Nullable
+    @Override
+    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> blockEntityType) {
+        if (blockEntityType != ModCinematicBlocks.QUAL_SEALING_STONE_BE.get()) {
+            return null;
+        }
+        return (lvl, pos, st, entity) -> {
+            if (entity instanceof QualSealingStoneBlockEntity tile) {
+                if (lvl.isClientSide) {
+                    tile.clientTick();
+                } else {
+                    tile.tick();
+                }
+            }
+        };
+    }
+
+    @Override
+    public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hitResult) {
+        return triggerUnseal(level, pos, player);
+    }
+
+    private InteractionResult triggerUnseal(Level level, BlockPos pos, Player player) {
+        BlockEntity be = level.getBlockEntity(pos);
+        if (be instanceof QualSealingStoneBlockEntity tile) {
+            if (tile.isUnsealing()) {
+                return InteractionResult.CONSUME;
+            }
+
+            if (!level.isClientSide) {
+                tile.startUnsealing();
+                player.displayClientMessage(Component.translatable("message.zoltraak_cinematic.unsealing_started"), true);
+            }
+            return InteractionResult.SUCCESS;
+        }
+        return InteractionResult.PASS;
+    }
+}
+

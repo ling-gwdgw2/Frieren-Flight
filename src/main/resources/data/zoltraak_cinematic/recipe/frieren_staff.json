@@ -1,0 +1,36 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "key": {
+    "C": {
+      "item": "zoltraak_cinematic:corruption_core"
+    },
+    "S": {
+      "item": "minecraft:nether_star"
+    },
+    "Q": {
+      "item": "zoltraak_cinematic:horn_of_corruption"
+    },
+    "D": {
+      "item": "irons_spellbooks:divine_pearl"
+    },
+    "H": {
+      "item": "irons_spellbooks:frosted_helve"
+    },
+    "K": {
+      "item": "irons_spellbooks:dragonskin"
+    },
+    "N": {
+      "item": "minecraft:netherite_ingot"
+    }
+  },
+  "pattern": [
+    "CSQ",
+    "DHK",
+    "HN "
+  ],
+  "result": {
+    "count": 1,
+    "id": "zoltraak_cinematic:frieren_staff"
+  }
+}
