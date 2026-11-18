@@ -433,6 +433,9 @@ public class ZoltraakSodiumConfig implements ConfigEntryPoint {
         addGlowOption(builder, glowGroup, "glow_qual", "bloom_qual",
                 ZoltraakCinematicClientConfig.QUAL_GLOW,
                 ZoltraakCinematicClientConfig::getQualGlow);
+        addGlowOption(builder, glowGroup, "glow_explosion", "bloom_explosion",
+                ZoltraakCinematicClientConfig.EXPLOSION_GLOW,
+                ZoltraakCinematicClientConfig::getExplosionGlow);
 
         mod.addPage(builder.createOptionPage()
                 .setName(Component.translatable("config.zoltraak_cinematic.page.bloom"))

@@ -25,6 +25,8 @@ public final class ZoltraakCinematicShaders {
    public static ShaderInstance unsealingFireColumn;
    public static ShaderInstance cinematicFlare;
    public static ShaderInstance zoltraakImpact;
+   public static ShaderInstance zoltraakBlastDome;
+   public static ShaderInstance zoltraakPyroclast;
    public static ShaderInstance barrageFx;
    public static ShaderInstance rapidBullet;
    public static ShaderInstance gargantua;
@@ -33,10 +35,13 @@ public final class ZoltraakCinematicShaders {
    public static ShaderInstance gargantuaComposite;
    public static ShaderInstance gargantuaDiskPreview;
    public static ShaderInstance gargantuaSpherePreview;
+   public static ShaderInstance explosionVortexRing;
+   public static ShaderInstance explosionDome;
+   public static ShaderInstance explosionDustWave;
 
    @SubscribeEvent
    /**
-    * Registers all 21 custom Core GLSL 150 shaders for the Zoltraak Cinematic rendering pipeline.
+    * Registers all 26 custom Core GLSL 150 shaders for the Zoltraak Cinematic rendering pipeline.
     */
    public static void onRegisterShaders(RegisterShadersEvent e) {
       registerSafe(e, "cinematic_singularity_corona", s -> corona = s);
@@ -52,6 +57,8 @@ public final class ZoltraakCinematicShaders {
       registerSafe(e, "unsealing_fire_column", s -> unsealingFireColumn = s);
       registerSafe(e, "cinematic_flare", s -> cinematicFlare = s);
       registerSafe(e, "zoltraak_impact", s -> zoltraakImpact = s);
+      registerSafe(e, "zoltraak_blast_dome", DefaultVertexFormat.POSITION_TEX_COLOR_NORMAL, s -> zoltraakBlastDome = s);
+      registerSafe(e, "zoltraak_pyroclast", DefaultVertexFormat.POSITION_TEX_COLOR_NORMAL, s -> zoltraakPyroclast = s);
       registerSafe(e, "barrage_fx", s -> barrageFx = s);
       registerSafe(e, "rapid_zoltraak_bullet", s -> rapidBullet = s);
       registerSafe(e, "gargantua", DefaultVertexFormat.POSITION_TEX, s -> gargantua = s);
@@ -60,6 +67,9 @@ public final class ZoltraakCinematicShaders {
       registerSafe(e, "gargantua_composite", DefaultVertexFormat.POSITION_TEX, s -> gargantuaComposite = s);
       registerSafe(e, "gargantua_disk_preview", s -> gargantuaDiskPreview = s);
       registerSafe(e, "gargantua_sphere_preview", DefaultVertexFormat.POSITION_TEX_COLOR_NORMAL, s -> gargantuaSpherePreview = s);
+      registerSafe(e, "explosion_vortex_ring", s -> explosionVortexRing = s);
+      registerSafe(e, "explosion_dome", DefaultVertexFormat.POSITION_TEX_COLOR_NORMAL, s -> explosionDome = s);
+      registerSafe(e, "explosion_dust_wave", s -> explosionDustWave = s);
    }
 
    private static void registerSafe(RegisterShadersEvent e, String name, java.util.function.Consumer<ShaderInstance> onLoaded) {

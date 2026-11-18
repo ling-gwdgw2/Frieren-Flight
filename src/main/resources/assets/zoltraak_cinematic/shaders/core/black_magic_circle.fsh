@@ -61,9 +61,11 @@ void main() {
 
     if (drawMask < 0.005 && leadSpark < 0.01) discard;
 
-    // Sample rune texture
-    vec4 tex = samplePrismatic(Sampler0, p_rot, dir, 0.0025);
-    float runeLuma = max(tex.r, max(tex.g, tex.b)) * tex.a;
+    // Sample crisp rune texture directly for sharpness, keeping RGB dispersion ultra-tight
+    vec4 texCenter = texture(Sampler0, clamp(uv, 0.0, 1.0));
+    vec4 tex = samplePrismatic(Sampler0, p_rot, dir, 0.0008);
+    float rawLuma = max(texCenter.r, max(texCenter.g, texCenter.b)) * texCenter.a;
+    float runeLuma = clamp(rawLuma * 0.82 + smoothstep(0.08, 0.45, rawLuma) * 0.34, 0.0, 1.0);
 
     // Outward pulse wave
     float wave = exp(-pow(fract(r * 2.2 - t * 0.70) * 4.0, 2.0)) * 0.28;

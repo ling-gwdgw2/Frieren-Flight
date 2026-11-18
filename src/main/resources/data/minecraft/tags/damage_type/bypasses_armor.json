@@ -1,6 +1,7 @@
 {
   "replace": false,
   "values": [
-    "zoltraak_cinematic:gargantua"
+    "zoltraak_cinematic:gargantua",
+    "zoltraak_cinematic:explosion"
   ]
 }

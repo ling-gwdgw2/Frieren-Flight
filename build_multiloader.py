@@ -27,6 +27,9 @@ CORE_SHADER_NAMES = [
     'cinematic_plasma_plume',
     'cinematic_singularity_corona',
     'defense_barrier',
+    'explosion_dome',
+    'explosion_dust_wave',
+    'explosion_vortex_ring',
     'gargantua',
     'gargantua_bloom_down',
     'gargantua_bloom_up',
@@ -37,7 +40,9 @@ CORE_SHADER_NAMES = [
     'rapid_zoltraak_bullet',
     'unsealing_fire_column',
     'unsealing_magic_circle',
+    'zoltraak_blast_dome',
     'zoltraak_impact',
+    'zoltraak_pyroclast',
 ]
 
 EXPECTED_RECIPES = [

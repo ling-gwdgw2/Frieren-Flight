@@ -11,6 +11,7 @@ import com.mojang.blaze3d.vertex.VertexSorting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.resources.ResourceLocation;
@@ -102,6 +103,11 @@ public final class DefenseBarrierRenderer extends EntityRenderer<DefenseBarrierE
     @Override
     public ResourceLocation getTextureLocation(DefenseBarrierEntity entity) {
         return TEX_GROUND_CIRCLE;
+    }
+
+    @Override
+    public boolean shouldRender(DefenseBarrierEntity entity, Frustum frustum, double camX, double camY, double camZ) {
+        return entity.shouldRender(camX, camY, camZ);
     }
 
     @Override
@@ -280,8 +286,8 @@ public final class DefenseBarrierRenderer extends EntityRenderer<DefenseBarrierE
             double R = DefenseBarrierEntity.DOME_RADIUS * grow * 1.0008;
             float baseVis = fade * grow;
             float guard = ZoltraakRenderPass.irisFadeGuard(baseVis);
-            float coreA = Mth.clamp(baseVis * (0.76F + hitBoost), 0.0F, 0.88F);
-            float haloA = Mth.clamp(baseVis * (0.44F + hitBoost * 0.65F), 0.0F, 0.62F);
+            float coreA = Mth.clamp(baseVis * (0.76F + hitBoost) * 0.48F, 0.0F, 0.44F);
+            float haloA = Mth.clamp(baseVis * (0.44F + hitBoost * 0.65F) * 0.18F, 0.0F, 0.16F);
 
             if (life > 0.0F && coreA > 0.01F) {
                 float coreR = 0.42F * guard;
@@ -343,7 +349,7 @@ public final class DefenseBarrierRenderer extends EntityRenderer<DefenseBarrierE
                     double tLenSqr = tx * tx + ty * ty + tz * tz;
                     if (tLenSqr < 1.0E-8) continue;
                     double invTLen = 1.0 / Math.sqrt(tLenSqr);
-                    float segA = Mth.clamp(arcWeight * baseVis * 0.50F * arcAttn, 0.0F, 0.58F);
+                    float segA = Mth.clamp(arcWeight * baseVis * 0.50F * arcAttn * 0.28F, 0.0F, 0.20F);
                     float segG = ZoltraakRenderPass.irisFadeGuard(segA) * (fpView.active() ? Mth.sqrt(arcAttn) : 1.0F);
                     double arcWidth = arcWeight * fpView.irisWidthScale();
                     ZoltraakRenderPass.emitFeatheredBeamSegment(
@@ -357,7 +363,7 @@ public final class DefenseBarrierRenderer extends EntityRenderer<DefenseBarrierE
             }
 
             if (hasHit) {
-                float impactFade = Mth.clamp((float) Math.exp(-hitAge * 0.22) * fade * 0.95F, 0.0F, 0.96F);
+                float impactFade = Mth.clamp((float) Math.exp(-hitAge * 0.22) * fade * 0.95F * 0.48F, 0.0F, 0.46F);
                 if (impactFade > 0.02F) {
                     float ig = ZoltraakRenderPass.irisFadeGuard(impactFade);
                     Vec3 hitNormal = hit.lengthSqr() > 1.0E-4 ? hit.normalize() : new Vec3(0, 1, 0);
@@ -374,7 +380,7 @@ public final class DefenseBarrierRenderer extends EntityRenderer<DefenseBarrierE
                     );
                     ZoltraakRenderPass.emitFeatheredStarBurst(
                             vc, m, sparkCenter, camRight, camUp, 1.40 + hitAge * 0.16,
-                            0.60F * ig, 0.94F * ig, 1.00F * ig, Mth.clamp(impactFade * 0.88F, 0.0F, 0.92F)
+                            0.60F * ig, 0.94F * ig, 1.00F * ig, Mth.clamp(impactFade * 0.72F, 0.0F, 0.42F)
                     );
                 }
             }
@@ -387,8 +393,8 @@ public final class DefenseBarrierRenderer extends EntityRenderer<DefenseBarrierE
             Vec3 normal = pose.normal();
             float baseVis = fade * grow;
             float guard = ZoltraakRenderPass.irisFadeGuard(baseVis);
-            float coreA = Mth.clamp(baseVis * (0.90F + hitBoost), 0.0F, 0.96F);
-            float haloA = Mth.clamp(baseVis * (0.60F + hitBoost * 0.70F), 0.0F, 0.76F);
+            float coreA = Mth.clamp(baseVis * (0.90F + hitBoost) * 0.48F, 0.0F, 0.48F);
+            float haloA = Mth.clamp(baseVis * (0.60F + hitBoost * 0.70F) * 0.18F, 0.0F, 0.18F);
 
             if (life > 0.0F && coreA > 0.01F) {
                 float coreR = 0.45F * guard;

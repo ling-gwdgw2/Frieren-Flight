@@ -77,7 +77,7 @@ public class ZoltraakCinematicBeamEntity extends Entity implements IZoltraakVisu
             SynchedEntityData.defineId(ZoltraakCinematicBeamEntity.class, EntityDataSerializers.BOOLEAN);
 
     public static final int LIFETIME = 46; // Full 2.3 seconds duration
-    public static final int FIRE_TICK = 14; // Exact 0.70 seconds charge matching frierenvoid
+    public static final int FIRE_TICK = 14; // 0.70-second charge phase before beam discharge
 
     private LivingEntity owner;
     private UUID ownerUUID;
@@ -87,6 +87,7 @@ public class ZoltraakCinematicBeamEntity extends Entity implements IZoltraakVisu
     private boolean barrierAbsorbed = false;
     private float barrierAbsorbedAmount = 0.0f;
     private boolean clientFireShockTriggered = false;
+    private boolean clientImpactShockTriggered = false;
     private final Set<Integer> hitEntityIds = new HashSet<>();
 
     public boolean markClientFireShockTriggered() {
@@ -97,9 +98,18 @@ public class ZoltraakCinematicBeamEntity extends Entity implements IZoltraakVisu
         return false;
     }
 
+    public boolean markClientImpactShockTriggered() {
+        if (!clientImpactShockTriggered) {
+            clientImpactShockTriggered = true;
+            return true;
+        }
+        return false;
+    }
+
     public ZoltraakCinematicBeamEntity(EntityType<?> entityType, Level level) {
         super(entityType, level);
         this.noPhysics = true;
+        this.noCulling = true;
     }
 
     @Override
@@ -668,14 +678,23 @@ public class ZoltraakCinematicBeamEntity extends Entity implements IZoltraakVisu
                         }
 
                         // Impact explosion particles at the real obstacle contact point
-                        if (black()) {
-                            serverLevel.sendParticles(ParticleTypes.WITCH, impactPos.x, impactPos.y, impactPos.z, 28, 1.2, 1.2, 1.2, 0.35);
-                            serverLevel.sendParticles(ParticleTypes.SMOKE, impactPos.x, impactPos.y, impactPos.z, 20, 0.8, 0.8, 0.8, 0.08);
-                            serverLevel.sendParticles(ParticleTypes.LARGE_SMOKE, impactPos.x, impactPos.y, impactPos.z, 10, 0.6, 0.6, 0.6, 0.05);
+                        if (mode() == ZoltraakMode.LARGE) {
+                            if (black()) {
+                                serverLevel.sendParticles(ParticleTypes.WITCH, impactPos.x, impactPos.y, impactPos.z, 28, 1.2, 1.2, 1.2, 0.35);
+                                serverLevel.sendParticles(ParticleTypes.SMOKE, impactPos.x, impactPos.y, impactPos.z, 20, 0.8, 0.8, 0.8, 0.08);
+                                serverLevel.sendParticles(ParticleTypes.LARGE_SMOKE, impactPos.x, impactPos.y, impactPos.z, 10, 0.6, 0.6, 0.6, 0.05);
+                            } else {
+                                serverLevel.sendParticles(ParticleTypes.ELECTRIC_SPARK, impactPos.x, impactPos.y, impactPos.z, 36, 1.2, 1.2, 1.2, 0.45);
+                                serverLevel.sendParticles(ParticleTypes.POOF, impactPos.x, impactPos.y, impactPos.z, 16, 0.8, 0.8, 0.8, 0.12);
+                                serverLevel.sendParticles(ParticleTypes.FLASH, impactPos.x, impactPos.y, impactPos.z, 1, 0.0, 0.0, 0.0, 0.0);
+                            }
                         } else {
-                            serverLevel.sendParticles(ParticleTypes.ELECTRIC_SPARK, impactPos.x, impactPos.y, impactPos.z, 36, 1.2, 1.2, 1.2, 0.45);
-                            serverLevel.sendParticles(ParticleTypes.POOF, impactPos.x, impactPos.y, impactPos.z, 16, 0.8, 0.8, 0.8, 0.12);
-                            serverLevel.sendParticles(ParticleTypes.FLASH, impactPos.x, impactPos.y, impactPos.z, 1, 0.0, 0.0, 0.0, 0.0);
+                            // Keep custom 3D pyroclast smoke clean of chunky vanilla POOF/SMOKE sprites; keep only crisp sparks
+                            if (black()) {
+                                serverLevel.sendParticles(ParticleTypes.REVERSE_PORTAL, impactPos.x, impactPos.y, impactPos.z, 18, 0.9, 0.9, 0.9, 0.45);
+                            } else {
+                                serverLevel.sendParticles(ParticleTypes.ELECTRIC_SPARK, impactPos.x, impactPos.y, impactPos.z, 22, 0.9, 0.9, 0.9, 0.45);
+                            }
                         }
                     }
 
@@ -901,6 +920,24 @@ public class ZoltraakCinematicBeamEntity extends Entity implements IZoltraakVisu
         this.maxRange = compound.getFloat("MaxRange");
         setColorTheme(compound.getInt("ColorTheme"));
         setMode(ZoltraakMode.from(compound.getInt("Mode")));
+    }
+
+    @Override
+    public boolean shouldRender(double x, double y, double z) {
+        return true;
+    }
+
+    @Override
+    public boolean shouldRenderAtSqrDistance(double distance) {
+        return distance < 512.0d * 512.0d;
+    }
+
+    @Override
+    public AABB getBoundingBoxForCulling() {
+        Vec3 start = visualOrigin(1.0F);
+        Vec3 tip = end();
+        double inflate = mode() == ZoltraakMode.LARGE ? 26.0d : 14.0d;
+        return new AABB(start, tip).inflate(inflate);
     }
 
     @Override

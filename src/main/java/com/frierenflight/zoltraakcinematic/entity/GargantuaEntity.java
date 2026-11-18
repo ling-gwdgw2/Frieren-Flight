@@ -290,7 +290,6 @@ public class GargantuaEntity extends Entity implements TraceableEntity, OwnableE
         int tearEnd = getTearEndTick();
         int holdEnd = getHoldEndTick();
         int critEnd = getCriticalEndTick();
-        int blastTick = getBlastTick();
         if (age < (float) tearEnd) {
             float p = smoothstep(age / (float) tearEnd);
             return Mth.clamp(0.15f + (GRAVITATIONAL_RADIUS - 0.15f) * p, 0.15f, GRAVITATIONAL_RADIUS);
@@ -299,15 +298,15 @@ public class GargantuaEntity extends Entity implements TraceableEntity, OwnableE
             return GRAVITATIONAL_RADIUS;
         }
         if (age <= (float) critEnd) {
-            // Critical gravitational implosion: compresses inward before detonating
-            float p = smoothstep((age - (float) holdEnd) / ((float) critEnd - (float) holdEnd));
-            return Mth.clamp(GRAVITATIONAL_RADIUS - 2.2f * p, 1.8f, GRAVITATIONAL_RADIUS);
+            // Accelerating gravitational pinch inward before relativistic collapse snap
+            float p = Mth.clamp((age - (float) holdEnd) / Math.max(1.0f, (float) critEnd - (float) holdEnd), 0.0f, 1.0f);
+            float pinch = p * p * (0.35f + 0.65f * p);
+            return Mth.clamp(GRAVITATIONAL_RADIUS - 1.65f * pinch, 2.35f, GRAVITATIONAL_RADIUS);
         }
-        // Supernova shock expansion: core rapidly blows open into expanding cosmic remnant
-        float postBlast = age - (float) blastTick;
-        float expand = Mth.clamp(postBlast / 85.0f, 0.0f, 1.0f);
-        float easeExpand = 1.0f - (1.0f - expand) * (1.0f - expand);
-        return 1.8f + (GRAVITATIONAL_RADIUS * 2.2f - 1.8f) * easeExpand;
+        // Subtle spatial relaxation after core annihilation (keeps shader blast coordinate frame stable, never balloons the disk)
+        float bp = blastProgress(partialTicks);
+        float recoil = 1.0f - (float) Math.pow(1.0f - bp, 2.2);
+        return 2.35f + 0.75f * recoil;
     }
 
     public float opened(float partialTicks) {
@@ -320,14 +319,15 @@ public class GargantuaEntity extends Entity implements TraceableEntity, OwnableE
             float progress = age / (float) tearEnd;
             return Mth.clamp(smoothstep(progress), 0.0f, 1.0f);
         }
-        if (age <= (float) blastTick + 15.0f) {
-            return 1.0f; // Stays fully open through peak detonation
+        float postDuration = Math.max(20.0f, (float) (maxLife - blastTick));
+        float dissolveStart = (float) blastTick + postDuration * 0.84f;
+        if (age <= dissolveStart) {
+            return 1.0f; // Keep spacetime field fully open across collapse snap & 3D shockwave expansion
         }
         if (age >= (float) maxLife) {
-            return 0.0f; // Completely closed and healed
+            return 0.0f;
         }
-        // Seamless spacetime healing & dissolution from blast until end of lifetime
-        float dissolveProgress = (age - ((float) blastTick + 15.0f)) / ((float) maxLife - ((float) blastTick + 15.0f));
+        float dissolveProgress = (age - dissolveStart) / Math.max(1.0f, (float) maxLife - dissolveStart);
         return Mth.clamp(1.0f - smoothstep(dissolveProgress), 0.0f, 1.0f);
     }
 
@@ -337,13 +337,25 @@ public class GargantuaEntity extends Entity implements TraceableEntity, OwnableE
         int critEnd = getCriticalEndTick();
         if (age <= (float) holdEnd) return 0.0f;
         if (age >= (float) critEnd) return 1.0f;
-        return smoothstep((age - (float) holdEnd) / ((float) critEnd - (float) holdEnd));
+        float p = Mth.clamp((age - (float) holdEnd) / Math.max(1.0f, (float) critEnd - (float) holdEnd), 0.0f, 1.0f);
+        return Mth.clamp(p * p * (1.20f - 0.20f * p), 0.0f, 1.0f);
+    }
+
+    public boolean isBlasting(float partialTicks) {
+        return getVisualAgeTicks(partialTicks) >= (float) getBlastTick();
+    }
+
+    public float blastProgress(float partialTicks) {
+        float age = getVisualAgeTicks(partialTicks);
+        int blastTick = getBlastTick();
+        if (age < (float) blastTick) return 0.0f;
+        float duration = Math.max(20.0f, (float) (getMaxLifetimeTicks() - blastTick));
+        return Mth.clamp((age - (float) blastTick) / duration, 0.0f, 1.0f);
     }
 
     public float blastFlash(float partialTicks) {
-        float age = getVisualAgeTicks(partialTicks) - (float) getBlastTick();
-        if (age < 0.0f || age > 75.0f) return 0.0f;
-        float p = age / 75.0f;
+        if (!isBlasting(partialTicks)) return 0.0f;
+        float p = blastProgress(partialTicks);
         return (1.0f - p) * (1.0f - p);
     }
 
@@ -368,12 +380,11 @@ public class GargantuaEntity extends Entity implements TraceableEntity, OwnableE
             return 1.0f;
         }
         if (age <= (float) critEnd) {
-            return 1.0f + 3.0f * criticality(partialTicks);
+            return 1.0f + 0.45f * criticality(partialTicks);
         }
         if (age <= (float) maxLife) {
-            float blast = blastFlash(partialTicks);
-            float open = opened(partialTicks);
-            return (1.0f + 3.5f * blast) * open;
+            float bp = blastProgress(partialTicks);
+            return (1.0f + 0.25f * (1.0f - bp)) * opened(partialTicks);
         }
         return 0.0f;
     }
@@ -401,7 +412,7 @@ public class GargantuaEntity extends Entity implements TraceableEntity, OwnableE
     @Override
     public AABB getBoundingBoxForCulling() {
         Vec3 c = centre(1.0f);
-        double r = 160.0;
+        double r = 256.0;
         return new AABB(c.x - r, c.y - r, c.z - r, c.x + r, c.y + r, c.z + r);
     }
 
@@ -589,19 +600,9 @@ public class GargantuaEntity extends Entity implements TraceableEntity, OwnableE
                 }
             }
 
-            // Supernova Detonation Screen Flash (Rendered smoothly via triggerFlash with distance falloff)
-            if (entity.getVisualAgeTicks(0.0f) >= (float) entity.getBlastTick() && !entity.clientBlastTriggered) {
+            // Blast cue is handled cohesively by GargantuaScreenFx (audio) and the 4-pass shader Impact Frame
+            if (entity.isBlasting(0.0f) && !entity.clientBlastTriggered) {
                 entity.clientBlastTriggered = true;
-                net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
-                if (mc.player != null) {
-                    double dist = mc.player.position().distanceTo(entity.centre(1.0f));
-                    double maxDist = 160.0;
-                    if (dist <= maxDist) {
-                        float factor = (float) Math.max(0.15, 1.0 - (dist / maxDist));
-                        int duration = Math.max(12, Math.round(45.0f * factor));
-                        com.frierenflight.zoltraakcinematic.client.ZoltraakCinematicClientEvents.triggerFlash(duration, factor);
-                    }
-                }
             }
         }
 

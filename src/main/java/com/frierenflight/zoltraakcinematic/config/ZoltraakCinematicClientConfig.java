@@ -42,6 +42,7 @@ public class ZoltraakCinematicClientConfig {
     public static final ModConfigSpec.DoubleValue BARRIER_GLOW;
     public static final ModConfigSpec.DoubleValue GARGANTUA_GLOW;
     public static final ModConfigSpec.DoubleValue QUAL_GLOW;
+    public static final ModConfigSpec.DoubleValue EXPLOSION_GLOW;
 
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
@@ -172,6 +173,10 @@ public class ZoltraakCinematicClientConfig {
         QUAL_GLOW = builder
                 .comment("Glow brightness for Qual boss effects and sealing stone runes.")
                 .defineInRange("qual", 1.0d, 0.0d, 2.0d);
+
+        EXPLOSION_GLOW = builder
+                .comment("Glow brightness for Crimson Explosion Magic rings, laser, and fireball dome.")
+                .defineInRange("explosion", 1.0d, 0.0d, 2.0d);
 
         builder.pop();
 
@@ -340,5 +345,9 @@ public class ZoltraakCinematicClientConfig {
 
     public static float getQualGlow() {
         return safeGlow(QUAL_GLOW);
+    }
+
+    public static float getExplosionGlow() {
+        return safeGlow(EXPLOSION_GLOW);
     }
 }

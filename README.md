@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <strong>Cinematic Zoltraak (一般攻撃魔法 - ゾルトラーク), Defensive Magic, Flight &amp; Relativistic Black Hole Spells for Iron's Spells 'n Spellbooks</strong><br>
+  <strong>Cinematic Zoltraak (一般攻撃魔法 - ゾルトラーク), Defensive Magic, Flight, Explosion Magic &amp; Relativistic Black Hole Spells for Iron's Spells 'n Spellbooks</strong><br>
   <em>เวอร์ชัน 2.0.0 — รองรับทั้ง Minecraft NeoForge 1.21.1 และ Forge 1.20.1 พร้อมเอนจินเรนเดอร์และ GLSL 150 Shaders ในตัว 100%</em>
 </p>
 
@@ -22,19 +22,19 @@
 
 ## Overview / ภาพรวมม็อด
 
-**Zoltraak: Cinematic Edition** (`zoltraak_cinematic`) is a non-commercial fan modification inspired by *Sousou no Frieren* (*Frieren: Beyond Journey's End*), built on top of **Iron's Spells 'n Spellbooks** for **NeoForge 1.21.1** and **Forge 1.20.1**.
+**Zoltraak: Cinematic Edition** (`zoltraak_cinematic`) is a non-commercial fan modification inspired by *Sousou no Frieren* (*Frieren: Beyond Journey's End*) and *KonoSuba: God's Blessing on This Wonderful World!*, built on top of **Iron's Spells 'n Spellbooks** for **NeoForge 1.21.1** and **Forge 1.20.1**.
 
 In v2.0.0, all rendering, camera choreography, shaders, and audio run completely standalone without external particle-engine dependencies:
-- **Procedural Vector Geometry (Blaze3D & JOML)**: Real-time dynamic ribbons, tapered cylinders, 24-circle barrage arrays, and Class-I Frequency-7 geodesic shields (`492` cells / `1,470` edges).
-- **21 Original GLSL 150 Core Shaders (63 files)**: Dedicated vertex/fragment pipelines including a 4-pass `GL_RGBA16F` relativistic black hole pipeline (`gargantua`, `gargantua_bloom_down`, `gargantua_bloom_up`, `gargantua_composite`), lensing previews, photonic/abyssal beams, hexagonal barriers, shockwaves, and unsealing rituals.
+- **Procedural Vector Geometry (Blaze3D & JOML)**: Real-time dynamic ribbons, tapered cylinders, 24-circle barrage arrays, layered blast debris/embers, and Class-I Frequency-7 geodesic shields (`492` cells / `1,470` edges).
+- **26 Original GLSL 150 Core Shaders (78 files)**: Dedicated vertex/fragment pipelines including a 4-pass `GL_RGBA16F` relativistic black hole pipeline (`gargantua`, `gargantua_bloom_down`, `gargantua_bloom_up`, `gargantua_composite`), lensing previews, photonic/abyssal beams, pyroclastic impact domes (`zoltraak_blast_dome`, `zoltraak_pyroclast`), stylized Explosion Magic pipelines (`explosion_dome`, `explosion_dust_wave`, `explosion_vortex_ring`), hexagonal barriers, shockwaves, and unsealing rituals.
 - **Iris / Oculus & Sodium Compatibility**: Automatic shader-pack detection with deferred emissive passes (`ShaderCompatibility`, `ZoltraakRenderPass`) plus native Sodium Video Settings integration on NeoForge 1.21.1 (`ZoltraakSodiumConfig`).
-- **Keyframe Camera Rig & 15 Synthesized DSP Sounds**: Smooth cutscene camera control (`CinematicRigController`) and custom-synthesized `.ogg` audio effects, with full **English (`en_us`) & Thai (`th_th`)** localization (`203` keys).
+- **Keyframe Camera Rig & 15 Synthesized DSP Sounds**: Smooth cutscene camera control (`CinematicRigController`) and custom-synthesized `.ogg` audio effects, with full **English (`en_us`) & Thai (`th_th`)** localization (`211` keys).
 
 ---
 
 ## Key Features / ฟีเจอร์หลัก
 
-### 1. Magic Schools & Spells (2 สายเวท, 7 คาถา)
+### 1. Magic Schools & Spells (2 สายเวทเฉพาะ + สาย Fire, 8 คาถา)
 | Spell ID | Display Name | School | Highlights |
 | :--- | :--- | :--- | :--- |
 | `zoltraak` | **Zoltraak: Frieren Blast** | `ordinary_magic` | Fast piercing photonic beam with impact shockwave; crouch/sneak triggers **Great Zoltraak** (`LARGE` mode) with extended range and cutscene. |
@@ -44,6 +44,7 @@ In v2.0.0, all rendering, camera choreography, shaders, and audio run completely
 | `defense` | **Defensive Magic (防御魔法)** | `ordinary_magic` | Deploys a hexagonal magic shield in front of the caster, or a **360° Geodesic Dome** when sneaking/double-pressing, while still allowing offensive casting. |
 | `flight` | **Flight Magic (飛行魔法)** | `ordinary_magic` | Free 3D aerial flight with dynamic mana consumption based on altitude and sprint speed, HUD readout, and camera turn-tilt. |
 | `gargantua` | **Gargantua: Event Horizon** | `black_hole` | 4.0-second incantation summoning a supermassive black hole with gravitational light bending, accretion disk, debris pull, and collapse detonation. |
+| `explosion` | **Explosion Magic** | `irons_spellbooks:fire` | 3.5-second Crimson Demon-style incantation channeling stacked sky vortex rings before unleashing a sky strike, sunburst blast dome, crater, full mana drain, and brief exhaustion. |
 
 ### 2. Boss Encounter & Unsealing Ritual
 - **Qual, Elder Sage of Corruption (`qual_boss`)**: Multi-phase aerial boss (`1500` base HP + player scaling) featuring 4-tier combat AI (`QualCataclysmicGoal`, `QualAntiBarrierGoal` with anti-shield Shadow Blink, `QualCombatGoal`, `QualFollowPlayerGoal`).
@@ -161,4 +162,4 @@ python build_multiloader.py --target neoforge --deploy --deploy-dir "path/to/ins
 ### Third-Party Exceptions & Acknowledgments
 - **Cosmic Textures (`textures/cosmic/`)**: NASA Earth Observatory / SVS (Public Domain, 17 U.S.C. § 105) and European Southern Observatory / Solar System Scope (CC BY 4.0). See [`CREDITS.txt`](src/main/resources/assets/zoltraak_cinematic/textures/cosmic/CREDITS.txt).
 - **Ecosystem**: [Iron's Spells 'n Spellbooks](https://github.com/iron431/Irons-Spells-n-Spellbooks) by Iron431, [NeoForge](https://neoforged.net/), [Minecraft Forge](https://files.minecraftforge.net/), [GeckoLib](https://github.com/bernie-g/geckolib), [Curios](https://github.com/TheIllusiveC4/Curios), [Sodium](https://modrinth.com/mod/sodium), and [Iris](https://modrinth.com/mod/iris) / Oculus.
-- **Fan Work Disclaimer**: Non-commercial fan modification inspired by *"Sousou no Frieren"* created by Kanehito Yamada and Tsukasa Abe. Not an official product of Mojang AB, Microsoft Corporation, Shogakukan, or Madhouse.
+- **Fan Work Disclaimer**: Non-commercial fan modification inspired by *"Sousou no Frieren"* created by Kanehito Yamada and Tsukasa Abe, and *"KonoSuba: God's Blessing on This Wonderful World!"* (*Kono Subarashii Sekai ni Shukufuku wo!*) created by Natsume Akatsuki and Kurone Mishima. Not an official product of Mojang AB, Microsoft Corporation, Shogakukan, Madhouse, Kadokawa Corporation, or Studio Deen.

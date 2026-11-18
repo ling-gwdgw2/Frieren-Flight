@@ -1,6 +1,6 @@
 #version 150
 // Copyright (c) 2026 Aling7788565. All Rights Reserved.
-// Pass 3: Bicubic B-Spline + 9-Tap Tent Bloom Upsample Pyramid (Modeled after Gargantua buffer/image.glsl BicubicTexture)
+// Pass 3: Bicubic B-Spline + 9-Tap Tent Bloom Upsample Pyramid
 
 uniform sampler2D HighMipSampler;
 uniform sampler2D LowMipSampler;
@@ -9,7 +9,7 @@ uniform vec4 UpsampleParams;
 in vec2 vUv;
 out vec4 fragColor;
 
-// Exact B-spline cubic filter from Gargantua buffer/image.glsl
+// Standard uniform cubic B-spline basis weights
 vec4 cubic(float x) {
     float x2 = x * x;
     float x3 = x2 * x;

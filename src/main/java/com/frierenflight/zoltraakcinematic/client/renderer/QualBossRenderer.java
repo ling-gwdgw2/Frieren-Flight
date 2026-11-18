@@ -13,6 +13,7 @@ import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
@@ -82,6 +83,11 @@ public class QualBossRenderer extends GeoEntityRenderer<QualBossEntity> {
     }
 
     @Override
+    public boolean shouldRender(QualBossEntity entity, Frustum frustum, double camX, double camY, double camZ) {
+        return entity.shouldRender(camX, camY, camZ);
+    }
+
+    @Override
     public void render(QualBossEntity entity, float entityYaw, float partialTick, PoseStack poseStack, MultiBufferSource bufferSource, int packedLight) {
         // Pass 1: GeckoLib Entity Animation
         super.render(entity, entityYaw, partialTick, poseStack, bufferSource, packedLight);
@@ -129,7 +135,7 @@ public class QualBossRenderer extends GeoEntityRenderer<QualBossEntity> {
             float offset = i * 1.618f;
             float lifeProgress = (gameTime * 0.020f + offset) % 1.0f;
             float alphaFactor = Mth.sin(lifeProgress * (float) Math.PI);
-            float wispA = Mth.clamp(alphaFactor * (isOverdrive ? 0.85f : 0.65f), 0.0f, 0.92f);
+            float wispA = Mth.clamp(alphaFactor * (isOverdrive ? 0.85f : 0.65f) * 0.48f, 0.0f, 0.44f);
             float size = (0.32f + 0.09f * Mth.sin(offset + gameTime * 0.08f)) * alphaFactor;
             if (wispA <= 0.015f || size <= 0.01f) continue;
 
@@ -149,11 +155,11 @@ public class QualBossRenderer extends GeoEntityRenderer<QualBossEntity> {
             float corePulse = 2.05f + 0.40f * Mth.sin(gameTime * 0.8f);
             ZoltraakRenderPass.emitFeatheredStarBurst(
                     quadVc, baseMat, vortexCenter, camRight, camUp, corePulse,
-                    0.80f, 0.24f, 1.00f, 0.90f
+                    0.80f, 0.24f, 1.00f, 0.42f
             );
             ZoltraakRenderPass.emitFeatheredStarBurst(
                     quadVc, baseMat, vortexCenter, camRight, camUp, corePulse * 0.52f,
-                    0.96f, 0.52f, 1.00f, 0.94f
+                    0.96f, 0.52f, 1.00f, 0.48f
             );
             int arms = 4;
             int steps = 12;
@@ -172,7 +178,7 @@ public class QualBossRenderer extends GeoEntityRenderer<QualBossEntity> {
                     if (seg.lengthSqr() < 1.0E-6) continue;
                     Vec3 segSide = seg.cross(camRight.cross(camUp));
                     segSide = segSide.lengthSqr() < 1.0E-5 ? camUp : segSide.normalize();
-                    float sa = Mth.clamp(0.88f * (1.0f - u0), 0.0f, 0.94f);
+                    float sa = Mth.clamp(0.88f * (1.0f - u0) * 0.48f, 0.0f, 0.46f);
                     float sg = ZoltraakRenderPass.irisFadeGuard(sa);
                     ZoltraakRenderPass.emitFeatheredBeamSegment(
                             quadVc, baseMat, p0, p1, segSide,
@@ -189,7 +195,7 @@ public class QualBossRenderer extends GeoEntityRenderer<QualBossEntity> {
             float progress = 1.0f - Math.max(0.0f, (flashTicks - partialTick) / 12.0f);
             if (progress >= 0.0f && progress <= 1.0f) {
                 float radius = 5.2f * (1.0f - (float) Math.exp(-4.5 * progress));
-                float a = Mth.clamp((1.0f - progress) * (1.0f - progress) * 0.92f, 0.0f, 0.96f);
+                float a = Mth.clamp((1.0f - progress) * (1.0f - progress) * 0.42f, 0.0f, 0.44f);
                 if (a > 0.02f) {
                     float ag = ZoltraakRenderPass.irisFadeGuard(a);
                     ZoltraakRenderPass.emitFeatheredRing(

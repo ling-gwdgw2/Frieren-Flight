@@ -564,14 +564,14 @@ public final class GargantuaPreviewRenderer {
         Vec3 side = new Vec3(0.0d, 1.0d, 0.0d).cross(relCenter);
         side = side.lengthSqr() < 1.0e-5d ? new Vec3(1.0d, 0.0d, 0.0d) : side.normalize();
 
-        float power = Mth.clamp(smoothFade * pulse * 0.92f, 0.0f, 0.96f);
+        float power = Mth.clamp(smoothFade * pulse * 0.48f, 0.0f, 0.52f);
         float pg = ZoltraakRenderPass.irisFadeGuard(power);
         double outerHalf = 0.09d + 0.04d * castProgress;
         ZoltraakRenderPass.emitFeatheredBeamSegment(
                 vc, m, topPoint, bottomPoint, side,
                 outerHalf * 0.55d, outerHalf * 2.50d,
                 1.00f * pg, 0.78f * pg, 0.36f * pg, power,
-                0.86f * pg, 0.52f * pg, 0.16f * pg, Mth.clamp(power * 0.68f, 0.0f, 0.80f)
+                0.86f * pg, 0.52f * pg, 0.16f * pg, Mth.clamp(power * 0.58f, 0.0f, 0.38f)
         );
 
         Vec3 worldX = new Vec3(1.0d, 0.0d, 0.0d);
@@ -580,7 +580,7 @@ public final class GargantuaPreviewRenderer {
         ZoltraakRenderPass.emitFeatheredRing(
                 vc, m, Vec3.ZERO, worldX, worldZ,
                 Math.max(0.1d, centerRingR - 0.24d), centerRingR, centerRingR + 0.34d, 32,
-                1.00f * pg, 0.78f * pg, 0.34f * pg, Mth.clamp(power * 0.90f, 0.0f, 0.95f)
+                1.00f * pg, 0.78f * pg, 0.34f * pg, Mth.clamp(power * 0.85f, 0.0f, 0.45f)
         );
 
         Vec3 groundLocal = new Vec3(0.0d, -groundDrop + 0.06d, 0.0d);
@@ -588,12 +588,12 @@ public final class GargantuaPreviewRenderer {
         ZoltraakRenderPass.emitFeatheredRing(
                 vc, m, groundLocal, worldX, worldZ,
                 Math.max(0.2d, reticleR - 0.30d), reticleR, reticleR + 0.42d, 36,
-                1.00f * pg, 0.74f * pg, 0.28f * pg, Mth.clamp(power * 0.90f, 0.0f, 0.95f)
+                1.00f * pg, 0.74f * pg, 0.28f * pg, Mth.clamp(power * 0.85f, 0.0f, 0.45f)
         );
         ZoltraakRenderPass.emitFeatheredRing(
                 vc, m, groundLocal, worldX, worldZ,
                 0.55d, 0.90d, 1.35d, 24,
-                1.00f * pg, 0.90f * pg, 0.68f * pg, Mth.clamp(power * 0.85f, 0.0f, 0.92f)
+                1.00f * pg, 0.90f * pg, 0.68f * pg, Mth.clamp(power * 0.78f, 0.0f, 0.42f)
         );
 
         buffers.endBatch(ZoltraakRenderTypes.IRIS_EMISSIVE_QUAD);

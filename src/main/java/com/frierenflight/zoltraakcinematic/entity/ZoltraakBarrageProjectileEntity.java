@@ -41,7 +41,7 @@ import java.util.List;
 
 /**
  * High-Speed Tapered Projectile for Fern's Rapid Barrage.
- * Implements IZoltraakVisualEntity to leverage frierenvoid's RapidZoltraakRenderer with GREAT_PLUME GLSL shaders.
+ * Implements IZoltraakVisualEntity for RapidZoltraakRenderer with GREAT_PLUME GLSL shaders.
  */
 public class ZoltraakBarrageProjectileEntity extends ThrowableProjectile implements IZoltraakVisualEntity {
     private static final EntityDataAccessor<Integer> DATA_COLOR_THEME =
@@ -114,6 +114,7 @@ public class ZoltraakBarrageProjectileEntity extends ThrowableProjectile impleme
     public ZoltraakBarrageProjectileEntity(EntityType<? extends ThrowableProjectile> entityType, Level level) {
         super(entityType, level);
         this.noPhysics = true;
+        this.noCulling = true;
     }
 
     @Override
@@ -205,8 +206,18 @@ public class ZoltraakBarrageProjectileEntity extends ThrowableProjectile impleme
     }
 
     @Override
+    public boolean shouldRender(double x, double y, double z) {
+        return true;
+    }
+
+    @Override
     public boolean shouldRenderAtSqrDistance(double distance) {
-        return distance < 16384.0;
+        return distance < 384.0d * 384.0d;
+    }
+
+    @Override
+    public AABB getBoundingBoxForCulling() {
+        return new AABB(computeCircleOrigin(1.0F), this.position()).inflate(32.0d);
     }
 
     @Override
@@ -529,7 +540,7 @@ public class ZoltraakBarrageProjectileEntity extends ThrowableProjectile impleme
                 }
             }
 
-            // Authentic frierenvoid rapid impact audio:
+            // Rapid barrage impact audio:
             float pitch = isPurple ? 0.85f : (1.12f + random.nextFloat() * 0.06f);
             level().playSound(null, hitPos.x, hitPos.y, hitPos.z,
                 ModCinematicSounds.ZOLTRAAK_IMPACT.get(), SoundSource.PLAYERS, 0.75f, pitch);

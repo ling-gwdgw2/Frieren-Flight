@@ -9,6 +9,7 @@ import java.util.List;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.MultiBufferSource.BufferSource;
+import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider.Context;
 import net.minecraft.resources.ResourceLocation;
@@ -33,6 +34,11 @@ public final class RapidZoltraakRenderer<T extends Entity & IZoltraakVisualEntit
 
    public ResourceLocation getTextureLocation(T e) {
       return ResourceLocation.fromNamespaceAndPath(ZoltraakCinematicMod.MODID, "textures/spell/zoltraak_magic_circle.png");
+   }
+
+   @Override
+   public boolean shouldRender(T e, Frustum frustum, double camX, double camY, double camZ) {
+      return e.shouldRender(camX, camY, camZ);
    }
 
    public void render(T e, float yaw, float partial, PoseStack pose, MultiBufferSource buffers, int light) {

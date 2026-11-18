@@ -96,7 +96,7 @@ public class QualSealingStoneRenderer implements BlockEntityRenderer<QualSealing
 
     @Override
     public int getViewDistance() {
-        return 128;
+        return 256;
     }
 
     @Override
@@ -138,7 +138,7 @@ public class QualSealingStoneRenderer implements BlockEntityRenderer<QualSealing
         float ticks = blockEntity.getUnsealTicks() + partialTick;
         float pulse = 0.82f + 0.18f * Mth.sin(ticks * 0.35f);
         float circleScale = Math.min(progress * 4.0f, 1.0f) * 1.65f;
-        float circleAlpha = Mth.clamp(Math.min(progress * 5.0f, 1.0f) * pulse * 0.94f, 0.0f, 0.96f);
+        float circleAlpha = Mth.clamp(Math.min(progress * 5.0f, 1.0f) * pulse * 0.48f, 0.0f, 0.48f);
         float circleGuard = ZoltraakRenderPass.irisFadeGuard(circleAlpha);
         float corruptShift = Mth.clamp(progress * 1.8f, 0.0f, 1.0f);
         float cr = Mth.lerp(corruptShift, 0.35f, 0.88f);
@@ -159,7 +159,7 @@ public class QualSealingStoneRenderer implements BlockEntityRenderer<QualSealing
             float fr = cr * circleGuard;
             float fg = cg * circleGuard;
             float fb = cb * circleGuard;
-            for (int stack = 0; stack < 2; stack++) {
+            for (int stack = 0; stack < 1; stack++) {
                 ZoltraakRenderPass.addProxyVertex(circleVc, circleMat, new Vec3(-circleScale, 0.0, -circleScale), 0.0f, 0.0f, fr, fg, fb, circleAlpha, 0.0f, 1.0f, 0.0f);
                 ZoltraakRenderPass.addProxyVertex(circleVc, circleMat, new Vec3( circleScale, 0.0, -circleScale), 1.0f, 0.0f, fr, fg, fb, circleAlpha, 0.0f, 1.0f, 0.0f);
                 ZoltraakRenderPass.addProxyVertex(circleVc, circleMat, new Vec3( circleScale, 0.0,  circleScale), 1.0f, 1.0f, fr, fg, fb, circleAlpha, 0.0f, 1.0f, 0.0f);
@@ -187,7 +187,7 @@ public class QualSealingStoneRenderer implements BlockEntityRenderer<QualSealing
                 float rg = 0.24f * ringGuard;
                 float rb = 1.00f * ringGuard;
                 int segments = 16;
-                for (int stack = 0; stack < 2; stack++) {
+                for (int stack = 0; stack < 1; stack++) {
                     for (int i = 0; i < segments; i++) {
                         float a1 = (float) (i * 2.0 * Math.PI / segments);
                         float a2 = (float) ((i + 1) * 2.0 * Math.PI / segments);
@@ -218,7 +218,7 @@ public class QualSealingStoneRenderer implements BlockEntityRenderer<QualSealing
             ZoltraakRenderPass.emitFeatheredRing(
                     quadVc, mat, new Vec3(0.0, 0.03, 0.0), new Vec3(1.0, 0.0, 0.0), new Vec3(0.0, 0.0, 1.0),
                     Math.max(0.1, circleScale - 0.35), circleScale, circleScale + 0.60, 28,
-                    cr * circleGuard, cg * circleGuard, cb * circleGuard, Mth.clamp(circleAlpha * 0.65f, 0.0f, 0.78f)
+                    cr * circleGuard, cg * circleGuard, cb * circleGuard, Mth.clamp(circleAlpha * 0.35f, 0.0f, 0.24f)
             );
             emittedQuads = true;
         }
@@ -226,7 +226,7 @@ public class QualSealingStoneRenderer implements BlockEntityRenderer<QualSealing
             float beamProgress = Mth.clamp((progress - 0.60f) / 0.40f, 0.0f, 1.0f);
             double height = 28.0 * beamProgress;
             double hw = 0.52 * beamProgress;
-            float ba = Mth.clamp(0.92f * beamProgress, 0.0f, 0.96f);
+            float ba = Mth.clamp(0.48f * beamProgress, 0.0f, 0.48f);
             if (height > 0.1 && ba > 0.01f) {
                 float bg = ZoltraakRenderPass.irisFadeGuard(ba);
                 Vec3 base = Vec3.ZERO;

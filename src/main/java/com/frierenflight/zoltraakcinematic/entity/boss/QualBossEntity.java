@@ -117,10 +117,21 @@ public class QualBossEntity extends AbstractSpellCastingMob implements Enemy, Ge
         super(entityType, level);
         this.xpReward = 100;
         this.setPersistenceRequired();
+        this.noCulling = true;
 
         // Configure 3D Demonic/Witch Levitation & Responsive Flight
         this.moveControl = new QualFlightMoveControl(this);
         this.setNoGravity(true);
+    }
+
+    @Override
+    public boolean shouldRenderAtSqrDistance(double distance) {
+        return distance < 384.0d * 384.0d;
+    }
+
+    @Override
+    public net.minecraft.world.phys.AABB getBoundingBoxForCulling() {
+        return this.getBoundingBox().inflate(12.0d);
     }
 
     public static AttributeSupplier.Builder prepareAttributes() {

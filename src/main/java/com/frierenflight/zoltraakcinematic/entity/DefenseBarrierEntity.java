@@ -69,6 +69,7 @@ public final class DefenseBarrierEntity extends Entity {
         super(type, level);
         this.noPhysics = true;
         this.setNoGravity(true);
+        this.noCulling = true;
     }
 
     @Override
@@ -497,11 +498,21 @@ public final class DefenseBarrierEntity extends Entity {
     }
 
     @Override
+    public boolean shouldRender(double x, double y, double z) {
+        return true;
+    }
+
+    @Override
+    public boolean shouldRenderAtSqrDistance(double distance) {
+        return distance < 384.0d * 384.0d;
+    }
+
+    @Override
     public AABB getBoundingBoxForCulling() {
         LivingEntity c = this.owner();
         return c != null && this.active()
-                ? this.getBoundingBox().minmax(c.getBoundingBox().inflate(6.0))
-                : this.getBoundingBox().inflate(5.0);
+                ? this.getBoundingBox().minmax(c.getBoundingBox().inflate(12.0))
+                : this.getBoundingBox().inflate(12.0);
     }
 
     public record VisualPose(Vec3 center, Vec3 normal, Vec3 right, Vec3 up) {

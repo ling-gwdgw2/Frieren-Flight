@@ -7,7 +7,7 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.LivingEntity;
 
 /**
- * Clean damage application utility modeled after frierenvoid prototype.
+ * Spell damage utility handling rapid invulnerability-frame bypass and magic resistance scaling.
  * Safely handles rapid invulnerability frame bypassing for continuous barrage spells
  * and respects school resistance attributes (Magic Resist) with soft-cap formulas.
  */

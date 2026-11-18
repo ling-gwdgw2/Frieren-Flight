@@ -39,7 +39,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * Pass 1 (gargantua): Relativistic volumetric raymarching into GL_RGBA16F HDR target.
  * Pass 2 (gargantua_bloom_down): 6-level energy-preserving downsample + Gaussian pyramid.
  * Pass 3 (gargantua_bloom_up): 5-level B-spline bicubic + tent upsample pyramid.
- * Pass 4 (gargantua_composite): Analytic gravitational lensing, galactic sky reveal, and image.glsl filmic tonemapping.
+ * Pass 4 (gargantua_composite): Analytic gravitational lensing, galactic sky reveal, and filmic tonemapping.
  */
 public final class GargantuaPostProcessor {
     private static final ResourceLocation NOISE_TEX =
@@ -312,10 +312,13 @@ public final class GargantuaPostProcessor {
                 if (entity == null || entity.isRemoved()) continue;
 
                 float rg = entity.gravitationalRadius(partialTicks);
+                float opened = entity.opened(partialTicks);
                 float brightness = entity.brightness(partialTicks);
-                if (rg < 0.01f || brightness <= 0.0f) continue;
+                if (rg < 0.01f || opened <= 0.0005f || brightness <= 0.0f) continue;
 
-                float blast = entity.blastFlash(partialTicks);
+                boolean isBlasting = entity.isBlasting(partialTicks);
+                float blastProg = isBlasting ? entity.blastProgress(partialTicks) : 0.0f;
+                float crit = entity.criticality(partialTicks);
 
                 Vec3 center = entity.centre(partialTicks);
                 SCRATCH_REL_POS.set(
@@ -325,8 +328,10 @@ public final class GargantuaPostProcessor {
                 );
                 SCRATCH_VIEW_ROT.transformPosition(SCRATCH_REL_POS, SCRATCH_EYE_CENTER);
 
-                // Use scissored screen bounds for a single Gargantua without full-screen blast/worldGlow
-                boolean useScissor = (entities.size() == 1) && !worldGlowActive && blast <= 0.001f;
+                // Use dynamic scissored bounds whenever full-screen worldGlow, late crit vignette, and 4-frame Impact Frame are inactive
+                boolean useScissor = (entities.size() == 1)
+                        && !worldGlowActive
+                        && (isBlasting ? (blastProg >= 0.045f) : (crit < 0.70f));
                 int px0 = 0;
                 int py0 = 0;
                 int px1 = main.width;
@@ -334,7 +339,10 @@ public final class GargantuaPostProcessor {
 
                 if (useScissor) {
                     float uScale = Math.max(rg * 1.65f, 0.05f);
-                    float outerVisualRadius = boundRadiusUnit * uScale * 1.45f;
+                    float sedov = isBlasting ? (float) Math.pow(Math.max(blastProg, 1.0e-4f), 0.54) : 0.0f;
+                    float shockR = 0.42f + 12.2f * sedov;
+                    float activeBoundUnit = isBlasting ? Math.max(boundRadiusUnit, shockR + 4.5f) : boundRadiusUnit;
+                    float outerVisualRadius = activeBoundUnit * uScale * 1.45f;
                     int status = computeProjectedBounds(
                             SCRATCH_EYE_CENTER, outerVisualRadius, projection, main.width, main.height, SCRATCH_BOUNDS
                     );
@@ -408,9 +416,7 @@ public final class GargantuaPostProcessor {
                         ? com.frierenflight.zoltraakcinematic.client.cinematic.CinematicRigController.rigWeight()
                         : 0.0f;
 
-                float opened = entity.opened(partialTicks);
-                float crit = entity.criticality(partialTicks);
-                float critAndBlast = (blast > 0.001f) ? (1.0f + blast) : crit;
+                float critAndBlast = isBlasting ? (1.005f + 0.995f * blastProg) : Math.min(0.998f, crit);
                 float timeSec = ((entity.level().getGameTime() % 72000L) + partialTicks) / 20.0f;
                 float swallowed = (float) Math.min(entity.getSwallowedCount(), 10);
 
@@ -434,10 +440,10 @@ public final class GargantuaPostProcessor {
                 GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER, hdrFbo);
                 GlStateManager._viewport(0, 0, main.width, main.height);
                 GL11.glDisable(GL11.GL_SCISSOR_TEST);
-                GL11.glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-                GL11.glClear(GL11.GL_COLOR_BUFFER_BIT);
 
                 if (useScissor) {
+                    GL11.glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+                    GL11.glClear(GL11.GL_COLOR_BUFFER_BIT);
                     GL11.glEnable(GL11.GL_SCISSOR_TEST);
                     GL11.glScissor(px0, py0, px1 - px0, py1 - py0);
                 }
@@ -491,7 +497,7 @@ public final class GargantuaPostProcessor {
                 }
 
                 // =========================================================================
-                // PASS 4: Analytic Lensing, Galactic Sky & image.glsl Filmic Composite
+                // PASS 4: Analytic Lensing, Galactic Sky & Filmic Composite
                 // =========================================================================
                 postTarget.bindWrite(true);
                 if (useScissor) {

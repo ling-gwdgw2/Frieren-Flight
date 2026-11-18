@@ -18,7 +18,7 @@ public class ModCinematicEntities {
             ENTITIES.register("zoltraak_beam", () -> EntityType.Builder.<ZoltraakCinematicBeamEntity>of(
                             ZoltraakCinematicBeamEntity::new, MobCategory.MISC)
                     .sized(1.2f, 1.2f)
-                    .clientTrackingRange(192)
+                    .clientTrackingRange(256)
                     .updateInterval(1)
                     .fireImmune()
                     .build(ZoltraakCinematicMod.MODID + ":zoltraak_beam"));
@@ -27,7 +27,7 @@ public class ModCinematicEntities {
             ENTITIES.register("zoltraak_barrage_projectile", () -> EntityType.Builder.<com.frierenflight.zoltraakcinematic.entity.ZoltraakBarrageProjectileEntity>of(
                             com.frierenflight.zoltraakcinematic.entity.ZoltraakBarrageProjectileEntity::new, MobCategory.MISC)
                     .sized(0.5f, 0.5f)
-                    .clientTrackingRange(64)
+                    .clientTrackingRange(256)
                     .updateInterval(1)
                     .fireImmune()
                     .build(ZoltraakCinematicMod.MODID + ":zoltraak_barrage_projectile"));
@@ -36,7 +36,7 @@ public class ModCinematicEntities {
             ENTITIES.register("defense_barrier", () -> EntityType.Builder.<com.frierenflight.zoltraakcinematic.entity.DefenseBarrierEntity>of(
                             com.frierenflight.zoltraakcinematic.entity.DefenseBarrierEntity::new, MobCategory.MISC)
                     .sized(3.0f, 3.0f)
-                    .clientTrackingRange(64)
+                    .clientTrackingRange(256)
                     .updateInterval(1)
                     .fireImmune()
                     .build(ZoltraakCinematicMod.MODID + ":defense_barrier"));
@@ -45,7 +45,7 @@ public class ModCinematicEntities {
             ENTITIES.register("qual_boss", () -> EntityType.Builder.<com.frierenflight.zoltraakcinematic.entity.boss.QualBossEntity>of(
                             com.frierenflight.zoltraakcinematic.entity.boss.QualBossEntity::new, MobCategory.MONSTER)
                     .sized(1.0f, 2.8f)
-                    .clientTrackingRange(128)
+                    .clientTrackingRange(256)
                     .updateInterval(1)
                     .fireImmune()
                     .build(ZoltraakCinematicMod.MODID + ":qual_boss"));
@@ -59,6 +59,16 @@ public class ModCinematicEntities {
                     .fireImmune()
                     .noSave()
                     .build(ZoltraakCinematicMod.MODID + ":gargantua"));
+
+    public static final DeferredHolder<EntityType<?>, EntityType<com.frierenflight.zoltraakcinematic.entity.ExplosionMagicEntity>> EXPLOSION =
+            ENTITIES.register("explosion", () -> EntityType.Builder.<com.frierenflight.zoltraakcinematic.entity.ExplosionMagicEntity>of(
+                            com.frierenflight.zoltraakcinematic.entity.ExplosionMagicEntity::new, MobCategory.MISC)
+                    .sized(8.0f, 8.0f)
+                    .clientTrackingRange(256)
+                    .updateInterval(1)
+                    .fireImmune()
+                    .noSave()
+                    .build(ZoltraakCinematicMod.MODID + ":explosion"));
 
     public static void register(IEventBus eventBus) {
         ENTITIES.register(eventBus);

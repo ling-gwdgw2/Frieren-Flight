@@ -41,7 +41,7 @@ public class GargantuaSpell extends AbstractSpell {
             .build();
 
     public GargantuaSpell() {
-        this.baseManaCost = 300;
+        this.baseManaCost = 1000;
         this.manaCostPerLevel = 0;
         this.baseSpellPower = 500;
         this.spellPowerPerLevel = 0;

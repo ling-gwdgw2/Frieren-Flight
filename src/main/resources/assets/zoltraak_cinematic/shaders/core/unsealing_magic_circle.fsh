@@ -25,18 +25,20 @@ void main() {
     ) * 0.0055;
     vec2 uvDistorted = uv + heatDistort;
 
-    // 2. Subtle RGB fringe
-    float distOffset = 0.0035;
+    // 2. Crisp unshifted rune luminance with tight subtle RGB edge fringe
+    float distOffset = 0.0009;
     vec2 uv_r = uvDistorted - dir * distOffset;
     vec2 uv_g = uvDistorted;
     vec2 uv_b = uvDistorted + dir * distOffset;
 
+    vec4 centerTex = texture(Sampler0, uvDistorted);
     float rawR = texture(Sampler0, uv_r).r;
     float rawG = texture(Sampler0, uv_g).g;
     float rawB = texture(Sampler0, uv_b).b;
-    float rawA = texture(Sampler0, uv).a;
+    float rawA = centerTex.a;
 
-    float luma = max(rawR, max(rawG, rawB)) * rawA;
+    float rawLuma = max(centerTex.r, max(centerTex.g, centerTex.b)) * rawA;
+    float luma = clamp(rawLuma * 0.82 + smoothstep(0.08, 0.45, rawLuma) * 0.34, 0.0, 1.0);
     if (luma <= 0.003) {
         discard;
     }

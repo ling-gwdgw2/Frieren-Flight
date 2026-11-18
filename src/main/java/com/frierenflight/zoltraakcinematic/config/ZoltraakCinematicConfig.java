@@ -75,6 +75,15 @@ public class ZoltraakCinematicConfig {
     public static final ModConfigSpec.IntValue CHRONOS_WATCH_DURATION_TICKS;
     public static final ModConfigSpec.IntValue CHRONOS_WATCH_COOLDOWN_SEC;
 
+    // --- Explosion Magic ---
+    public static final ModConfigSpec.DoubleValue EXPLOSION_DAMAGE_SCALE;
+    public static final ModConfigSpec.DoubleValue EXPLOSION_RADIUS;
+    public static final ModConfigSpec.BooleanValue EXPLOSION_BREAK_BLOCKS;
+    public static final ModConfigSpec.DoubleValue EXPLOSION_CRATER_DEPTH;
+    public static final ModConfigSpec.BooleanValue EXPLOSION_DRAIN_MANA;
+    public static final ModConfigSpec.BooleanValue EXPLOSION_EXHAUSTION_ENABLED;
+    public static final ModConfigSpec.IntValue EXPLOSION_EXHAUSTION_TICKS;
+
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
 
@@ -260,6 +269,30 @@ public class ZoltraakCinematicConfig {
         CHRONOS_WATCH_COOLDOWN_SEC = builder
                 .comment("Cooldown in seconds for the Chronos Time Watch.")
                 .defineInRange("watchCooldownSec", 60, 10, 600);
+        builder.pop();
+
+        builder.push("explosion_magic");
+        EXPLOSION_DAMAGE_SCALE = builder
+                .comment("Damage multiplier for Explosion Magic detonation.")
+                .defineInRange("explosionDamageScale", 1.0d, 0.1d, 5.0d);
+        EXPLOSION_RADIUS = builder
+                .comment("Maximum blast and crater radius (in blocks) for Explosion Magic.")
+                .defineInRange("explosionRadius", 22.0d, 8.0d, 48.0d);
+        EXPLOSION_BREAK_BLOCKS = builder
+                .comment("Whether Explosion Magic carves a shallow crater and flings real FallingBlockEntity rock debris (also respects mobGriefing).")
+                .define("explosionBreakBlocks", true);
+        EXPLOSION_CRATER_DEPTH = builder
+                .comment("Maximum crater depth (in blocks) at the center of Explosion Magic.")
+                .defineInRange("explosionCraterDepth", 6.0d, 1.0d, 16.0d);
+        EXPLOSION_DRAIN_MANA = builder
+                .comment("If true (and not in Creative), casting Explosion Magic drains all remaining mana to 0.")
+                .define("explosionDrainMana", true);
+        EXPLOSION_EXHAUSTION_ENABLED = builder
+                .comment("If true (and not in Creative), casting Explosion Magic applies brief post-cast exhaustion debuffs.")
+                .define("explosionExhaustionEnabled", true);
+        EXPLOSION_EXHAUSTION_TICKS = builder
+                .comment("Duration in ticks of the post-cast exhaustion effects (100 ticks = 5 seconds).")
+                .defineInRange("explosionExhaustionTicks", 100, 20, 400);
         builder.pop();
 
         SPEC = builder.build();
@@ -478,5 +511,33 @@ public class ZoltraakCinematicConfig {
 
     public static int getChronosWatchCooldownSec() {
         return SPEC.isLoaded() ? CHRONOS_WATCH_COOLDOWN_SEC.get() : 60;
+    }
+
+    public static double getExplosionDamageScale() {
+        return SPEC.isLoaded() ? EXPLOSION_DAMAGE_SCALE.get() : 1.0d;
+    }
+
+    public static double getExplosionRadius() {
+        return SPEC.isLoaded() ? EXPLOSION_RADIUS.get() : 22.0d;
+    }
+
+    public static boolean isExplosionBreakBlocks() {
+        return !SPEC.isLoaded() || EXPLOSION_BREAK_BLOCKS.get();
+    }
+
+    public static double getExplosionCraterDepth() {
+        return SPEC.isLoaded() ? EXPLOSION_CRATER_DEPTH.get() : 6.0d;
+    }
+
+    public static boolean isExplosionDrainMana() {
+        return !SPEC.isLoaded() || EXPLOSION_DRAIN_MANA.get();
+    }
+
+    public static boolean isExplosionExhaustionEnabled() {
+        return !SPEC.isLoaded() || EXPLOSION_EXHAUSTION_ENABLED.get();
+    }
+
+    public static int getExplosionExhaustionTicks() {
+        return SPEC.isLoaded() ? EXPLOSION_EXHAUSTION_TICKS.get() : 100;
     }
 }

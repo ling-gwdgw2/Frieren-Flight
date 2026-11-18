@@ -1,6 +1,6 @@
 #version 150
 // Copyright (c) 2026 Aling7788565. All Rights Reserved.
-// Pass 2: Multi-Octave HDR Bloom Mip Downsample + Gaussian Filter (Modeled after Gargantua buffer/bufferB-D.glsl)
+// Pass 2: Multi-Octave HDR Bloom Mip Downsample + Separable Cross-Gaussian Filter
 
 uniform sampler2D SourceSampler;
 uniform vec4 BloomTexel;
@@ -62,7 +62,15 @@ void main() {
         downCol += (j + k + l + m) * 0.125;
     }
 
-    // Wide Gaussian cross taps using exact bilinear offsets & weights from Gargantua buffer/bufferC.glsl & bufferD.glsl
+    // Short-circuit 12-tap Gaussian cross on strictly black sky regions where all 13 downsample taps are empty
+    vec3 ringMax = max(max(max(a, b), max(c, d)), max(max(e, f), max(g, max(h, i))));
+    vec3 totalPeak = max(ringMax, downCol);
+    if (max(totalPeak.r, max(totalPeak.g, totalPeak.b)) <= 1.0e-6) {
+        fragColor = vec4(downCol, 1.0);
+        return;
+    }
+
+    // Wide Gaussian cross taps using 3-ring normalized bilinear offsets & weights
     const float w1 = 0.29675293;
     const float w2 = 0.09442139;
     const float w3 = 0.01037598;

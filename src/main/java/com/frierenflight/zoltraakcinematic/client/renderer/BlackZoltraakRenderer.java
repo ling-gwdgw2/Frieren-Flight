@@ -8,6 +8,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.MultiBufferSource.BufferSource;
+import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider.Context;
 import net.minecraft.resources.ResourceLocation;
@@ -34,6 +35,11 @@ public final class BlackZoltraakRenderer<T extends Entity & IZoltraakVisualEntit
 
    private static Vec3 ring(Vec3 u, Vec3 v, double angle, double radius) {
       return u.scale(Math.cos(angle) * radius).add(v.scale(Math.sin(angle) * radius));
+   }
+
+   @Override
+   public boolean shouldRender(T e, Frustum frustum, double camX, double camY, double camZ) {
+      return e.shouldRender(camX, camY, camZ);
    }
 
    public void render(T e, float yaw, float partial, PoseStack pose, MultiBufferSource buffers, int light) {
@@ -177,73 +183,12 @@ public final class BlackZoltraakRenderer<T extends Entity & IZoltraakVisualEntit
          }
       }
 
-            float dt = t - e.impactAge();
-      if (e.fired() && e.impact() && dt >= 0.0F && dt < 26.0F) {
-         Vec3 center = e.end().subtract(origin).add(e.normal().scale(0.09));
-         float fade = 1.0F - ease(dt / 26.0F);
-         Vec3 normal = e.normal();
-         Vec3 iu = normal.cross(new Vec3(0.0, 1.0, 0.0));
-         if (iu.lengthSqr() < 0.01) {
-            iu = u;
-         } else {
-            iu = iu.normalize();
-         }
-
-         Vec3 iv = iu.cross(normal).normalize();
-
-         // 1. Expanding 3D impact shockwave dome
-         double domeRadius = (1.5 + dt * 0.36) * 1.2 * e.scale();
-         float domeAlpha = fade * (float)Math.exp(-dt * 0.10) * 0.55F;
-         dome(lines, mat, center, iu, iv, normal, domeRadius, domeAlpha, 0.38F, 0.18F, 0.55F);
-
-         // 2. 3D spark fountain and electric arcs
-         for (int k = 0; k < 56; k++) {
-            double a = k * 2.399;
-            double elevation = 0.20 + (k % 7) * 0.10;
-            double r = (0.3 + dt * (0.22 + (k % 5) * 0.040)) * e.scale();
-            Vec3 ray = ring(iu, iv, a, Math.cos(elevation)).add(normal.scale(Math.sin(elevation) + 0.30)).normalize();
-            Vec3 tip = center.add(ray.scale(r)).add(0.0, -0.007 * dt * dt, 0.0);
-            double sparkLen = (0.25 + 0.45 * fade) * e.scale();
-            Vec3 tail = tip.subtract(ray.scale(sparkLen));
-            float sparkWidth = 0.020F * (float)e.scale();
-            ribbon(lines, mat, tail, tip, camRight, sparkWidth, fade * 0.85F, 0.38F, 0.18F, 0.55F);
-            ribbon(lines, mat, tail, tip, camRight, sparkWidth * 0.45F, fade * 0.95F, 0.88F, 0.72F, 0.98F);
-         }
-
-         flush(buffers, ZoltraakRenderTypes.LIGHT);
-         glow = buffers.getBuffer(ZoltraakRenderTypes.BLACK_GLOW);
-         float burst = (float)Math.exp(-dt * 0.27);
-         quad(glow, mat, center, iu.scale((3.0 + dt * 0.18) * e.scale()), iv.scale((3.0 + dt * 0.18) * e.scale()), 0.008F, 0.006F, 0.014F, burst * 0.7F);
-         quad(glow, mat, center, iu.scale((1.2 + dt * 0.05) * e.scale()), iv.scale((1.2 + dt * 0.05) * e.scale()), 0.008F, 0.006F, 0.014F, burst);
-         if (com.frierenflight.zoltraakcinematic.config.ZoltraakCinematicClientConfig.isLensFlaresEnabled()) {
-            quad(glow, mat, center, iu.scale((5.0 + dt * 0.2) * e.scale()), iv.scale(0.13 * e.scale()), 0.008F, 0.006F, 0.014F, burst);
-            quad(glow, mat, center, iu.scale(0.08 * e.scale()), iv.scale(3.0 * e.scale()), 0.008F, 0.006F, 0.014F, burst);
-         }
-         flush(buffers, ZoltraakRenderTypes.BLACK_GLOW);
-
-         float progress = Mth.clamp(dt / 26.0F, 0.0F, 1.0F);
-         VertexConsumer impact = buffers.getBuffer(ZoltraakRenderTypes.BLACK_IMPACT);
-
-         // 3. Multi-lobe rising impact puffs
-         Vec3 corePos = center.add(normal.scale(0.35 + dt * 0.15));
-         double coreSize = (2.2 + dt * 0.20) * 1.1 * e.scale();
-         quad(impact, mat, corePos, camRight.scale(coreSize), camUp.scale(coreSize), progress, 1.0F, 0.0F, fade);
-
-         for (int k = 0; k < 6; k++) {
-            double angle = k * (Math.PI * 2.0 / 6.0) + t * 0.06;
-            double puffDist = (0.7 + dt * 0.16) * 1.0 * e.scale();
-            double puffHeight = (0.25 + dt * 0.12 + Math.sin(k * 1.5) * 0.15) * e.scale();
-            Vec3 puffPos = center.add(ring(iu, iv, angle, puffDist)).add(normal.scale(puffHeight));
-            double puffSize = (1.5 + dt * 0.16) * 1.0 * e.scale();
-            float puffProgress = Mth.clamp((dt + k * 0.7F) / 26.0F, 0.0F, 1.0F);
-            quad(impact, mat, puffPos, camRight.scale(puffSize), camUp.scale(puffSize), puffProgress, 1.0F, 0.0F, fade * 0.75F);
-         }
-
-         // 4. Ground shockwave ring (mode 1)
-         double surfRadius = (1.4 + dt * 0.10) * 1.0 * e.scale();
-         Vec3 surfCenter = center.add(normal.scale(0.04));
-         quad(impact, mat, surfCenter, iu.scale(surfRadius), iv.scale(surfRadius), progress, 1.0F, 1.0F, fade * 0.85F);
-         flush(buffers, ZoltraakRenderTypes.BLACK_IMPACT);
+      float dt = t - e.impactAge();
+      if (e.fired() && e.impact() && dt >= 0.0F && dt < ZoltraakImpactFx.IMPACT_DURATION) {
+         ZoltraakImpactFx.renderImpact(
+            buffers, mat, lines, origin, e.end(), e.normal(), u, camera, camRight, camUp,
+            t, dt, e.scale(), true, e.mode() == ZoltraakMode.LARGE
+         );
       } else {
          flush(buffers, ZoltraakRenderTypes.LIGHT);
       }
@@ -277,38 +222,6 @@ public final class BlackZoltraakRenderer<T extends Entity & IZoltraakVisualEntit
       b.addVertex(m, (float)a.x, (float)a.y, (float)a.z).setColor(rc, gc, bc, ac);
       b.addVertex(m, (float)c.x, (float)c.y, (float)c.z).setColor(rc, gc, bc, ac);
       b.addVertex(m, (float)d.x, (float)d.y, (float)d.z).setColor(rc, gc, bc, ac);
-   }
-
-   private static void dome(
-      VertexConsumer b, Matrix4f m, Vec3 center, Vec3 iu, Vec3 iv, Vec3 normal, double radius, float alpha, float red, float green, float blue
-   ) {
-      if (alpha < 0.003F) return;
-      int rings = 6;
-      int slices = 16;
-      for (int ringIdx = 0; ringIdx < rings; ringIdx++) {
-         double phi1 = (ringIdx / (double)rings) * (Math.PI * 0.5);
-         double phi2 = ((ringIdx + 1) / (double)rings) * (Math.PI * 0.5);
-         double cos1 = Math.cos(phi1);
-         double sin1 = Math.sin(phi1);
-         double cos2 = Math.cos(phi2);
-         double sin2 = Math.sin(phi2);
-
-         float a1 = alpha * (float)(1.0 - 0.35 * sin1);
-         float a2 = alpha * (float)(1.0 - 0.35 * sin2);
-
-         for (int sliceIdx = 0; sliceIdx < slices; sliceIdx++) {
-            double theta1 = sliceIdx * (Math.PI * 2.0 / slices);
-            double theta2 = (sliceIdx + 1) * (Math.PI * 2.0 / slices);
-
-            Vec3 p00 = center.add(ring(iu, iv, theta1, radius * cos1)).add(normal.scale(radius * sin1));
-            Vec3 p10 = center.add(ring(iu, iv, theta2, radius * cos1)).add(normal.scale(radius * sin1));
-            Vec3 p01 = center.add(ring(iu, iv, theta1, radius * cos2)).add(normal.scale(radius * sin2));
-            Vec3 p11 = center.add(ring(iu, iv, theta2, radius * cos2)).add(normal.scale(radius * sin2));
-
-            tri(b, m, p00, p10, p11, red, green, blue, (a1 + a2) * 0.5F);
-            tri(b, m, p00, p11, p01, red, green, blue, (a1 + a2) * 0.5F);
-         }
-      }
    }
 
    private static void quad(VertexConsumer b, Matrix4f m, Vec3 c, Vec3 u, Vec3 v, float r, float g, float blue, float a) {

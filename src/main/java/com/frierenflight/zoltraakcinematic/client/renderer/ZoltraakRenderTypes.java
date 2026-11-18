@@ -164,6 +164,118 @@ public final class ZoltraakRenderTypes extends RenderType {
          .createCompositeState(false)
    );
 
+   public static final RenderType ZOL_BLAST_DOME = create(
+      "zol_blast_dome",
+      DefaultVertexFormat.POSITION_TEX_COLOR_NORMAL,
+      Mode.TRIANGLES,
+      32768,
+      false,
+      false,
+      CompositeState.builder()
+         .setShaderState(safeShaderTexColorNormal(() -> ZoltraakCinematicShaders.zoltraakBlastDome))
+         .setTransparencyState(ADD)
+         .setCullState(NO_CULL)
+         .setDepthTestState(LEQUAL_DEPTH_TEST)
+         .setWriteMaskState(COLOR_WRITE)
+         .createCompositeState(false)
+   );
+
+   public static final RenderType BLACK_BLAST_DOME = create(
+      "black_zol_blast_dome",
+      DefaultVertexFormat.POSITION_TEX_COLOR_NORMAL,
+      Mode.TRIANGLES,
+      32768,
+      false,
+      false,
+      CompositeState.builder()
+         .setShaderState(safeShaderTexColorNormal(() -> ZoltraakCinematicShaders.zoltraakBlastDome))
+         .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
+         .setCullState(NO_CULL)
+         .setDepthTestState(LEQUAL_DEPTH_TEST)
+         .setWriteMaskState(COLOR_WRITE)
+         .createCompositeState(false)
+   );
+
+   public static final RenderType ZOL_PYROCLAST = create(
+      "zol_pyroclast",
+      DefaultVertexFormat.POSITION_TEX_COLOR_NORMAL,
+      Mode.TRIANGLES,
+      32768,
+      false,
+      false,
+      CompositeState.builder()
+         .setShaderState(safeShaderTexColorNormal(() -> ZoltraakCinematicShaders.zoltraakPyroclast))
+         .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
+         .setCullState(NO_CULL)
+         .setDepthTestState(LEQUAL_DEPTH_TEST)
+         .setWriteMaskState(COLOR_WRITE)
+         .createCompositeState(false)
+   );
+
+   public static final RenderType EXPLOSION_VORTEX_RING = create(
+      "explosion_vortex_ring",
+      DefaultVertexFormat.POSITION_TEX_COLOR,
+      Mode.QUADS,
+      16384,
+      false,
+      false,
+      CompositeState.builder()
+         .setShaderState(safeShader(() -> ZoltraakCinematicShaders.explosionVortexRing))
+         .setTransparencyState(ADD)
+         .setCullState(NO_CULL)
+         .setDepthTestState(LEQUAL_DEPTH_TEST)
+         .setWriteMaskState(COLOR_WRITE)
+         .createCompositeState(false)
+   );
+
+   public static final RenderType EXPLOSION_DOME = create(
+      "explosion_dome",
+      DefaultVertexFormat.POSITION_TEX_COLOR_NORMAL,
+      Mode.TRIANGLES,
+      32768,
+      false,
+      false,
+      CompositeState.builder()
+         .setShaderState(safeShaderTexColorNormal(() -> ZoltraakCinematicShaders.explosionDome))
+         .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
+         .setCullState(NO_CULL)
+         .setDepthTestState(LEQUAL_DEPTH_TEST)
+         .setWriteMaskState(COLOR_WRITE)
+         .createCompositeState(false)
+   );
+
+   public static final RenderType EXPLOSION_DOME_HALO = create(
+      "explosion_dome_halo",
+      DefaultVertexFormat.POSITION_TEX_COLOR_NORMAL,
+      Mode.TRIANGLES,
+      32768,
+      false,
+      false,
+      CompositeState.builder()
+         .setShaderState(safeShaderTexColorNormal(() -> ZoltraakCinematicShaders.explosionDome))
+         .setTransparencyState(ADD)
+         .setCullState(NO_CULL)
+         .setDepthTestState(LEQUAL_DEPTH_TEST)
+         .setWriteMaskState(COLOR_WRITE)
+         .createCompositeState(false)
+   );
+
+   public static final RenderType EXPLOSION_DUST_WAVE = create(
+      "explosion_dust_wave",
+      DefaultVertexFormat.POSITION_TEX_COLOR,
+      Mode.QUADS,
+      16384,
+      false,
+      false,
+      CompositeState.builder()
+         .setShaderState(safeShader(() -> ZoltraakCinematicShaders.explosionDustWave))
+         .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
+         .setCullState(NO_CULL)
+         .setDepthTestState(LEQUAL_DEPTH_TEST)
+         .setWriteMaskState(COLOR_WRITE)
+         .createCompositeState(false)
+   );
+
    public static final RenderType ZOL_BEAM = create(
       "zol_beam",
       DefaultVertexFormat.POSITION_TEX_COLOR,

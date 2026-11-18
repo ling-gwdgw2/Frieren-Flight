@@ -84,6 +84,11 @@
   "entity.zoltraak_cinematic.gargantua": "Gargantua Black Hole",
   "death.attack.gargantua": "%1$s was crushed by the Gargantua Black Hole.",
   "death.attack.gargantua.player": "%1$s was pulled into the Black Hole cast by %2$s.",
+  "spell.zoltraak_cinematic.explosion": "Explosion Magic",
+  "spell.zoltraak_cinematic.explosion.desc": "Channels crimson sky rings over a target before unleashing a catastrophic stylized detonation that drains all remaining mana.",
+  "entity.zoltraak_cinematic.explosion": "Explosion Magic",
+  "death.attack.explosion": "%1$s was obliterated by Explosion Magic.",
+  "death.attack.explosion.player": "%1$s was reduced to ash by %2$s's Explosion Magic.",
   "subtitles.zoltraak_cinematic.singularity_charge": "Black hole compresses",
   "subtitles.zoltraak_cinematic.singularity_active": "Black hole hums",
   "subtitles.zoltraak_cinematic.singularity_explode": "Black hole detonates",
@@ -201,5 +206,8 @@
   "config.zoltraak_cinematic.option.bloom_gargantua.tooltip": "Glow brightness for the black hole core and glowing ring.",
   "config.zoltraak_cinematic.option.bloom_qual": "Qual & Seal Stone",
   "config.zoltraak_cinematic.option.bloom_qual.value": "Qual Boss: %s%%",
-  "config.zoltraak_cinematic.option.bloom_qual.tooltip": "Glow brightness for Qual boss runes and the sealing stone."
+  "config.zoltraak_cinematic.option.bloom_qual.tooltip": "Glow brightness for Qual boss runes and the sealing stone.",
+  "config.zoltraak_cinematic.option.bloom_explosion": "Explosion Magic",
+  "config.zoltraak_cinematic.option.bloom_explosion.value": "Explosion: %s%%",
+  "config.zoltraak_cinematic.option.bloom_explosion.tooltip": "Glow brightness for Explosion Magic sky rings, strike beam, and blast dome."
 }

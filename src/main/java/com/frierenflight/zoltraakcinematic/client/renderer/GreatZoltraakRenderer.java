@@ -7,6 +7,7 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.MultiBufferSource.BufferSource;
+import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider.Context;
 import net.minecraft.resources.ResourceLocation;
@@ -33,6 +34,11 @@ public final class GreatZoltraakRenderer<T extends Entity & IZoltraakVisualEntit
 
    private static Vec3 radial(Vec3 u, Vec3 v, double a, double r) {
       return u.scale(Math.cos(a) * r).add(v.scale(Math.sin(a) * r));
+   }
+
+   @Override
+   public boolean shouldRender(T e, Frustum frustum, double camX, double camY, double camZ) {
+      return e.shouldRender(camX, camY, camZ);
    }
 
    public void render(T e, float yaw, float partial, PoseStack pose, MultiBufferSource buffers, int light) {

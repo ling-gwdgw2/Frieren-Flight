@@ -16,8 +16,8 @@ import net.minecraft.world.phys.Vec3;
  * Calculates camera shake during Gargantua casting, black hole bursts, and final blast.
  */
 public final class GargantuaShake {
-    private static final float SHAKE_TICKS = 55.0f;
-    private static final float SHAKE_STRENGTH = 18.0f;
+    private static final float SHAKE_TICKS = 38.0f;
+    private static final float SHAKE_STRENGTH = 4.2f;
     private static final double SHAKE_RANGE = 128.0d;
 
     private GargantuaShake() {}
@@ -58,23 +58,24 @@ public final class GargantuaShake {
                     openingShake = jolt * distFactor;
                 }
 
-                // 2. Continuous cosmic low rumble while active, escalating exponentially into critical collapse
+                // 2. Continuous cosmic low rumble while active, escalating cleanly into critical collapse
                 float rumble = 0.0f;
                 int critEnd = gargantua.getCriticalEndTick();
                 if (visualAge > (float) tearEnd && visualAge < (float) critEnd) {
                     float distFactor = (float) Mth.clamp(1.0 - dist / 175.0d, 0.0, 1.0);
                     float baseRumble = 0.20f;
                     float crit = gargantua.criticality(partialTick);
-                    rumble = (baseRumble + 4.5f * (crit * crit)) * distFactor;
+                    rumble = (baseRumble + 1.85f * (crit * crit)) * distFactor;
                 }
 
-                // 3. Colossal Supernova Detonation Shockwave at blast tick
+                // 3. Relativistic Supernova Shockwave Snap at blast tick (brisk shock impulse without flipping view)
                 float blastElapsed = visualAge - (float) gargantua.getBlastTick();
                 float blastShake = 0.0f;
                 if (blastElapsed >= 0.0f && blastElapsed <= SHAKE_TICKS) {
                     float timeFactor = 1.0f - blastElapsed / SHAKE_TICKS;
                     float distFactor = (float) Mth.clamp(1.0 - dist / SHAKE_RANGE, 0.0, 1.0);
-                    blastShake = SHAKE_STRENGTH * (timeFactor * timeFactor) * distFactor;
+                    float snapDecay = (float) Math.exp(-blastElapsed * 0.11);
+                    blastShake = SHAKE_STRENGTH * snapDecay * timeFactor * distFactor;
                 }
 
                 maxShake = Math.max(maxShake, Math.max(openingShake, Math.max(rumble, blastShake)));

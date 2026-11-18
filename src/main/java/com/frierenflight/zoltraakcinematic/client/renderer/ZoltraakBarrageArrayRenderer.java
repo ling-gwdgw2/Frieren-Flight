@@ -129,7 +129,7 @@ public class ZoltraakBarrageArrayRenderer {
         List<LivingEntity> checkEntities = new ArrayList<>();
         checkEntities.add(mc.player);
         for (net.minecraft.world.entity.player.Player p : mc.level.players()) {
-            if (p != mc.player && p.distanceToSqr(mc.player) < 4096.0) {
+            if (p != mc.player && p.distanceToSqr(mc.player) < 256.0 * 256.0) {
                 checkEntities.add(p);
             }
         }
@@ -279,7 +279,7 @@ public class ZoltraakBarrageArrayRenderer {
 
                     float currentRadius = baseR * scaleEase;
                     if (irisBridge) {
-                        float a = 0.92f * scaleEase;
+                        float a = 0.46f * scaleEase;
                         if (a > 0.015f && currentRadius > 0.01f) {
                             boolean black = state.colorTheme == 1;
                             float guard = ZoltraakRenderPass.irisFadeGuard(scaleEase);
@@ -290,9 +290,7 @@ public class ZoltraakBarrageArrayRenderer {
                             if (irisPass == 0) {
                                 Vec3 ru = new Vec3(currentRadius, 0.0, 0.0);
                                 Vec3 rv = new Vec3(0.0, currentRadius, 0.0);
-                                for (int s = 0; s < 2; s++) {
-                                    ZoltraakRenderPass.emitTexturedDisc(circleBuilder, mat, Vec3.ZERO, ru, rv, cr, cg, cb, a);
-                                }
+                                ZoltraakRenderPass.emitTexturedDisc(circleBuilder, mat, Vec3.ZERO, ru, rv, cr, cg, cb, a);
                             } else {
                                 Vec3 uUnit = new Vec3(1.0, 0.0, 0.0);
                                 Vec3 vUnit = new Vec3(0.0, 1.0, 0.0);
@@ -300,19 +298,19 @@ public class ZoltraakBarrageArrayRenderer {
                                 float haloG = (black ? 0.16f : 0.78f) * guard;
                                 ZoltraakRenderPass.emitFeatheredRing(
                                         circleBuilder, mat, Vec3.ZERO, uUnit, vUnit,
-                                        currentRadius * 0.58, currentRadius * 1.02, currentRadius * 1.48, 22,
-                                        haloR, haloG, cb, 0.56f * scaleEase
+                                        currentRadius * 0.84, currentRadius * 1.00, currentRadius * 1.18, 22,
+                                        haloR, haloG, cb, 0.18f * scaleEase
                                 );
                                 ZoltraakRenderPass.emitFeatheredStarBurst(
-                                        circleBuilder, mat, Vec3.ZERO, uUnit, vUnit, currentRadius * 1.25,
-                                        cr, cg, cb, 0.34f * scaleEase
+                                        circleBuilder, mat, Vec3.ZERO, uUnit, vUnit, currentRadius * 0.90,
+                                        cr, cg, cb, 0.14f * scaleEase
                                 );
                                 if (state.muzzleTicks[i] > 0) {
                                     float muzzleFrac = Mth.clamp((state.muzzleTicks[i] - partialTick) / 4.0f, 0.0f, 1.0f);
-                                    float shockR = currentRadius * (1.05f + (1.0f - muzzleFrac) * 0.85f);
+                                    float shockR = currentRadius * (1.05f + (1.0f - muzzleFrac) * 0.75f);
                                     ZoltraakRenderPass.emitFeatheredStarBurst(
                                             circleBuilder, mat, Vec3.ZERO, uUnit, vUnit, shockR,
-                                            cr, cg, cb, 0.78f * muzzleFrac * scaleEase
+                                            cr, cg, cb, 0.38f * muzzleFrac * scaleEase
                                     );
                                 }
                             }

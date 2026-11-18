@@ -84,6 +84,11 @@
   "entity.zoltraak_cinematic.gargantua": "หลุมดำ Gargantua",
   "death.attack.gargantua": "%1$s ถูกบดขยี้เข้าสู่หลุมดำ Gargantua",
   "death.attack.gargantua.player": "%1$s ถูกดูดเข้าสู่หลุมดำที่ร่ายโดย %2$s",
+  "spell.zoltraak_cinematic.explosion": "เวทมหาประลัย Explosion",
+  "spell.zoltraak_cinematic.explosion.desc": "ร่ายวงแหวนเวทสีแดงฉานเหนือเป้าหมาย ก่อนปลดปล่อยแรงระเบิดมหาวินาศที่ใช้มานาที่เหลืออยู่ทั้งหมด",
+  "entity.zoltraak_cinematic.explosion": "มหาเวทระเบิด Explosion",
+  "death.attack.explosion": "%1$s ถูกทำลายสิ้นซากด้วยเวท Explosion",
+  "death.attack.explosion.player": "%1$s ถูกเผาเป็นเถ้าถ่านด้วยเวท Explosion ของ %2$s",
   "subtitles.zoltraak_cinematic.singularity_charge": "หลุมดำเริ่มบีบอัดพลังงาน",
   "subtitles.zoltraak_cinematic.singularity_active": "หลุมดำส่งเสียงกึกก้อง",
   "subtitles.zoltraak_cinematic.singularity_explode": "หลุมดำระเบิดยุบตัว",
@@ -201,5 +206,8 @@
   "config.zoltraak_cinematic.option.bloom_gargantua.tooltip": "ปรับความสว่างของแกนหลุมดำและวงแหวนแสง",
   "config.zoltraak_cinematic.option.bloom_qual": "บอสควาลและศิลา",
   "config.zoltraak_cinematic.option.bloom_qual.value": "บอสควาล: %s%%",
-  "config.zoltraak_cinematic.option.bloom_qual.tooltip": "ปรับความสว่างของออร่าบอสควาลและศิลาสะกดมาร"
+  "config.zoltraak_cinematic.option.bloom_qual.tooltip": "ปรับความสว่างของออร่าบอสควาลและศิลาสะกดมาร",
+  "config.zoltraak_cinematic.option.bloom_explosion": "เวทระเบิด Explosion",
+  "config.zoltraak_cinematic.option.bloom_explosion.value": "Explosion: %s%%",
+  "config.zoltraak_cinematic.option.bloom_explosion.tooltip": "ปรับความสว่างของวงแหวนบนฟ้า ลำแสง และโดมระเบิดเวท Explosion"
 }

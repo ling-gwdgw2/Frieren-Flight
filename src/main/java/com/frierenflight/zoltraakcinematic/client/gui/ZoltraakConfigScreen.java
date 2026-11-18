@@ -267,6 +267,9 @@ public class ZoltraakConfigScreen extends Screen {
         addGlowSlider(c2, y + 52, w, h, "bloom_qual",
                 ZoltraakCinematicClientConfig.QUAL_GLOW,
                 ZoltraakCinematicClientConfig.getQualGlow());
+        addGlowSlider(c1, y + 78, w, h, "bloom_explosion",
+                ZoltraakCinematicClientConfig.EXPLOSION_GLOW,
+                ZoltraakCinematicClientConfig.getExplosionGlow());
     }
 
     private void addGlowSlider(int x, int y, int w, int h, String optionKey,
@@ -335,6 +338,7 @@ public class ZoltraakConfigScreen extends Screen {
         ZoltraakCinematicClientConfig.BARRIER_GLOW.set(1.0d);
         ZoltraakCinematicClientConfig.GARGANTUA_GLOW.set(1.0d);
         ZoltraakCinematicClientConfig.QUAL_GLOW.set(1.0d);
+        ZoltraakCinematicClientConfig.EXPLOSION_GLOW.set(1.0d);
         saveConfig();
     }
 

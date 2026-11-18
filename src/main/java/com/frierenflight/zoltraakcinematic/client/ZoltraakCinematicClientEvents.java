@@ -21,7 +21,7 @@ import net.neoforged.neoforge.common.NeoForge;
 /**
  * ZoltraakCinematicClientEvents
  * Handles client-side entity renderer registration, dynamic camera kickback/shake,
- * KilaGraph material pre-compilation, and first-person cinematic exposure flash.
+ * and cinematic exposure flash overlays.
  */
 public class ZoltraakCinematicClientEvents {
 
@@ -31,6 +31,7 @@ public class ZoltraakCinematicClientEvents {
     private static int flashDuration = 0;
     private static int maxFlashDuration = 0;
     private static float flashIntensity = 0.0f;
+    private static int flashColorRgb = 0xFFFFFF;
 
     private static int barrageRumbleTicks = 0;
     private static net.minecraft.client.CameraType originalCameraType = null;
@@ -72,6 +73,8 @@ public class ZoltraakCinematicClientEvents {
         NeoForge.EVENT_BUS.addListener(ZoltraakCinematicClientEvents::onClientTick);
         NeoForge.EVENT_BUS.addListener(ZoltraakCinematicClientEvents::onLevelUnload);
         NeoForge.EVENT_BUS.addListener(com.frierenflight.zoltraakcinematic.client.renderer.ZoltraakBarrageArrayRenderer::renderArray);
+        NeoForge.EVENT_BUS.addListener(com.frierenflight.zoltraakcinematic.client.renderer.ExplosionChargeRenderer::onRenderLevelStage);
+        NeoForge.EVENT_BUS.addListener(com.frierenflight.zoltraakcinematic.client.renderer.ExplosionMagicRenderer::onRenderLevelStage);
         NeoForge.EVENT_BUS.addListener(com.frierenflight.zoltraakcinematic.client.renderer.GargantuaPreviewRenderer::onRenderLevelStage);
         NeoForge.EVENT_BUS.addListener(com.frierenflight.zoltraakcinematic.client.renderer.ZoltraakRenderPass::onRenderLevelStage);
         NeoForge.EVENT_BUS.addListener(com.frierenflight.zoltraakcinematic.client.renderer.GargantuaPostProcessor::onRenderLevelStage);
@@ -176,14 +179,22 @@ public class ZoltraakCinematicClientEvents {
     }
 
     public static void onEntityJoinLevel(net.neoforged.neoforge.event.entity.EntityJoinLevelEvent event) {
-        if (event.getLevel().isClientSide() && event.getEntity() instanceof com.frierenflight.zoltraakcinematic.entity.GargantuaEntity g) {
-            com.frierenflight.zoltraakcinematic.client.renderer.GargantuaPostProcessor.registerClientInstance(g);
+        if (event.getLevel().isClientSide()) {
+            if (event.getEntity() instanceof com.frierenflight.zoltraakcinematic.entity.GargantuaEntity g) {
+                com.frierenflight.zoltraakcinematic.client.renderer.GargantuaPostProcessor.registerClientInstance(g);
+            } else if (event.getEntity() instanceof com.frierenflight.zoltraakcinematic.entity.ExplosionMagicEntity exp) {
+                com.frierenflight.zoltraakcinematic.client.renderer.ExplosionMagicRenderer.registerClientInstance(exp);
+            }
         }
     }
 
     public static void onEntityLeaveLevel(net.neoforged.neoforge.event.entity.EntityLeaveLevelEvent event) {
-        if (event.getLevel().isClientSide() && event.getEntity() instanceof com.frierenflight.zoltraakcinematic.entity.GargantuaEntity g) {
-            com.frierenflight.zoltraakcinematic.client.renderer.GargantuaPostProcessor.unregisterClientInstance(g);
+        if (event.getLevel().isClientSide()) {
+            if (event.getEntity() instanceof com.frierenflight.zoltraakcinematic.entity.GargantuaEntity g) {
+                com.frierenflight.zoltraakcinematic.client.renderer.GargantuaPostProcessor.unregisterClientInstance(g);
+            } else if (event.getEntity() instanceof com.frierenflight.zoltraakcinematic.entity.ExplosionMagicEntity exp) {
+                com.frierenflight.zoltraakcinematic.client.renderer.ExplosionMagicRenderer.unregisterClientInstance(exp);
+            }
         }
     }
 
@@ -199,6 +210,7 @@ public class ZoltraakCinematicClientEvents {
             shakeIntensity = 0.0f;
             flashDuration = 0;
             flashIntensity = 0.0f;
+            flashColorRgb = 0xFFFFFF;
             barrageRumbleTicks = 0;
             if (forcedThirdPerson && originalCameraType != null) {
                 Minecraft.getInstance().options.setCameraType(originalCameraType);
@@ -208,6 +220,8 @@ public class ZoltraakCinematicClientEvents {
             cameraRestoreDelay = 0;
             com.frierenflight.zoltraakcinematic.client.renderer.GargantuaPostProcessor.release();
             com.frierenflight.zoltraakcinematic.client.renderer.GargantuaPreviewRenderer.resetState();
+            com.frierenflight.zoltraakcinematic.client.renderer.ExplosionChargeRenderer.resetState();
+            com.frierenflight.zoltraakcinematic.client.renderer.ExplosionMagicRenderer.resetState();
         }
     }
 
@@ -218,6 +232,7 @@ public class ZoltraakCinematicClientEvents {
         event.registerEntityRenderer(ModCinematicEntities.DEFENSE_BARRIER.get(), com.frierenflight.zoltraakcinematic.client.renderer.DefenseBarrierRenderer::new);
         event.registerEntityRenderer(ModCinematicEntities.QUAL_BOSS.get(), com.frierenflight.zoltraakcinematic.client.renderer.QualBossRenderer::new);
         event.registerEntityRenderer(ModCinematicEntities.GARGANTUA.get(), com.frierenflight.zoltraakcinematic.client.renderer.GargantuaRenderer::new);
+        event.registerEntityRenderer(ModCinematicEntities.EXPLOSION.get(), com.frierenflight.zoltraakcinematic.client.renderer.ExplosionMagicRenderer::new);
         event.registerBlockEntityRenderer(ModCinematicBlocks.QUAL_SEALING_STONE_BE.get(), QualSealingStoneRenderer::new);
     }
 
@@ -249,6 +264,24 @@ public class ZoltraakCinematicClientEvents {
                 shakeDuration = Math.max(shakeDuration, (int) (4 * factor));
                 shakeIntensity = Math.max(shakeIntensity, 0.65f * factor * shakeMult);
             }
+        }
+    }
+
+    /**
+     * Triggers concussive camera thump when a Zoltraak beam detonates on impact near the viewer.
+     */
+    public static void triggerImpactShock(ZoltraakCinematicBeamEntity beam, Vec3 impactPos) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null) return;
+        if (!com.frierenflight.zoltraakcinematic.config.ZoltraakCinematicClientConfig.isCameraShakeEnabled()) return;
+
+        double dist = mc.player.position().distanceTo(impactPos);
+        double maxDist = 48.0 * beam.scale();
+        if (dist < maxDist) {
+            float shakeMult = com.frierenflight.zoltraakcinematic.config.ZoltraakCinematicClientConfig.getShakeStrength();
+            float factor = (float) Math.pow(1.0 - dist / maxDist, 1.35);
+            shakeDuration = Math.max(shakeDuration, Math.max(3, (int) (7 * factor)));
+            shakeIntensity = Math.max(shakeIntensity, 0.92F * factor * shakeMult);
         }
     }
 
@@ -311,14 +344,39 @@ public class ZoltraakCinematicClientEvents {
     }
 
     public static void triggerFlash(int duration, float intensity) {
+        triggerFlash(duration, intensity, 0xFFFFFF);
+    }
+
+    public static void triggerFlash(int duration, float intensity, int rgb) {
         if (!com.frierenflight.zoltraakcinematic.config.ZoltraakCinematicClientConfig.isScreenFlashEnabled()) return;
         flashDuration = duration;
         maxFlashDuration = duration;
         flashIntensity = intensity * com.frierenflight.zoltraakcinematic.config.ZoltraakCinematicClientConfig.getFlashStrength();
+        flashColorRgb = rgb & 0xFFFFFF;
+    }
+
+    public static void triggerExplosionDetonation(com.frierenflight.zoltraakcinematic.entity.ExplosionMagicEntity exp) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null) return;
+
+        Vec3 targetPos = exp.getTargetPos();
+        double dist = mc.player.position().distanceTo(targetPos);
+        double maxDist = Math.max(72.0, exp.getRadius() * 4.0);
+        if (dist >= maxDist) return;
+
+        float factor = (float) Math.pow(1.0 - dist / maxDist, 1.2);
+        if (com.frierenflight.zoltraakcinematic.config.ZoltraakCinematicClientConfig.isCameraShakeEnabled()) {
+            float shakeMult = com.frierenflight.zoltraakcinematic.config.ZoltraakCinematicClientConfig.getShakeStrength();
+            shakeDuration = Math.max(shakeDuration, Math.max(6, (int) (16 * factor)));
+            shakeIntensity = Math.max(shakeIntensity, 2.35F * factor * shakeMult);
+        }
+
+        float flashScale = mc.options.getCameraType().isFirstPerson() ? 0.94F : 0.58F;
+        triggerFlash(7, flashScale * factor, 0xFFE8A0);
     }
 
     /**
-     * Renders a brief high-exposure blinding white flash and chromatic edge fringe in First-Person.
+     * Renders a brief high-exposure blinding flash and chromatic edge fringe in First-Person.
      */
     public static void onRenderGui(RenderGuiEvent.Post event) {
         if (flashDuration > 0 && maxFlashDuration > 0) {
@@ -329,8 +387,8 @@ public class ZoltraakCinematicClientEvents {
                 int w = event.getGuiGraphics().guiWidth();
                 int h = event.getGuiGraphics().guiHeight();
 
-                // High-exposure blinding white/cyan flash overlay
-                int flashColor = (alpha << 24) | 0xFFFFFF;
+                // High-exposure blinding flash overlay (supports warm gold for Explosion or pure white)
+                int flashColor = (alpha << 24) | (flashColorRgb & 0xFFFFFF);
                 event.getGuiGraphics().fill(0, 0, w, h, flashColor);
 
                 // Screen edge color fringe (cyan left, violet right)
@@ -474,6 +532,13 @@ public class ZoltraakCinematicClientEvents {
                             && beam.markClientFireShockTriggered()) {
                         triggerFireShock(beam, beam.visualOrigin(1.0f));
                     }
+                    if (beam.fired()
+                            && beam.impact()
+                            && beam.mode() != com.frierenflight.zoltraakcinematic.client.renderer.ZoltraakMode.LARGE
+                            && beam.age(1.0f) >= beam.impactAge()
+                            && beam.markClientImpactShockTriggered()) {
+                        triggerImpactShock(beam, beam.end());
+                    }
                 } else if (entity instanceof com.frierenflight.zoltraakcinematic.entity.ZoltraakBarrageProjectileEntity proj && !proj.isRemoved()) {
                     if (proj.markClientEffectsTriggered()) {
                         Entity shooter = proj.getOwner();
@@ -484,11 +549,17 @@ public class ZoltraakCinematicClientEvents {
                             triggerBarrageMicroRumble();
                         }
                     }
+                } else if (entity instanceof com.frierenflight.zoltraakcinematic.entity.ExplosionMagicEntity exp && !exp.isRemoved()) {
+                    if (!exp.clientDetonated && exp.tickCount >= com.frierenflight.zoltraakcinematic.entity.ExplosionMagicEntity.DETONATE_TICK) {
+                        exp.clientDetonated = true;
+                        triggerExplosionDetonation(exp);
+                    }
                 }
             }
         }
 
         com.frierenflight.zoltraakcinematic.client.renderer.ZoltraakBarrageArrayRenderer.clientTick();
         com.frierenflight.zoltraakcinematic.client.renderer.GargantuaPreviewRenderer.clientTick();
+        com.frierenflight.zoltraakcinematic.client.renderer.ExplosionChargeRenderer.clientTick();
     }
 }

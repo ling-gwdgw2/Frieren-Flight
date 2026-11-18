@@ -35,19 +35,24 @@ Zoltraak: Cinematic Edition is authored under All Rights Reserved and built
 with original clean-room implementations across all Java code, keyframe camera
 rig choreography (CinematicRigController, CameraTrack, CameraTransform,
 CameraRigFrame, CameraObstacleSolver), Blaze3D/JOML procedural geometry,
-custom Qual boss model/animations/textures, synthesized audio, and all 18
-GLSL 150 core shaders:
+custom Qual boss model/animations/textures, synthesized audio, and all 26
+GLSL 150 core shaders (covering all 8 registered spells):
   - Early pre-1.0.4 spell prototypes were permanently replaced in Version 1.0.4.
-  - gargantua.fsh was rewritten clean-room from first-principles astrophysics
-    (RK2 Schwarzschild null-geodesic raymarching, Planck radiation law, analytic
-    Gaussian slab integration, physical 3D Doppler beaming, Roberts R2 dither,
-    and GLSL 150 integer pcgCellHash3 starfield).
+  - gargantua.fsh and its 3 post-processing bloom passes (gargantua_bloom_down,
+    gargantua_bloom_up, gargantua_composite) are written clean-room around
+    inverse-square gravitational geodesic raymarching, lattice 3D value noise &
+    FBM accretion disk rendering, blackbody/plasma shading, Karis-weighted HDR
+    downsampling, bicubic B-spline upsampling, and ACES filmic tone mapping.
+  - Explosion Magic & pyroclastic impact shaders (explosion_dome,
+    explosion_dust_wave, explosion_vortex_ring, zoltraak_blast_dome,
+    zoltraak_pyroclast) are authored clean-room in GLSL 150 with multi-pass
+    additive/translucent volumetric layering.
   - client/cinematic/ was rewritten from scratch around an original keyframe
     timeline and camera obstacle solver architecture.
   - qual_boss (.geo.json, .animation.json, .png, _glowmask.png) is a clean-room
     original creation with zero third-party skins or character models.
 
-Protected Code & GLSL 150 Core Shaders (18 Programs — All Rights Reserved):
+Protected Code & GLSL 150 Core Shaders (26 Programs — All Rights Reserved):
   - barrage_fx (.fsh, .vsh, .json)
   - black_magic_circle (.fsh, .vsh, .json)
   - cinematic_abyssal_beam (.fsh, .vsh, .json)
@@ -58,12 +63,20 @@ Protected Code & GLSL 150 Core Shaders (18 Programs — All Rights Reserved):
   - cinematic_plasma_plume (.fsh, .vsh, .json)
   - cinematic_singularity_corona (.fsh, .vsh, .json)
   - defense_barrier (.fsh, .vsh, .json)
+  - explosion_dome (.fsh, .vsh, .json)
+  - explosion_dust_wave (.fsh, .vsh, .json)
+  - explosion_vortex_ring (.fsh, .vsh, .json)
   - gargantua (.fsh, .vsh, .json)
+  - gargantua_bloom_down (.fsh, .vsh, .json)
+  - gargantua_bloom_up (.fsh, .vsh, .json)
+  - gargantua_composite (.fsh, .vsh, .json)
   - gargantua_disk_preview & gargantua_sphere_preview (.fsh, .vsh, .json)
   - magic_circle (.fsh, .vsh, .json)
   - rapid_zoltraak_bullet (.fsh, .vsh, .json)
   - unsealing_fire_column & unsealing_magic_circle (.fsh, .vsh, .json)
+  - zoltraak_blast_dome (.fsh, .vsh, .json)
   - zoltraak_impact (.fsh, .vsh, .json)
+  - zoltraak_pyroclast (.fsh, .vsh, .json)
 
 Original Image & Audio Assets (Freely Permitted for Use As Desired):
   - Image / Texture Assets (*.png, logo.png):
@@ -119,8 +132,10 @@ Detailed source URLs and attributions are preserved in textures/cosmic/CREDITS.t
 -------------------------------------
 Zoltraak: Cinematic Edition is a free, non-commercial fan modification inspired
 by "Sousou no Frieren" (Frieren: Beyond Journey's End) created by Kanehito
-Yamada and Tsukasa Abe. Not an official product of Mojang AB, Microsoft
-Corporation, Shogakukan, or Madhouse.
+Yamada and Tsukasa Abe, and "KonoSuba: God's Blessing on This Wonderful World!"
+(Kono Subarashii Sekai ni Shukufuku wo!) created by Natsume Akatsuki and Kurone
+Mishima. Not an official product of Mojang AB, Microsoft Corporation,
+Shogakukan, Madhouse, Kadokawa Corporation, or Studio Deen.
 
 
 6. THAI SUMMARY / สรุปประกาศสิทธิ์การใช้งาน (ภาษาไทย)
