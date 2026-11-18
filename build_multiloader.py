@@ -69,8 +69,6 @@ REQUIRED_ASSETS = [
     'assets/zoltraak_cinematic/textures/entity/qual_boss.png',
     'assets/zoltraak_cinematic/textures/entity/qual_boss_glowmask.png',
     'assets/zoltraak_cinematic/textures/effect/noise_tile.png',
-    'assets/zoltraak_cinematic/textures/cosmic/milky_way.jpg',
-    'assets/zoltraak_cinematic/textures/cosmic/CREDITS.txt',
 ]
 
 NEOFORGE_ONLY_FILES = {
@@ -395,6 +393,8 @@ def copy_forge_resources(bin_dir):
 
             if rel_posix == f'data/{MOD_ID}/recipe':
                 target_posix = f'data/{MOD_ID}/recipes'
+            elif rel_posix.startswith('data/neoforge/tags/'):
+                target_posix = rel_posix.replace('data/neoforge/tags/', 'data/forge/tags/', 1)
             elif rel_posix.startswith('data/') and re.search(r'/tags/item(?=/|$)', rel_posix):
                 target_posix = re.sub(r'/tags/item(?=/|$)', '/tags/items', rel_posix)
             else:
@@ -876,7 +876,7 @@ def _verify_assets_and_audio(rep, z, names):
     missing_req = [asset for asset in REQUIRED_ASSETS if asset not in names]
     rep.check(
         not missing_req,
-        f"Core assets: All {len(REQUIRED_ASSETS)} required textures, models, cosmic sky, and metadata files present",
+        f"Core assets: All {len(REQUIRED_ASSETS)} required textures, models, and metadata files present",
         f"Missing core assets: {missing_req}",
     )
 

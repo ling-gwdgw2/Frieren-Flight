@@ -50,11 +50,24 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class ExplosionMagicRenderer extends EntityRenderer<ExplosionMagicEntity> {
 
-    public static final float BLAST_DURATION = 96.0F;
+    public static final float BLAST_DURATION = 192.0F;
 
-    /** Inverted cone (funnel) sky ring heights & scales rising above the blast target. */
-    public static final double[] SKY_RING_HEIGHT_FACTORS = { 0.19, 0.34, 0.50, 0.68, 0.89, 1.14 };
-    public static final double[] SKY_RING_SCALE_FACTORS  = { 0.16, 0.25, 0.36, 0.50, 0.68, 1.15 };
+    /**
+     * Vertical sky vortex column profile raised cleanly above the peak fireball dome crown (~26.8..69.3 blocks at 1.0x),
+     * preserving the non-monotonic bulge-and-waist proportions and scaling with explosionSkyHeight.
+     */
+    public static final double SKY_RING_BASE_LIFT = 22.0;
+    public static final double[] SKY_RING_HEIGHT_FACTORS = { 0.22, 0.42, 0.64, 0.88, 1.14, 1.42, 1.72, 2.15 };
+    public static final double[] SKY_RING_SCALE_FACTORS  = { 0.26, 0.20, 0.46, 0.72, 0.48, 0.38, 0.30, 1.18 };
+
+    public static double getSkyRingY(double radius, int ringIndex) {
+        return (SKY_RING_BASE_LIFT + radius * SKY_RING_HEIGHT_FACTORS[ringIndex])
+                * ZoltraakCinematicClientConfig.getExplosionSkyHeight();
+    }
+
+    public static double getSkyApexHeight(double radius) {
+        return getSkyRingY(radius, SKY_RING_HEIGHT_FACTORS.length - 1);
+    }
 
     private static final Set<ExplosionMagicEntity> ACTIVE_ENTITIES =
             Collections.newSetFromMap(new ConcurrentHashMap<>());
@@ -100,12 +113,12 @@ public class ExplosionMagicRenderer extends EntityRenderer<ExplosionMagicEntity>
     private static List<ExplosionMagicEntity> getActiveClientEntities(Minecraft mc, float partial) {
         List<ExplosionMagicEntity> active = new ArrayList<>();
         ACTIVE_ENTITIES.removeIf(e -> e == null || e.isRemoved() || e.level() != mc.level
-                || (e.tickCount + partial) > ExplosionMagicEntity.LIFETIME_TICKS + 4.0F);
+                || (e.tickCount + partial) > e.getLifetimeTicks() + 4.0F);
         active.addAll(ACTIVE_ENTITIES);
         if (mc.level != null) {
             for (Entity e : mc.level.entitiesForRendering()) {
                 if (e instanceof ExplosionMagicEntity exp && !exp.isRemoved()
-                        && (exp.tickCount + partial) <= ExplosionMagicEntity.LIFETIME_TICKS
+                        && (exp.tickCount + partial) <= exp.getLifetimeTicks()
                         && !active.contains(exp)) {
                     ACTIVE_ENTITIES.add(exp);
                     active.add(exp);
@@ -218,7 +231,8 @@ public class ExplosionMagicRenderer extends EntityRenderer<ExplosionMagicEntity>
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null) return;
 
-        float t = entity.tickCount + partial;
+        float timeScale = entity.getTimeScale();
+        float t = (entity.tickCount + partial) / timeScale;
         if (t < 0.0F || t > ExplosionMagicEntity.LIFETIME_TICKS) return;
 
         float bloom = ZoltraakCinematicClientConfig.getExplosionGlow();
@@ -250,56 +264,62 @@ public class ExplosionMagicRenderer extends EntityRenderer<ExplosionMagicEntity>
         }
 
         boolean shadersActive = ShaderCompatibility.useFullDetailPass() && ZoltraakCinematicClientConfig.isWorldGlowActive(true);
-        float vfxBloom = shadersActive ? bloom * 0.64F : bloom;
-        float shaderHaloMult = shadersActive ? 0.38F : 1.0F;
+        float vfxBloom = shadersActive ? bloom * 0.86F : bloom;
+        float shaderHaloMult = shadersActive ? 0.68F : 1.0F;
 
-        // 1. Strike Sequence: Diagonal Beam -> Horizontal Sky Flare -> Persistent Vertical Laser Pillar (t = 0 .. 52)
-        if (t < 52.0F) {
+        // 1. Strike Sequence: Diagonal Beam -> Sky Flare -> Pillar Descent & Compression -> Persistent Pillar (t = 0 .. 118)
+        if (t < 118.0F) {
             emitStrikeAndPersistentLaser(buffers, mat, relTarget, relStart, relCam, camRight, camUp, radius, t, seed, seedNorm, vfxBloom);
         }
 
-        // 2. Detonation & Aftermath Sequence (dt = -0.5 .. 96)
+        // 2. Detonation & Slow-Burning Pyroclastic Aftermath Sequence (dt = -0.5 .. 192)
         if (dt >= -0.5F && dt < BLAST_DURATION) {
             float safeDt = Math.max(0.0F, dt);
             float p = Mth.clamp(safeDt / BLAST_DURATION, 0.0F, 1.0F);
-            float blastScale = (float) (Math.pow(Mth.clamp(safeDt / 9.0F, 0.0F, 1.0F), 0.32) * (0.86 + 0.14 * p));
-            double domeRadius = radius * 0.68 * blastScale;
+            float domeP = Mth.clamp(safeDt / 160.0F, 0.0F, 1.0F);
+            double visualR = radius * ZoltraakCinematicClientConfig.getExplosionDomeScale();
+            float blastScale = (float) (Math.pow(Mth.clamp(safeDt / 16.0F, 0.0F, 1.0F), 0.34) * (0.85 + 0.16 * domeP));
+            double domeRadius = visualR * 0.88 * blastScale;
 
-            // 2a. Stylized Cel-Shaded Sunburst Dome + Fast Spherical Shockwave Shell + Volumetric Bloom Dome
-            Vec3 axX = new Vec3(0.0, 0.0, 1.0);
-            Vec3 axY = new Vec3(1.0, 0.0, 0.0);
-            Vec3 axZ = new Vec3(0.0, 1.0, 0.0);
-            Vec3 domeCenter = relTarget.add(0.0, 0.06, 0.0);
-            float heatFlash = (float) Math.exp(-safeDt * 0.18);
-            float domeFade = 1.0F - smoothstep((p - 0.86F) / 0.14F);
+            // 2a. Organic Pyroclastic Fireball Dome (sub-ground root skirt + churning lobes so ZERO hard half-sphere cut!)
+            Vec3 domeCenter = relTarget.add(0.0, domeRadius * 0.08, 0.0);
+            float heatFlash = (float) Math.exp(-safeDt * 0.058);
+            float domeFade = 1.0F - smoothstep((domeP - 0.64F) / 0.20F);
+            float domeAnimT = safeDt * 0.042F;
 
-            if (domeFade > 0.005F && domeRadius > 0.25) {
+            if (domeFade > 0.005F && domeRadius > 0.25 && domeP < 0.86F) {
                 VertexConsumer domeVc = buffers.getBuffer(ZoltraakRenderTypes.EXPLOSION_DOME);
-                ZoltraakImpactFx.emitSurfaceHemisphereDome(
-                        domeVc, mat, domeCenter, axX, axY, axZ,
-                        domeRadius, 28, 56,
-                        p, heatFlash, 0.0F, domeFade
+                emitPyroclasticExplosionDome(
+                        domeVc, mat, domeCenter, domeRadius,
+                        domeP, heatFlash, 0.0F, domeFade, domeAnimT, 0.055F + 0.065F * domeP
                 );
                 ZoltraakRenderPass.endBatchWithBloom(buffers, ZoltraakRenderTypes.EXPLOSION_DOME, Math.max(0.45F, bloom));
 
                 if (bloom > 0.004F) {
                     VertexConsumer haloVc = buffers.getBuffer(ZoltraakRenderTypes.EXPLOSION_DOME_HALO);
-                    // Exterior 1.38x volumetric bloom corona (tempered under shaderpacks so crimson/amber stays vivid)
-                    if (p < 0.58F) {
-                        ZoltraakImpactFx.emitSurfaceHemisphereDome(
-                                haloVc, mat, domeCenter, axX, axY, axZ,
-                                domeRadius * 1.38, 24, 48,
-                                p, heatFlash, 1.0F, domeFade * (shadersActive ? 0.45F : 0.90F)
+                    // Exterior 1.48x volumetric blast corona (seamlessly wraps terrain base & boiling plasma rim)
+                    if (domeP < 0.74F) {
+                        emitPyroclasticExplosionDome(
+                                haloVc, mat, domeCenter, domeRadius * 1.48,
+                                domeP, heatFlash, 1.0F, domeFade * (shadersActive ? 0.68F : 0.90F), domeAnimT, 0.030F
                         );
                     }
-                    // Fast translucent spherical pressure shockwave dome (dt = 0..16)
-                    if (safeDt < 16.0F) {
-                        float sp = safeDt / 16.0F;
-                        double pressureR = radius * (0.58 + 0.96 * Math.pow(sp, 0.52));
-                        ZoltraakImpactFx.emitSurfaceHemisphereDome(
-                                haloVc, mat, domeCenter, axX, axY, axZ,
-                                pressureR, 20, 40,
-                                sp, 1.0F, 0.60F, (1.0F - sp) * (shadersActive ? 0.68F : 1.0F)
+                    // Primary supersonic spherical pressure shockwave dome (dt = 0..26)
+                    if (safeDt < 26.0F) {
+                        float sp = safeDt / 26.0F;
+                        double pressureR = visualR * (0.68 + 1.24 * Math.pow(sp, 0.50));
+                        emitPyroclasticExplosionDome(
+                                haloVc, mat, domeCenter, pressureR,
+                                sp, 1.0F, 0.60F, (1.0F - sp) * (shadersActive ? 0.84F : 1.0F), domeAnimT, 0.015F
+                        );
+                    }
+                    // Secondary atmospheric reverberation shell (dt = 4..42)
+                    if (safeDt >= 4.0F && safeDt < 42.0F) {
+                        float sp2 = (safeDt - 4.0F) / 38.0F;
+                        double pressureR2 = visualR * (0.82 + 1.48 * Math.pow(sp2, 0.55));
+                        emitPyroclasticExplosionDome(
+                                haloVc, mat, domeCenter, pressureR2,
+                                sp2, 0.65F, 0.60F, (1.0F - sp2) * 0.62F * (shadersActive ? 0.78F : 1.0F), domeAnimT, 0.012F
                         );
                     }
                     ZoltraakRenderPass.endBatchWithBloom(buffers, ZoltraakRenderTypes.EXPLOSION_DOME_HALO, vfxBloom);
@@ -310,63 +330,67 @@ public class ExplosionMagicRenderer extends EntityRenderer<ExplosionMagicEntity>
             if (bloom > 0.004F) {
                 VertexConsumer bloomVc = buffers.getBuffer(ZoltraakRenderTypes.EXPLOSION_VORTEX_RING);
 
-                // Blinding golden-white ignition flash at dt = 0..10
-                if (safeDt < 10.0F) {
-                    float flashFade = (float) Math.exp(-safeDt * 0.34) * (1.0F - smoothstep((safeDt - 5.0F) / 5.0F));
-                    double flashR = radius * (1.28 + 1.50 * smoothstep(safeDt / 8.0F));
-                    emitHorizDiscQuad(bloomVc, mat, relTarget.add(0.0, 0.14, 0.0), flashR, 0.0, 0.96F, 0.10F, 0.98F, flashFade * (shadersActive ? 0.48F : 0.88F));
+                // Blinding golden-white ignition flash at dt = 0..18
+                if (safeDt < 18.0F) {
+                    float flashFade = (float) Math.exp(-safeDt * 0.22) * (1.0F - smoothstep((safeDt - 10.0F) / 8.0F));
+                    double flashR = visualR * (1.42 + 1.75 * smoothstep(safeDt / 14.0F));
+                    emitHorizDiscQuad(bloomVc, mat, relTarget.add(0.0, 0.14, 0.0), flashR, 0.0, 0.96F, 0.10F, 0.98F, flashFade * (shadersActive ? 0.68F : 0.88F));
                     double airR = flashR * 0.68;
-                    emitBillboardQuad(bloomVc, mat, relTarget.add(0.0, airR * 0.92, 0.0), camRight, camUp, flashR * 0.95, airR, 0.92F, 0.10F, 0.98F, flashFade * (shadersActive ? 0.44F : 0.82F));
+                    emitBillboardQuad(bloomVc, mat, relTarget.add(0.0, airR * 0.92, 0.0), camRight, camUp, flashR * 0.95, airR, 0.92F, 0.10F, 0.98F, flashFade * (shadersActive ? 0.64F : 0.82F));
                 }
 
-                // Wide Golden-Amber Ground Light Disc (radius * 2.2)
-                float groundGlowLife = (1.0F - smoothstep(0.0F, 0.88F, p));
+                // Wide Golden-Amber Ground Light Disc (visualR * 2.25) + Base Crater Fire Skirt Blend
+                float groundGlowLife = (1.0F - smoothstep(0.0F, 0.90F, p));
                 if (groundGlowLife > 0.01F) {
-                    double groundLightR = Math.max(radius * 0.95, domeRadius * 2.25);
-                    float palTint = Mth.lerp(smoothstep(0.28F, 0.78F, p), 0.72F, 0.46F);
-                    emitHorizDiscQuad(bloomVc, mat, relTarget.add(0.0, 0.07, 0.0), groundLightR, 0.0, palTint, 0.10F, 0.98F, groundGlowLife * 0.44F * shaderHaloMult);
+                    double groundLightR = Math.max(visualR * 1.15, domeRadius * 2.25);
+                    float palTint = Mth.lerp(smoothstep(0.28F, 0.78F, domeP), 0.74F, 0.46F);
+                    emitHorizDiscQuad(bloomVc, mat, relTarget.add(0.0, 0.07, 0.0), groundLightR, 0.0, palTint, 0.10F, 0.98F, groundGlowLife * 0.46F * shaderHaloMult);
+                    if (domeRadius > 0.5 && domeP < 0.74F) {
+                        float baseBlend = (1.0F - smoothstep(0.0F, 0.74F, domeP)) * 0.54F * shaderHaloMult;
+                        emitHorizDiscQuad(bloomVc, mat, relTarget.add(0.0, 0.14, 0.0), domeRadius * 1.28, 0.0, 0.60F, 0.10F, 0.98F, baseBlend);
+                    }
                 }
 
                 // Bright entry hotspot where vertical laser meets top crown of dome
-                if (safeDt < 26.0F && domeRadius > 0.5) {
-                    float capAlpha = (1.0F - smoothstep(8.0F, 26.0F, safeDt)) * (shadersActive ? 0.56F : 0.88F);
-                    double capR = radius * (0.28 + 0.12 * (1.0F - safeDt / 26.0F));
+                if (safeDt < 46.0F && domeRadius > 0.5) {
+                    float capAlpha = (1.0F - smoothstep(14.0F, 46.0F, safeDt)) * (shadersActive ? 0.76F : 0.90F);
+                    double capR = visualR * (0.34 + 0.16 * (1.0F - safeDt / 46.0F));
                     emitBillboardQuad(bloomVc, mat, relTarget.add(0.0, domeRadius * 0.98, 0.0), camRight, camUp, capR, capR * 0.65, 0.96F, 0.10F, 0.98F, capAlpha);
                 }
 
                 // Swirling Golden-Orange Flame Arcs orbiting soot dome perimeter (Mode 5, g = 0.85)
-                if (p >= 0.22F && p < 0.70F && domeRadius > 1.0) {
-                    float arcP = (p - 0.22F) / 0.48F;
-                    float arcAlpha = (float) Math.sin(arcP * Math.PI) * 0.88F;
-                    emitHorizDiscQuad(bloomVc, mat, relTarget.add(0.0, domeRadius * 0.22, 0.0), domeRadius * 1.18, safeDt * 0.04, 0.74F, 0.85F, 0.98F, arcAlpha);
-                    emitHorizDiscQuad(bloomVc, mat, relTarget.add(0.0, domeRadius * 0.48, 0.0), domeRadius * 0.92, -safeDt * 0.05 + 1.4, 0.68F, 0.85F, 0.98F, arcAlpha * 0.78F);
+                if (p >= 0.16F && p < 0.72F && domeRadius > 1.0) {
+                    float arcP = (p - 0.16F) / 0.56F;
+                    float arcAlpha = (float) Math.sin(arcP * Math.PI) * 0.90F;
+                    emitHorizDiscQuad(bloomVc, mat, relTarget.add(0.0, domeRadius * 0.22, 0.0), domeRadius * 1.18, safeDt * 0.032, 0.74F, 0.85F, 0.98F, arcAlpha);
+                    emitHorizDiscQuad(bloomVc, mat, relTarget.add(0.0, domeRadius * 0.48, 0.0), domeRadius * 0.94, -safeDt * 0.042 + 1.4, 0.68F, 0.85F, 0.98F, arcAlpha * 0.80F);
                 }
 
                 // Soft Crimson-Amber Interior Volumetric Afterglow cloud hovering cleanly above ground
-                if (p >= 0.42F && p < 0.96F) {
-                    float hazeP = (p - 0.42F) / 0.54F;
-                    float hazeAlpha = (float) Math.sin(hazeP * Math.PI) * 0.44F * shaderHaloMult;
-                    double hazeR = radius * 0.85;
-                    emitBillboardQuad(bloomVc, mat, relTarget.add(0.0, hazeR * 0.52, 0.0), camRight, camUp, hazeR * 1.15, hazeR * 0.56, 0.48F, 0.10F, 0.98F, hazeAlpha);
+                if (p >= 0.36F && p < 0.96F) {
+                    float hazeP = (p - 0.36F) / 0.60F;
+                    float hazeAlpha = (float) Math.sin(hazeP * Math.PI) * 0.46F * shaderHaloMult;
+                    double hazeR = visualR * 1.02;
+                    emitBillboardQuad(bloomVc, mat, relTarget.add(0.0, hazeR * 0.54, 0.0), camRight, camUp, hazeR * 1.15, hazeR * 0.56, 0.48F, 0.10F, 0.98F, hazeAlpha);
                 }
 
-                // 3 Concentric Flat Glowing Gold Ground Crater Ripples + 18 Ember Puddles (Mode 5, g = 0.50 & g = 0.10)
-                if (safeDt >= 3.0F && safeDt < 92.0F) {
-                    float cP = (safeDt - 3.0F) / 89.0F;
-                    float cEnv = smoothstep(cP / 0.12F) * (1.0F - smoothstep((cP - 0.56F) / 0.44F));
-                    if (cP > 0.35F) {
-                        float rEnv = (float) Math.sin(Math.min(1.0F, (cP - 0.35F) / 0.62F) * Math.PI) * 0.82F;
-                        emitHorizDiscQuad(bloomVc, mat, relTarget.add(0.0, 0.09, 0.0), radius * 0.36, 0.0, 0.78F, 0.50F, 0.98F, rEnv);
-                        emitHorizDiscQuad(bloomVc, mat, relTarget.add(0.0, 0.10, 0.0), radius * 0.60, 0.0, 0.74F, 0.50F, 0.98F, rEnv * 0.76F);
-                        emitHorizDiscQuad(bloomVc, mat, relTarget.add(0.0, 0.11, 0.0), radius * 0.84, 0.0, 0.68F, 0.50F, 0.98F, rEnv * 0.54F);
+                // 3 Concentric Flat Glowing Gold Ground Crater Ripples + 22 Ember Puddles (Mode 5, g = 0.50 & g = 0.10)
+                if (safeDt >= 4.0F && safeDt < 188.0F) {
+                    float cP = (safeDt - 4.0F) / 184.0F;
+                    float cEnv = smoothstep(cP / 0.10F) * (1.0F - smoothstep((cP - 0.58F) / 0.42F));
+                    if (cP > 0.28F) {
+                        float rEnv = (float) Math.sin(Math.min(1.0F, (cP - 0.28F) / 0.68F) * Math.PI) * 0.85F;
+                        emitHorizDiscQuad(bloomVc, mat, relTarget.add(0.0, 0.09, 0.0), visualR * 0.40, 0.0, 0.78F, 0.50F, 0.98F, rEnv);
+                        emitHorizDiscQuad(bloomVc, mat, relTarget.add(0.0, 0.10, 0.0), visualR * 0.68, 0.0, 0.74F, 0.50F, 0.98F, rEnv * 0.76F);
+                        emitHorizDiscQuad(bloomVc, mat, relTarget.add(0.0, 0.11, 0.0), visualR * 0.96, 0.0, 0.68F, 0.50F, 0.98F, rEnv * 0.56F);
                     }
-                    int puddles = 18;
+                    int puddles = 22;
                     for (int i = 0; i < puddles; i++) {
                         float h1 = hashFloat(seed + i * 37 + 201);
                         float h2 = hashFloat(seed + i * 59 + 211);
                         double pAng = i * (Math.PI * 2.0 / puddles) + h1 * 0.45;
-                        double pDist = radius * (0.42 + 0.98 * h2);
-                        double pSize = 0.55 + 0.65 * h1;
+                        double pDist = visualR * (0.42 + 1.02 * h2);
+                        double pSize = 0.60 + 0.75 * h1;
                         Vec3 puddlePos = relTarget.add(Math.cos(pAng) * pDist, 0.09, Math.sin(pAng) * pDist);
                         emitHorizDiscQuad(bloomVc, mat, puddlePos, pSize, 0.0, 0.74F + 0.10F * h1, 0.10F, 0.98F, cEnv * 0.92F);
                     }
@@ -375,116 +399,144 @@ public class ExplosionMagicRenderer extends EntityRenderer<ExplosionMagicEntity>
                 ZoltraakRenderPass.endBatchWithBloom(buffers, ZoltraakRenderTypes.EXPLOSION_VORTEX_RING, vfxBloom);
             }
 
-            // 2c. Crisp Expanding Outer Orange Shock Ring + Fast Flat Ground Pressure Ring (LIGHT)
+            // 2c. Crisp Expanding Outer Orange Shock Ring + Twin Flat Ground Pressure Rings (LIGHT)
             if (bloom > 0.004F) {
                 VertexConsumer ringVc = buffers.getBuffer(ZoltraakRenderTypes.LIGHT);
-                if (p >= 0.18F && p < 0.78F) {
-                    float sp = (p - 0.18F) / 0.60F;
-                    float sAlpha = (float) Math.sin(sp * Math.PI) * 0.92F;
-                    double shockR = domeRadius * (0.94 + 0.30 * sp);
-                    emitThinHorizRing(ringVc, mat, relTarget.add(0.0, domeRadius * 0.22, 0.0), shockR, 0.26, 40, 1.0F, 0.60F, 0.10F, sAlpha);
+                if (p >= 0.14F && p < 0.72F) {
+                    float sp = (p - 0.14F) / 0.58F;
+                    float sAlpha = (float) Math.sin(sp * Math.PI) * 0.94F;
+                    double shockR = domeRadius * (0.94 + 0.36 * sp);
+                    emitThinHorizRing(ringVc, mat, relTarget.add(0.0, domeRadius * 0.24, 0.0), shockR, 0.30, 40, 1.0F, 0.60F, 0.10F, sAlpha);
                 }
-                if (safeDt >= 1.0F && safeDt < 34.0F) {
-                    float gp = (safeDt - 1.0F) / 33.0F;
-                    float gAlpha = (1.0F - smoothstep(0.35F, 1.0F, gp)) * 0.70F;
-                    double gShockR = radius * (0.65 + 1.38 * Math.pow(gp, 0.56));
-                    emitThinHorizRing(ringVc, mat, relTarget.add(0.0, 0.16, 0.0), gShockR, 0.34 * (1.0 - 0.5 * gp), 40, 0.98F, 0.90F, 0.72F, gAlpha);
+                if (safeDt >= 1.0F && safeDt < 58.0F) {
+                    float gp = (safeDt - 1.0F) / 57.0F;
+                    float gAlpha = (1.0F - smoothstep(0.32F, 1.0F, gp)) * 0.78F;
+                    double gShockR = visualR * (0.72 + 1.92 * Math.pow(gp, 0.54));
+                    emitThinHorizRing(ringVc, mat, relTarget.add(0.0, 0.18, 0.0), gShockR, 0.42 * (1.0 - 0.5 * gp), 44, 0.98F, 0.90F, 0.72F, gAlpha);
+                }
+                if (safeDt >= 6.0F && safeDt < 76.0F) {
+                    float gp2 = (safeDt - 6.0F) / 70.0F;
+                    float gAlpha2 = (1.0F - smoothstep(0.30F, 1.0F, gp2)) * 0.60F;
+                    double gShockR2 = visualR * (0.56 + 1.72 * Math.pow(gp2, 0.58));
+                    emitThinHorizRing(ringVc, mat, relTarget.add(0.0, 0.14, 0.0), gShockR2, 0.28 * (1.0 - 0.45 * gp2), 40, 1.0F, 0.62F, 0.18F, gAlpha2);
                 }
                 ZoltraakRenderPass.endBatchWithBloom(buffers, ZoltraakRenderTypes.LIGHT, bloom);
             }
 
-            // 2d. TWO Tiers of Cream-White Scalloped Clouds on Dome + Dark Soot Smoke Chunks + Ground Dust Wave
+            // 2d. Rising Mushroom Cloud Collars + Dark Soot Smoke Chunks + Long-Sweeping Ground Dust Wave
             VertexConsumer dustVc = buffers.getBuffer(ZoltraakRenderTypes.EXPLOSION_DUST_WAVE);
 
-            // Waist & Crown Cloud Collars (Type 0.0, dt = 0.6..76)
-            if (safeDt >= 0.6F && safeDt < 76.0F) {
-                float wp = Mth.clamp((safeDt - 0.6F) / 75.0F, 0.0F, 1.0F);
-                float wFade = smoothstep(wp / 0.05F) * (1.0F - smoothstep((wp - 0.58F) / 0.42F));
+            // Rising Crown & Waist Cloud Collars (Type 0.0, dt = 1.0..164)
+            if (safeDt >= 1.0F && safeDt < 164.0F) {
+                float wp = Mth.clamp((safeDt - 1.0F) / 163.0F, 0.0F, 1.0F);
+                float wFade = smoothstep(wp / 0.05F) * (1.0F - smoothstep((wp - 0.56F) / 0.44F));
                 if (wFade > 0.008F) {
-                    float crownFade = wFade * (1.0F - smoothstep(0.38F, 0.72F, wp));
+                    float crownFade = wFade * (1.0F - smoothstep(0.42F, 0.82F, wp));
                     if (crownFade > 0.01F) {
-                        int crownCount = 18;
-                        double crownR = domeRadius * (0.56 + 0.14 * wp);
-                        double crownY = domeRadius * 0.74;
-                        double cHalfW = domeRadius * (0.16 + 0.05 * wp);
-                        double cHalfH = domeRadius * (0.072 + 0.025 * wp);
+                        int crownCount = 32;
+                        double crownR = domeRadius * (0.54 + 0.22 * wp);
+                        double crownY = domeRadius * (0.72 + 0.54 * wp);
+                        double cHalfW = domeRadius * (0.19 + 0.09 * wp);
+                        double cHalfH = domeRadius * (0.082 + 0.042 * wp);
                         for (int i = 0; i < crownCount; i++) {
-                            double ang = i * (Math.PI * 2.0 / crownCount) + seedNorm * 4.1;
-                            Vec3 cPos = relTarget.add(Math.cos(ang) * crownR, crownY + cHalfH * 0.14 * Math.cos(i * 2.0), Math.sin(ang) * crownR);
+                            float hj = hashFloat(seed + i * 31 + 101);
+                            float hw = hashFloat(seed + i * 43 + 113);
+                            double ang = i * (Math.PI * 2.0 / crownCount) + seedNorm * 4.1 + (hj - 0.5) * 0.18 + wp * 0.25;
+                            double tierScale = (i % 2 == 0) ? 1.0 : 0.86;
+                            double rCur = crownR * tierScale * (0.92 + 0.16 * hj);
+                            double yCur = crownY + cHalfH * ((i % 2 == 0 ? 0.25 : -0.18) + 0.32 * (hw - 0.5));
+                            Vec3 cPos = relTarget.add(Math.cos(ang) * rCur, yCur, Math.sin(ang) * rCur);
                             float cSeed = ((i * 41 + Math.abs(seed % 83)) % 100) / 100.0F;
-                            emitBillboardQuad(dustVc, mat, cPos, camRight, camUp, cHalfW, cHalfH, wp, cSeed, 0.0F, crownFade);
+                            emitBillboardQuad(
+                                    dustVc, mat, cPos, camRight, camUp,
+                                    cHalfW * (0.86 + 0.28 * hw), cHalfH * (0.82 + 0.34 * hj),
+                                    wp, cSeed, 0.0F, crownFade * 0.85F
+                            );
                         }
                     }
 
-                    int waistCount = 28;
-                    double beltR = domeRadius * (0.90 + 0.25 * Math.pow(wp, 0.68));
-                    double waistY = domeRadius * 0.35;
-                    double halfW = domeRadius * (0.22 + 0.08 * wp);
-                    double halfH = domeRadius * (0.095 + 0.035 * wp);
+                    int waistCount = 46;
+                    double beltR = domeRadius * (0.88 + 0.42 * Math.pow(wp, 0.68));
+                    double waistY = domeRadius * (0.35 + 0.14 * wp);
+                    double halfW = domeRadius * (0.24 + 0.11 * wp);
+                    double halfH = domeRadius * (0.105 + 0.048 * wp);
                     for (int i = 0; i < waistCount; i++) {
-                        double ang = i * (Math.PI * 2.0 / waistCount) + seedNorm * 6.283;
-                        double rJitter = beltR * (0.96 + 0.08 * Math.cos(i * 2.3 + seedNorm * 4.0));
+                        float hj = hashFloat(seed + i * 23 + 211);
+                        float hw = hashFloat(seed + i * 37 + 223);
+                        double ang = i * (Math.PI * 2.0 / waistCount) + seedNorm * 6.283 + (hj - 0.5) * 0.14 - wp * 0.18;
+                        double ringMult = (i % 2 == 0) ? 1.0 : 0.84;
+                        double rJitter = beltR * ringMult * (0.92 + 0.16 * hj);
                         Vec3 puffCenter = relTarget.add(
                                 Math.cos(ang) * rJitter,
-                                waistY + halfH * 0.18 * Math.sin(i * 3.0),
+                                waistY + halfH * ((i % 2 == 0 ? 0.16 : -0.14) + 0.30 * (hw - 0.5)),
                                 Math.sin(ang) * rJitter
                         );
                         float puffSeed = ((i * 37 + Math.abs(seed % 97)) % 100) / 100.0F;
-                        emitBillboardQuad(dustVc, mat, puffCenter, camRight, camUp, halfW, halfH, wp, puffSeed, 0.0F, wFade);
+                        emitBillboardQuad(
+                                dustVc, mat, puffCenter, camRight, camUp,
+                                halfW * (0.85 + 0.32 * hw), halfH * (0.80 + 0.36 * hj),
+                                wp, puffSeed, 0.0F, wFade * 0.88F
+                        );
                     }
                 }
             }
 
-            // Rolling Outer Ground Dust Wall (Type 1.0, bottom tangent flush above y=0 so ZERO sharp floor cut!)
-            if (safeDt >= 1.2F && safeDt < 92.0F) {
-                float dp = Mth.clamp((safeDt - 1.2F) / 90.8F, 0.0F, 1.0F);
-                float dFade = smoothstep(dp / 0.05F) * (1.0F - smoothstep((dp - 0.56F) / 0.44F));
+            // Rolling Outer Ground Dust Wall (Type 1.0, dt = 1.5..188, sweeps dramatically across terrain!)
+            if (safeDt >= 1.5F && safeDt < 188.0F) {
+                float dp = Mth.clamp((safeDt - 1.5F) / 186.5F, 0.0F, 1.0F);
+                float dFade = smoothstep(dp / 0.04F) * (1.0F - smoothstep((dp - 0.54F) / 0.46F));
                 if (dFade > 0.008F) {
-                    int puffCount = 40;
-                    double wallR = radius * (0.50 + 1.04 * Math.pow(dp, 0.52));
-                    double halfW = radius * (0.17 + 0.12 * smoothstep(dp / 0.38F));
-                    // Rises slightly taller in late aftermath while sitting cleanly flush on y=0
-                    double halfH = radius * (0.072 + 0.068 * smoothstep(dp / 0.52F));
+                    int puffCount = 64;
+                    double wallR = visualR * (0.56 + 1.58 * Math.pow(dp, 0.50));
+                    double halfW = visualR * (0.22 + 0.18 * smoothstep(dp / 0.36F));
+                    double halfH = visualR * (0.090 + 0.098 * smoothstep(dp / 0.50F));
                     for (int i = 0; i < puffCount; i++) {
-                        double ringOffset = (i % 2 == 0) ? 1.0 : 0.84;
-                        double ang = i * (Math.PI * 2.0 / puffCount) + seedNorm * 3.14 + (i % 2) * 0.08;
-                        double rCur = wallR * ringOffset * (0.95 + 0.10 * Math.sin(i * 3.1));
-                        double curH = halfH * (0.88 + 0.24 * ((i % 3) * 0.5));
-                        Vec3 puffCenter = relTarget.add(Math.cos(ang) * rCur, curH * 0.92, Math.sin(ang) * rCur);
+                        float hj = hashFloat(seed + i * 19 + 307);
+                        float hw = hashFloat(seed + i * 41 + 317);
+                        double ringOffset = switch (i % 3) {
+                            case 0 -> 1.0;
+                            case 1 -> 0.86;
+                            default -> 0.72;
+                        };
+                        double ang = i * (Math.PI * 2.0 / puffCount) + seedNorm * 3.14 + (i % 3) * 0.09 + (hj - 0.5) * 0.14;
+                        double rCur = wallR * ringOffset * (0.91 + 0.16 * hj);
+                        double curW = halfW * (0.86 + 0.30 * hw);
+                        double curH = halfH * (0.84 + 0.34 * ((i % 3) * 0.35 + hj * 0.30));
+                        Vec3 puffCenter = relTarget.add(Math.cos(ang) * rCur, curH * (0.86 + 0.18 * hw), Math.sin(ang) * rCur);
                         float puffSeed = ((i * 53 + Math.abs(seed % 89)) % 100) / 100.0F;
-                        emitBillboardQuad(dustVc, mat, puffCenter, camRight, camUp, halfW, curH, dp, puffSeed, 1.0F, dFade);
+                        emitBillboardQuad(dustVc, mat, puffCenter, camRight, camUp, curW, curH, dp, puffSeed, 1.0F, dFade * 0.90F);
                     }
                 }
             }
 
-            // 26 Dark Flying Soot-Smoke Chunks launching outward through the fireball (Type 0.50)
-            if (safeDt >= 1.0F && safeDt < 56.0F) {
-                float sp = (safeDt - 1.0F) / 55.0F;
-                float smokeAlpha = smoothstep(sp / 0.08F) * (1.0F - smoothstep(0.55F, 1.0F, sp));
-                float tSec = safeDt * 0.05F;
+            // 26 Wispy Soot-Smoke Trails launching outward through the fireball (Type 0.50, dt = 1.5..124)
+            if (safeDt >= 1.5F && safeDt < 124.0F) {
+                float sp = (safeDt - 1.5F) / 122.5F;
+                float smokeAlpha = smoothstep(sp / 0.08F) * (1.0F - smoothstep(0.45F, 0.94F, sp));
+                float tSec = safeDt * 0.032F;
                 int chunkCount = 26;
                 for (int i = 0; i < chunkCount; i++) {
                     float h1 = hashFloat(seed + i * 29 + 401);
                     float h2 = hashFloat(seed + i * 47 + 409);
                     float h3 = hashFloat(seed + i * 61 + 419);
                     double ang = h1 * Math.PI * 2.0 + i * 0.72;
-                    double vH = radius * (0.42 + 0.52 * h2);
-                    double vU = radius * (0.40 + 0.55 * h3);
-                    double gx = Math.cos(ang) * (radius * 0.22 + vH * tSec / (1.0 + tSec * 0.65));
-                    double gz = Math.sin(ang) * (radius * 0.22 + vH * tSec / (1.0 + tSec * 0.65));
-                    double gy = 1.2 + vU * tSec - 0.5 * 14.0 * tSec * tSec;
+                    double vH = visualR * (0.44 + 0.56 * h2);
+                    double vU = visualR * (0.46 + 0.58 * h3);
+                    double gx = Math.cos(ang) * (visualR * 0.24 + vH * tSec / (1.0 + tSec * 0.60));
+                    double gz = Math.sin(ang) * (visualR * 0.24 + vH * tSec / (1.0 + tSec * 0.60));
+                    double gy = 1.2 + vU * tSec - 0.5 * 9.5 * tSec * tSec;
                     if (gy < 0.25) continue;
-                    double cSz = 0.55 + 0.75 * h1 + sp * 0.45;
+                    double cSz = 0.70 + 0.90 * h1 + sp * 0.80;
                     Vec3 scPos = relTarget.add(gx, gy, gz);
-                    emitBillboardQuad(dustVc, mat, scPos, camRight, camUp, cSz, cSz * 0.85, sp, h2, 0.50F, smokeAlpha * 0.85F);
+                    emitBillboardQuad(dustVc, mat, scPos, camRight, camUp, cSz * 1.15, cSz * 0.92, sp, h2, 0.50F, smokeAlpha * 0.45F);
                 }
             }
 
             ZoltraakRenderPass.endBatchWithBloom(buffers, ZoltraakRenderTypes.EXPLOSION_DUST_WAVE, Math.max(0.55F, bloom));
 
-            // 2e. 56 Craggy 3D Dark Boulders, 80 Soft-Blooming Radial Speed Streaks & 120 Twinkling Blooming Aftermath Embers
-            if (safeDt >= 0.2F && safeDt < 95.0F) {
-                emitDebrisSparksAndEmbers(buffers, mat, relTarget, relCam, camRight, camUp, radius, safeDt, seed, vfxBloom);
+            // 2e. 56 Craggy 3D Dark Boulders, 96 Soft-Blooming Radial Speed Streaks & 160 Twinkling Blooming Aftermath Embers
+            if (safeDt >= 0.2F && safeDt < 190.0F) {
+                emitDebrisSparksAndEmbers(buffers, mat, relTarget, relCam, camRight, camUp, visualR, safeDt, seed, vfxBloom);
             }
         }
     }
@@ -494,101 +546,149 @@ public class ExplosionMagicRenderer extends EntityRenderer<ExplosionMagicEntity>
             Vec3 relTarget, Vec3 relStart, Vec3 relCam, Vec3 camRight, Vec3 camUp,
             double radius, float t, int seed, float seedNorm, float bloom
     ) {
-        double apexHeight = radius * SKY_RING_HEIGHT_FACTORS[5];
+        double apexHeight = getSkyApexHeight(radius);
         Vec3 skyApex = relTarget.add(0.0, apexHeight, 0.0);
         Vec3 groundTip = relTarget.add(0.0, 0.15, 0.0);
 
         VertexConsumer vortexVc = buffers.getBuffer(ZoltraakRenderTypes.EXPLOSION_VORTEX_RING);
 
-        // 1. Inverted-cone sky rings holding then collapsing as vertical pillar fires (t = 0 .. 17)
-        if (t < 17.0F && bloom > 0.004F) {
-            float collapseP = Mth.clamp((t - 5.0F) / 12.0F, 0.0F, 1.0F);
-            float skyFade = 1.0F - smoothstep((t - 8.0F) / 9.0F);
-            emitSkyVortexColumn(vortexVc, mat, relTarget, radius, 1.0F, 1.0F - 0.26F * collapseP, skyFade, seedNorm, t * 0.09);
+        // 1. Inverted-cone sky rings holding, surging on convergence, then lingering majestically (t = 0 .. 50)
+        if (t < 50.0F && bloom > 0.004F) {
+            float collapseP = Mth.clamp((t - 7.0F) / 22.0F, 0.0F, 1.0F);
+            float skyFade = 1.0F - smoothstep((t - 26.0F) / 24.0F);
+            emitSkyVortexColumn(vortexVc, mat, relTarget, radius, 1.0F, 1.0F - 0.28F * collapseP, skyFade, seedNorm, t * (0.095 + 0.035 * collapseP));
         }
 
-        // 2. Stage 1 (t = 0 .. 6.2): Soft-Blooming Diagonal Golden Beam from Caster Staff UP to Sky Apex
-        if (t < 6.2F && relStart.distanceToSqr(skyApex) > 4.0) {
-            float diagFade = 1.0F - smoothstep((t - 3.4F) / 2.8F);
-            float diagReach = Mth.clamp(t / 2.6F, 0.08F, 1.0F);
-            Vec3 diagHead = relStart.lerp(skyApex, diagReach);
-            emitSoftBloomBeamQuad(vortexVc, mat, relStart, diagHead, relCam, 0.72 * diagFade, 0.15F, 0.20F, diagFade * 0.98F);
+        // 2. Stage 1 (t = 0 .. 26): Soft-Blooming Diagonal Golden Beam + Tilted Launch Magic Ring & Ignition Flash
+        if (t < 26.0F && relStart.distanceToSqr(skyApex) > 4.0) {
+            Vec3 diagAxis = skyApex.subtract(relStart).normalize();
+            Vec3 beamU = diagAxis.cross(new Vec3(0.0, 1.0, 0.0));
+            beamU = beamU.lengthSqr() < 1.0E-4 ? diagAxis.cross(new Vec3(1.0, 0.0, 0.0)).normalize() : beamU.normalize();
+            Vec3 beamV = diagAxis.cross(beamU).normalize();
+
+            if (t < 14.5F) {
+                float diagFade = 1.0F - smoothstep((t - 8.5F) / 6.0F);
+                float diagReach = Mth.clamp(t / 6.8F, 0.06F, 1.0F);
+                Vec3 diagHead = relStart.lerp(skyApex, diagReach);
+                emitSoftBloomBeamQuad(vortexVc, mat, relStart, diagHead, relCam, 0.78 * diagFade, 0.15F, 0.20F, diagFade * 0.98F);
+            }
+
+            // Blazing golden-white staff muzzle ignition burst (t = 0..16)
+            if (t < 16.0F && bloom > 0.004F) {
+                float mFade = (float) Math.exp(-t * 0.16) * (1.0F - smoothstep((t - 9.0F) / 7.0F));
+                double mRad = 1.45 + 1.85 * smoothstep(t / 5.5F);
+                emitBillboardQuad(vortexVc, mat, relStart, camRight, camUp, mRad * 1.45, mRad * 1.45, 0.72F, 0.10F, 0.98F, mFade * 0.80F);
+                emitBillboardQuad(vortexVc, mat, relStart, camRight, camUp, mRad * 0.85, mRad * 0.85, 0.98F, 0.10F, 0.98F, mFade * 0.96F);
+            }
+
+            // Tilted crimson-gold arcane launch circle coaxial around the diagonal beam (t = 0..26)
+            if (bloom > 0.004F) {
+                float ringFade = 1.0F - smoothstep((t - 9.0F) / 17.0F);
+                double launchR = 1.50 + 1.45 * smoothstep(t / 9.5F);
+                Vec3 launchPos = relStart.lerp(skyApex, Math.min(0.16, 0.05 + t * 0.0045));
+                double rotAngle = t * 0.085;
+                Vec3 ru = beamU.scale(Math.cos(rotAngle)).add(beamV.scale(Math.sin(rotAngle)));
+                Vec3 rv = beamU.scale(-Math.sin(rotAngle)).add(beamV.scale(Math.cos(rotAngle)));
+                emitBillboardQuad(vortexVc, mat, launchPos, ru, rv, launchR, launchR, t / 26.0F, 0.35F, 0.50F, ringFade * 0.94F);
+                emitBillboardQuad(vortexVc, mat, launchPos, ru, rv, launchR * 1.28, launchR * 1.28, 0.66F, 0.10F, 0.98F, ringFade * 0.34F);
+            }
         }
 
-        // 3. Stage 2 (t = 2.4 .. 8.8): Super-Wide Horizontal Golden Lens-Flare Slash at Sky Apex
-        if (t >= 2.4F && t < 8.8F && bloom > 0.004F) {
-            float flareP = (t - 2.4F) / 6.4F;
+        // 3. Stage 2 (t = 6.2 .. 22.0): Super-Wide Horizontal Golden Lens-Flare Slash & Apex Supernova Core
+        if (t >= 6.2F && t < 22.0F && bloom > 0.004F && ZoltraakCinematicClientConfig.isLensFlaresEnabled()) {
+            float flareP = (t - 6.2F) / 15.8F;
             float flareAlpha = (float) Math.sin(flareP * Math.PI);
-            double slashHalfLen = radius * (1.42 + 0.80 * flareP);
-            double slashHalfW = radius * 0.20 * flareAlpha;
+            double slashHalfLen = radius * (1.45 + 0.92 * flareP);
+            double slashHalfW = radius * 0.22 * flareAlpha;
             emitSoftBloomBeamQuad(
                     vortexVc, mat,
                     skyApex.subtract(camRight.scale(slashHalfLen)),
                     skyApex.add(camRight.scale(slashHalfLen)),
                     relCam, slashHalfW, 0.20F, 0.85F, flareAlpha * 0.98F
             );
-            emitBillboardQuad(vortexVc, mat, skyApex, camRight, camUp, radius * 0.55, radius * 0.55, 0.96F, 0.10F, 0.98F, flareAlpha * 0.90F);
+            emitBillboardQuad(vortexVc, mat, skyApex, camRight, camUp, radius * 0.62, radius * 0.62, 0.96F, 0.10F, 0.98F, flareAlpha * 0.94F);
         }
 
-        // 4. Stage 3 (t = 4.0 .. 52.0): Persistent Soft-Blooming Vertical Laser Pillar
-        if (t >= 4.0F && t < 52.0F) {
-            float vAge = t - 4.0F;
-            float strikeReach = Mth.clamp(vAge / 1.6F, 0.08F, 1.0F);
+        // 4. Stage 3 (t = 15.0 .. 118.0): Heavens Pillar Descent -> Ground Compression Singularity -> Persistent Plasma Column
+        if (t >= 15.0F && t < 118.0F) {
+            float vAge = t - 15.0F;
+            float strikeReach = Mth.clamp(vAge / 4.2F, 0.06F, 1.0F);
             Vec3 headPos = skyApex.lerp(groundTip, strikeReach);
 
-            float widePhase = 1.0F - smoothstep(12.0F, 22.0F, vAge);
-            float needleFade = 1.0F - smoothstep(34.0F, 48.0F, vAge);
-            double beamHalfW = radius * (0.044 + 0.26 * widePhase) * needleFade;
+            float preDetPulse = (t < 29.0F) ? smoothstep((t - 18.5F) / 9.5F) : 1.0F;
+            float postDetAge = Math.max(0.0F, t - 28.0F);
+            float widePhase = (1.0F - smoothstep(14.0F, 36.0F, postDetAge)) * (0.62F + 0.38F * preDetPulse);
+            float needleFade = 1.0F - smoothstep(68.0F, 90.0F, postDetAge);
+            double beamHalfW = radius * (0.044 + 0.28 * widePhase) * needleFade;
             float pinkTint = 0.45F * widePhase;
             emitSoftBloomBeamQuad(vortexVc, mat, skyApex, headPos, relCam, beamHalfW, pinkTint, 0.15F, needleFade * 0.98F);
+
+            // Pre-detonation ground contact compression singularity right before the dome erupts (t = 18.8 .. 28.8)
+            if (t >= 18.8F && t < 28.8F && bloom > 0.004F) {
+                float cp = Mth.clamp((t - 18.8F) / 9.2F, 0.0F, 1.0F);
+                double coreR = radius * (0.18 + 0.38 * cp * cp);
+                emitBillboardQuad(vortexVc, mat, relTarget.add(0.0, 0.45, 0.0), camRight, camUp, coreR, coreR, 0.96F, 0.10F, 0.98F, (0.35F + 0.65F * cp) * (1.0F - smoothstep((t - 27.6F) / 1.2F)));
+                emitHorizDiscQuad(vortexVc, mat, relTarget.add(0.0, 0.16, 0.0), coreR * 1.45, 0.0, 0.88F, 0.10F, 0.98F, (0.28F + 0.62F * cp));
+            }
         }
 
-        // 5. Lingering Diagonal Sparkle Trail (Mode 5 dot bloom, t = 0.5 .. 13.5)
-        if (t >= 0.5F && t < 13.5F && bloom > 0.004F && relStart.distanceToSqr(skyApex) > 4.0) {
-            float trailFade = 1.0F - smoothstep(6.0F, 13.5F, t);
-            int trailSparks = 32;
+        // 5. Lingering Diagonal Sparkle Trail (Mode 5 dot bloom, t = 1.0 .. 24.0)
+        if (t >= 1.0F && t < 24.0F && bloom > 0.004F && relStart.distanceToSqr(skyApex) > 4.0) {
+            float trailFade = 1.0F - smoothstep(12.0F, 24.0F, t);
+            int trailSparks = 38;
             for (int i = 0; i < trailSparks; i++) {
                 float h1 = hashFloat(seed + i * 29 + 301);
                 float h2 = hashFloat(seed + i * 53 + 313);
                 double u = (i + 0.5) / (double) trailSparks;
-                if (u > t / 2.5) continue;
+                if (u > t / 7.0) continue;
                 Vec3 base = relStart.lerp(skyApex, u);
-                Vec3 jitter = new Vec3((h1 - 0.5) * 1.6, (h2 - 0.5) * 1.6 - 0.04 * t, ((h1 * 1.7) % 1.0 - 0.5) * 1.6);
-                double sz = (0.18 + 0.20 * h1) * trailFade;
-                emitBillboardQuad(vortexVc, mat, base.add(jitter), camRight, camUp, sz, sz, 0.68F + 0.16F * h2, 0.10F, 0.98F, trailFade * 0.90F);
+                Vec3 jitter = new Vec3((h1 - 0.5) * 1.6, (h2 - 0.5) * 1.6 - 0.03 * t, ((h1 * 1.7) % 1.0 - 0.5) * 1.6);
+                double sz = (0.18 + 0.22 * h1) * trailFade;
+                emitBillboardQuad(vortexVc, mat, base.add(jitter), camRight, camUp, sz, sz, 0.68F + 0.16F * h2, 0.10F, 0.98F, trailFade * 0.92F);
             }
         }
 
         ZoltraakRenderPass.endBatchWithBloom(buffers, ZoltraakRenderTypes.EXPLOSION_VORTEX_RING, Math.max(0.5F, bloom));
 
-        // 6. Coaxial Smoke Rings on Diagonal Beam + Concentric Golden Beam Rings on Vertical Laser
-        if (t < 18.0F) {
+        // 6. Coaxial Smoke Rings on Diagonal Beam + Cascading Vertical Beam Halo Rings + Pre-Blast Seismic Rings
+        if (t < 38.0F) {
             VertexConsumer ringVc = buffers.getBuffer(ZoltraakRenderTypes.LIGHT);
-            if (t < 6.5F && relStart.distanceToSqr(skyApex) > 4.0) {
-                float diagFade = 1.0F - smoothstep((t - 3.6F) / 2.9F);
+            if (t < 16.5F && relStart.distanceToSqr(skyApex) > 4.0) {
+                float diagFade = 1.0F - smoothstep((t - 8.0F) / 8.5F);
                 Vec3 diagAxis = skyApex.subtract(relStart).normalize();
-                emitCoaxialBeamRing(ringVc, mat, relStart.lerp(skyApex, 0.26), diagAxis, 1.45 + t * 0.18, 0.12, 24, 0.96F, 0.94F, 0.90F, diagFade * 0.72F);
-                emitCoaxialBeamRing(ringVc, mat, relStart.lerp(skyApex, 0.58), diagAxis, 1.15 + t * 0.15, 0.10, 24, 0.96F, 0.94F, 0.90F, diagFade * 0.62F);
+                double adv = smoothstep(t / 16.5F);
+                emitCoaxialBeamRing(ringVc, mat, relStart.lerp(skyApex, 0.12 + 0.26 * adv), diagAxis, 1.50 + t * 0.14, 0.15, 28, 1.00F, 0.88F, 0.42F, diagFade * 0.82F);
+                emitCoaxialBeamRing(ringVc, mat, relStart.lerp(skyApex, 0.32 + 0.30 * adv), diagAxis, 1.25 + t * 0.12, 0.13, 28, 1.00F, 0.80F, 0.30F, diagFade * 0.70F);
+                emitCoaxialBeamRing(ringVc, mat, relStart.lerp(skyApex, 0.54 + 0.32 * adv), diagAxis, 1.05 + t * 0.10, 0.11, 28, 1.00F, 0.72F, 0.22F, diagFade * 0.58F);
             }
-            if (t >= 4.2F && t < 17.0F) {
-                float ringAge = t - 4.2F;
-                float rLife = 1.0F - smoothstep(6.0F, 12.8F, ringAge);
-                double[] ringAltitudes = { 0.10, 0.28, 0.52, 0.78 };
+            if (t >= 15.5F && t < 38.0F) {
+                float ringAge = t - 15.5F;
+                float rLife = 1.0F - smoothstep(10.0F, 22.5F, ringAge);
+                double[] ringAltitudes = { 0.10, 0.26, 0.46, 0.66, 0.84 };
                 for (int i = 0; i < ringAltitudes.length; i++) {
                     double ry = apexHeight * ringAltitudes[i];
-                    double rr = radius * (0.18 + 0.06 * i + 0.045 * ringAge);
-                    emitThinHorizRing(ringVc, mat, relTarget.add(0.0, ry, 0.0), rr, 0.14 * rLife, 32, 1.0F, 0.86F, 0.28F, rLife * 0.85F);
+                    double rr = radius * (0.18 + 0.055 * i + 0.032 * ringAge);
+                    emitThinHorizRing(ringVc, mat, relTarget.add(0.0, ry, 0.0), rr, 0.15 * rLife, 32, 1.0F, 0.86F, 0.28F, rLife * 0.86F);
                 }
+            }
+            // Fast pre-detonation seismic compression rings racing across ground right before boom (t = 19.0 .. 28.2)
+            if (t >= 19.0F && t < 28.2F) {
+                float sp = (t - 19.0F) / 9.2F;
+                float sa = (float) Math.sin(sp * Math.PI) * 0.90F;
+                double sR1 = radius * (0.72 - 0.54 * smoothstep(sp));
+                double sR2 = radius * (0.12 + 0.78 * sp);
+                emitThinHorizRing(ringVc, mat, relTarget.add(0.0, 0.18, 0.0), Math.max(0.5, sR1), 0.24, 36, 1.0F, 0.94F, 0.58F, sa);
+                emitThinHorizRing(ringVc, mat, relTarget.add(0.0, 0.14, 0.0), sR2, 0.20, 36, 1.0F, 0.68F, 0.22F, sa * 0.76F);
             }
             ZoltraakRenderPass.endBatchWithBloom(buffers, ZoltraakRenderTypes.LIGHT, Math.max(0.45F, bloom));
         }
 
-        // 7. Crisp Anamorphic Horizontal Glint on Sky Apex Flare Slash (ZOL_GLOW)
-        if (t >= 2.4F && t < 8.8F && bloom > 0.004F) {
-            float flareP = (t - 2.4F) / 6.4F;
+        // 7. Crisp Anamorphic Horizontal Glint on Sky Apex Flare Slash (ZOL_GLOW, t = 6.2 .. 22.0)
+        if (t >= 6.2F && t < 22.0F && bloom > 0.004F && ZoltraakCinematicClientConfig.isLensFlaresEnabled()) {
+            float flareP = (t - 6.2F) / 15.8F;
             float flareAlpha = (float) Math.sin(flareP * Math.PI);
             VertexConsumer flareVc = buffers.getBuffer(ZoltraakRenderTypes.ZOL_GLOW);
-            emitBillboardQuad(flareVc, mat, skyApex, camRight, camUp, radius * 1.45, 1.8, 1.0F, 0.92F, 0.52F, flareAlpha * 0.85F);
+            emitBillboardQuad(flareVc, mat, skyApex, camRight, camUp, radius * 1.55, 2.0, 1.0F, 0.92F, 0.52F, flareAlpha * 0.88F);
             ZoltraakRenderPass.endBatchWithBloom(buffers, ZoltraakRenderTypes.ZOL_GLOW, bloom);
         }
     }
@@ -598,11 +698,11 @@ public class ExplosionMagicRenderer extends EntityRenderer<ExplosionMagicEntity>
             Vec3 relTarget, Vec3 relCam, Vec3 camRight, Vec3 camUp,
             double radius, float dt, int seed, float bloom
     ) {
-        float tSec = dt * 0.05F;
+        float tSec = dt * 0.036F;
 
-        // A. 56 Craggy 3D Dark Rock Boulders with warm inner blast rim-lighting
-        if (dt < 74.0F) {
-            float rockAlpha = 1.0F - smoothstep((dt - 50.0F) / 24.0F);
+        // A. 56 Craggy 3D Dark Rock Boulders with warm inner blast rim-lighting (hang in air longer & grander)
+        if (dt < 136.0F) {
+            float rockAlpha = 1.0F - smoothstep((dt - 96.0F) / 40.0F);
             if (rockAlpha > 0.01F) {
                 VertexConsumer rockVc = buffers.getBuffer(ZoltraakRenderTypes.BLACK_CORE);
                 int rockCount = 56;
@@ -614,17 +714,17 @@ public class ExplosionMagicRenderer extends EntityRenderer<ExplosionMagicEntity>
 
                     double ang = h1 * Math.PI * 2.0 + i * 0.618;
                     double vHoriz = radius * (0.34 + 0.58 * h2);
-                    double vUp = radius * (0.44 + 0.70 * h3);
-                    double drag = 1.0 / (1.0 + tSec * 0.42);
+                    double vUp = radius * (0.46 + 0.72 * h3);
+                    double drag = 1.0 / (1.0 + tSec * 0.36);
                     double gx = Math.cos(ang) * (radius * 0.20 + vHoriz * tSec * drag);
                     double gz = Math.sin(ang) * (radius * 0.20 + vHoriz * tSec * drag);
-                    double gy = 0.8 + vUp * tSec - 0.5 * 16.5 * tSec * tSec;
+                    double gy = 0.8 + vUp * tSec - 0.5 * 11.2 * tSec * tSec;
                     if (gy < -0.3) continue;
 
-                    double sz = 0.15 + 0.44 * (h4 * h4);
+                    double sz = 0.15 + 0.46 * (h4 * h4);
                     Vec3 center = relTarget.add(gx, gy, gz);
-                    float spinA = dt * (0.12F + 0.15F * h2) + h1 * 6.28F;
-                    float spinB = dt * (0.09F + 0.12F * h3) + h2 * 6.28F;
+                    float spinA = dt * (0.09F + 0.12F * h2) + h1 * 6.28F;
+                    float spinB = dt * (0.07F + 0.10F * h3) + h2 * 6.28F;
                     emitCraggyRockBoulder(rockVc, mat, center, relTarget, sz, spinA, spinB, i * 17 + seed, rockAlpha);
                 }
                 ZoltraakRenderPass.endBatchWithBloom(buffers, ZoltraakRenderTypes.BLACK_CORE, 1.0F);
@@ -635,10 +735,10 @@ public class ExplosionMagicRenderer extends EntityRenderer<ExplosionMagicEntity>
 
         VertexConsumer fxVc = buffers.getBuffer(ZoltraakRenderTypes.EXPLOSION_VORTEX_RING);
 
-        // B. 80 Soft-Blooming Radial Orange-Yellow Speed Streaks (Mode 4)
-        if (dt < 40.0F) {
-            float sparkFade = 1.0F - smoothstep((dt - 14.0F) / 26.0F);
-            int sparkCount = 80;
+        // B. 96 Soft-Blooming Radial Orange-Yellow Speed Streaks (Mode 4, dt = 0..64)
+        if (dt < 64.0F) {
+            float sparkFade = 1.0F - smoothstep((dt - 24.0F) / 40.0F);
+            int sparkCount = 96;
             for (int i = 0; i < sparkCount; i++) {
                 float h1 = hashFloat(seed + i * 29 + 11);
                 float h2 = hashFloat(seed + i * 43 + 17);
@@ -652,12 +752,12 @@ public class ExplosionMagicRenderer extends EntityRenderer<ExplosionMagicEntity>
                         Math.cos(phi) * Math.sin(theta)
                 );
 
-                double speed = radius * (0.95 + 1.20 * h3);
-                double travel = speed * tSec * (1.0 / (1.0 + tSec * 1.12));
-                Vec3 pos = relTarget.add(launchDir.scale(radius * 0.26 + travel)).add(0.0, -2.4 * tSec * tSec, 0.0);
+                double speed = radius * (0.95 + 1.25 * h3);
+                double travel = speed * tSec * (1.0 / (1.0 + tSec * 1.02));
+                Vec3 pos = relTarget.add(launchDir.scale(radius * 0.26 + travel)).add(0.0, -1.8 * tSec * tSec, 0.0);
                 if (pos.y < -0.2) continue;
 
-                double halfLen = (0.42 + 0.72 * h2) * (0.48 + 0.52 * sparkFade);
+                double halfLen = (0.44 + 0.76 * h2) * (0.48 + 0.52 * sparkFade);
                 double halfW = 0.12 + 0.09 * h1;
                 Vec3 tail = pos.subtract(launchDir.scale(halfLen));
                 Vec3 head = pos.add(launchDir.scale(halfLen));
@@ -665,25 +765,25 @@ public class ExplosionMagicRenderer extends EntityRenderer<ExplosionMagicEntity>
             }
         }
 
-        // C. 120 Twinkling Blooming Golden-Orange Aftermath Ember Sparks (Mode 5 radial glow dots)
-        if (dt >= 8.0F && dt < 95.0F) {
-            float ep = (dt - 8.0F) / 87.0F;
-            float emberEnv = smoothstep(ep / 0.14F) * (1.0F - smoothstep((ep - 0.66F) / 0.34F));
-            int emberCount = 120;
+        // C. 160 Twinkling Blooming Golden-Orange Aftermath Ember Sparks rising slowly over the crater (dt = 10..190)
+        if (dt >= 10.0F && dt < 190.0F) {
+            float ep = (dt - 10.0F) / 180.0F;
+            float emberEnv = smoothstep(ep / 0.12F) * (1.0F - smoothstep((ep - 0.68F) / 0.32F));
+            int emberCount = 160;
             for (int i = 0; i < emberCount; i++) {
                 float h1 = hashFloat(seed + i * 31 + 101);
                 float h2 = hashFloat(seed + i * 47 + 107);
                 float h3 = hashFloat(seed + i * 73 + 113);
 
-                double ang = h1 * Math.PI * 2.0 + tSec * (0.22 + 0.32 * h2);
-                double rDist = radius * (0.12 + 0.84 * Math.sqrt(h2)) * (0.85 + 0.25 * ep);
-                double ey = 0.35 + h3 * (radius * 0.66) + Math.sin(tSec * 2.2 + i) * 0.45 + ep * 2.2;
+                double ang = h1 * Math.PI * 2.0 + tSec * (0.18 + 0.26 * h2);
+                double rDist = radius * (0.12 + 0.88 * Math.sqrt(h2)) * (0.85 + 0.30 * ep);
+                double ey = 0.35 + h3 * (radius * 0.72) + Math.sin(tSec * 1.9 + i) * 0.55 + ep * 4.5;
                 Vec3 ePos = relTarget.add(Math.cos(ang) * rDist, ey, Math.sin(ang) * rDist);
 
-                float twinkle = 0.50F + 0.50F * (float) Math.sin(dt * (0.28 + 0.18 * h1) + i * 1.7);
+                float twinkle = 0.48F + 0.52F * (float) Math.sin(dt * (0.22 + 0.16 * h1) + i * 1.7);
                 float ea = emberEnv * twinkle * 0.95F;
                 if (ea <= 0.02F) continue;
-                double eSize = 0.16 + 0.18 * h1;
+                double eSize = 0.16 + 0.20 * h1;
                 emitBillboardQuad(fxVc, mat, ePos, camRight, camUp, eSize, eSize, 0.66F + 0.18F * h2, 0.10F, 0.98F, ea);
             }
         }
@@ -697,96 +797,162 @@ public class ExplosionMagicRenderer extends EntityRenderer<ExplosionMagicEntity>
             double radius, float t, float dt
     ) {
         VertexConsumer quadVc = buffers.getBuffer(ZoltraakRenderTypes.IRIS_EMISSIVE_QUAD);
-        double apexHeight = radius * SKY_RING_HEIGHT_FACTORS[5];
+        double apexHeight = getSkyApexHeight(radius);
         Vec3 skyApex = relTarget.add(0.0, apexHeight, 0.0);
         Vec3 axU = new Vec3(1.0, 0.0, 0.0);
         Vec3 axV = new Vec3(0.0, 0.0, 1.0);
 
-        // Restrained HDR proxies so shaderpacks bloom cleanly around sharp details without blowing colors to white/yellow
-        // 1. Diagonal golden beam HDR bloom (t = 0..6.5)
-        if (t < 6.5F && relStart.distanceToSqr(skyApex) > 4.0) {
-            float dFade = (1.0F - smoothstep((t - 3.4F) / 3.1F)) * 0.36F;
-            float g = ZoltraakRenderPass.irisFadeGuard(dFade);
-            Vec3 diagSide = skyApex.subtract(relStart).cross(relCam.subtract(relStart));
-            diagSide = diagSide.lengthSqr() < 1.0E-5 ? camRight : diagSide.normalize();
-            ZoltraakRenderPass.emitFeatheredBeamSegment(
-                    quadVc, mat, relStart, skyApex, diagSide,
-                    0.22 * dFade, 0.65 * dFade,
-                    0.96F * g, 0.88F * g, 0.62F * g, dFade,
-                    0.96F * g, 0.44F * g, 0.08F * g, dFade * 0.45F
-            );
-        }
+        // HDR proxies for shaderpack bloom around beams, thin sky vortex rims, fireball peak flash & crater embers
+        // 1. Diagonal golden beam + tilted crimson-gold launch magic ring & muzzle flash HDR bloom (t = 0..24)
+        if (t < 24.0F && relStart.distanceToSqr(skyApex) > 4.0) {
+            Vec3 diagAxis = skyApex.subtract(relStart).normalize();
+            Vec3 beamU = diagAxis.cross(new Vec3(0.0, 1.0, 0.0));
+            beamU = beamU.lengthSqr() < 1.0E-4 ? diagAxis.cross(new Vec3(1.0, 0.0, 0.0)).normalize() : beamU.normalize();
+            Vec3 beamV = diagAxis.cross(beamU).normalize();
 
-        // 2. Sky Apex horizontal lens flare HDR bloom (t = 2.4..9.0)
-        if (t >= 2.4F && t < 9.0F) {
-            float flareP = (t - 2.4F) / 6.6F;
-            float flareA = (float) Math.sin(flareP * Math.PI) * 0.34F;
-            float fg = ZoltraakRenderPass.irisFadeGuard(flareA);
-            ZoltraakRenderPass.emitFeatheredStarBurst(
-                    quadVc, mat, skyApex, camRight, camUp, radius * 0.90,
-                    0.96F * fg, 0.84F * fg, 0.34F * fg, flareA
-            );
-        }
-
-        // 3. Sky Vortex Rings thin rim HDR accent (t = 0..17)
-        if (t < 17.0F) {
-            float skyFade = (1.0F - smoothstep((t - 8.0F) / 9.0F)) * 0.16F;
-            float sg = ZoltraakRenderPass.irisFadeGuard(skyFade);
-            for (int i = 0; i < SKY_RING_HEIGHT_FACTORS.length; i++) {
-                double ry = radius * SKY_RING_HEIGHT_FACTORS[i];
-                double rr = radius * SKY_RING_SCALE_FACTORS[i];
+            if (t < 14.5F) {
+                float dFade = (1.0F - smoothstep((t - 8.5F) / 6.0F)) * 0.78F;
+                float diagReach = Mth.clamp(t / 6.8F, 0.08F, 1.0F);
+                Vec3 diagHead = relStart.lerp(skyApex, diagReach);
+                float g = ZoltraakRenderPass.irisFadeGuard(dFade);
+                Vec3 diagSide = diagAxis.cross(relCam.subtract(relStart));
+                diagSide = diagSide.lengthSqr() < 1.0E-5 ? camRight : diagSide.normalize();
+                ZoltraakRenderPass.emitFeatheredBeamSegment(
+                        quadVc, mat, relStart, diagHead, diagSide,
+                        0.28 * dFade, 0.84 * dFade,
+                        0.98F * g, 0.90F * g, 0.66F * g, dFade,
+                        0.98F * g, 0.48F * g, 0.10F * g, dFade * 0.58F
+                );
+            }
+            if (t < 16.0F) {
+                float mFade = (float) Math.exp(-t * 0.16) * (1.0F - smoothstep((t - 9.0F) / 7.0F)) * 0.80F;
+                float mg = ZoltraakRenderPass.irisFadeGuard(mFade);
+                ZoltraakRenderPass.emitFeatheredStarBurst(
+                        quadVc, mat, relStart, camRight, camUp, 1.6 + 1.8 * smoothstep(t / 5.5F),
+                        1.00F * mg, 0.86F * mg, 0.40F * mg, mFade
+                );
+            }
+            float rFade = (1.0F - smoothstep((t - 9.0F) / 15.0F)) * 0.64F;
+            if (rFade > 0.015F) {
+                float rg = ZoltraakRenderPass.irisFadeGuard(rFade);
+                double launchR = 1.50 + 1.45 * smoothstep(t / 9.5F);
+                Vec3 launchPos = relStart.lerp(skyApex, Math.min(0.16, 0.05 + t * 0.0045));
                 ZoltraakRenderPass.emitFeatheredRing(
-                        quadVc, mat, relTarget.add(0.0, ry, 0.0), axU, axV,
-                        rr * 0.72, rr * 0.81, rr * 0.90, 22,
-                        0.96F * sg, 0.32F * sg, 0.05F * sg, skyFade
+                        quadVc, mat, launchPos, beamU, beamV,
+                        launchR * 0.70, launchR * 0.84, launchR * 1.00, 24,
+                        1.00F * rg, 0.46F * rg, 0.10F * rg, rFade
                 );
             }
         }
 
-        // 4. Persistent Vertical Laser Pillar HDR bloom (t = 4..48)
-        if (t >= 4.0F && t < 48.0F) {
-            float vAge = t - 4.0F;
-            float widePhase = 1.0F - smoothstep(12.0F, 22.0F, vAge);
-            float skyFade = (1.0F - smoothstep(32.0F, 44.0F, vAge)) * 0.38F;
+        // 2. Sky Apex horizontal lens flare HDR bloom (t = 6.2..22.0)
+        if (t >= 6.2F && t < 22.0F) {
+            float flareP = (t - 6.2F) / 15.8F;
+            float flareA = (float) Math.sin(flareP * Math.PI) * 0.82F;
+            float fg = ZoltraakRenderPass.irisFadeGuard(flareA);
+            ZoltraakRenderPass.emitFeatheredStarBurst(
+                    quadVc, mat, skyApex, camRight, camUp, radius * 1.10,
+                    0.98F * fg, 0.88F * fg, 0.42F * fg, flareA
+            );
+            if (ZoltraakCinematicClientConfig.isLensFlaresEnabled()) {
+                ZoltraakRenderPass.emitFeatheredLensStreak(
+                        quadVc, mat, skyApex, camRight, camUp, radius * 1.25,
+                        0.14 * (0.4 + 0.6 * flareA), 0.68 * (0.4 + 0.6 * flareA),
+                        0.98F * fg, 0.88F * fg, 0.44F * fg, flareA * 0.68F,
+                        0.98F * fg, 0.52F * fg, 0.10F * fg, flareA * 0.36F
+                );
+            }
+        }
+
+        // 3. Sky Vortex Rings thin rim HDR accent (t = 0..50)
+        if (t < 50.0F) {
+            float skyFade = (1.0F - smoothstep((t - 26.0F) / 24.0F)) * 0.56F;
+            float sg = ZoltraakRenderPass.irisFadeGuard(skyFade);
+            int ringCount = SKY_RING_HEIGHT_FACTORS.length;
+            for (int i = 0; i < ringCount; i++) {
+                double ry = getSkyRingY(radius, i);
+                double rr = radius * SKY_RING_SCALE_FACTORS[i];
+                float ringA = skyFade * (0.55F + 0.45F * (i / (float) Math.max(1, ringCount - 1)));
+                ZoltraakRenderPass.emitFeatheredRing(
+                        quadVc, mat, relTarget.add(0.0, ry, 0.0), axU, axV,
+                        rr * 0.78, rr * 0.85, rr * 0.92, 24,
+                        0.98F * sg, 0.44F * sg, 0.08F * sg, ringA
+                );
+            }
+        }
+
+        // 4. Persistent Vertical Laser Pillar + Pre-Detonation Compression Core HDR bloom (t = 15..116)
+        if (t >= 15.0F && t < 116.0F) {
+            float vAge = t - 15.0F;
+            float strikeReach = Mth.clamp(vAge / 4.2F, 0.06F, 1.0F);
+            Vec3 curTip = skyApex.lerp(relTarget, strikeReach);
+            float postDetAge = Math.max(0.0F, t - 28.0F);
+            float widePhase = 1.0F - smoothstep(14.0F, 36.0F, postDetAge);
+            float skyFade = (1.0F - smoothstep(66.0F, 88.0F, postDetAge)) * 0.84F;
             float g = ZoltraakRenderPass.irisFadeGuard(skyFade);
             Vec3 beamSide = relTarget.subtract(skyApex).cross(relCam.subtract(skyApex));
             beamSide = beamSide.lengthSqr() < 1.0E-5 ? new Vec3(1.0, 0.0, 0.0) : beamSide.normalize();
             ZoltraakRenderPass.emitFeatheredBeamSegment(
-                    quadVc, mat, skyApex, relTarget, beamSide,
-                    radius * (0.03 + 0.10 * widePhase),
-                    radius * (0.09 + 0.24 * widePhase),
-                    0.96F * g, 0.88F * g, 0.62F * g, skyFade,
-                    0.96F * g, 0.30F * g, 0.08F * g, skyFade * 0.45F
+                    quadVc, mat, skyApex, curTip, beamSide,
+                    radius * (0.04 + 0.12 * widePhase),
+                    radius * (0.12 + 0.30 * widePhase),
+                    0.98F * g, 0.90F * g, 0.68F * g, skyFade,
+                    0.98F * g, 0.38F * g, 0.09F * g, skyFade * 0.56F
             );
+            if (t >= 18.8F && t < 28.8F) {
+                float cp = Mth.clamp((t - 18.8F) / 9.2F, 0.0F, 1.0F);
+                float cFade = cp * (1.0F - smoothstep((t - 27.6F) / 1.2F)) * 0.80F;
+                float cg = ZoltraakRenderPass.irisFadeGuard(cFade);
+                ZoltraakRenderPass.emitFeatheredStarBurst(
+                        quadVc, mat, relTarget.add(0.0, 0.45, 0.0), camRight, camUp, radius * (0.28 + 0.44 * cp),
+                        1.00F * cg, 0.88F * cg, 0.48F * cg, cFade
+                );
+            }
         }
 
-        // 5. 3D Fireball Dome + Equatorial Rim + Ground Flash HDR bloom for Iris / Complementary (dt = 0..64)
-        if (dt >= 0.0F && dt < 64.0F) {
-            float p = Mth.clamp(dt / 64.0F, 0.0F, 1.0F);
-            float glowFade = (float) Math.exp(-dt * 0.032) * (1.0F - smoothstep((p - 0.52F) / 0.48F));
-            if (glowFade > 0.015F) {
+        // 5. 3D Fireball Dome + Equatorial Rim + Ground Flash HDR bloom for Iris / Complementary (dt = 0..126)
+        if (dt >= 0.0F && dt < 126.0F) {
+            float p = Mth.clamp(dt / 126.0F, 0.0F, 1.0F);
+            float glowFade = (float) Math.exp(-dt * 0.016) * (1.0F - smoothstep((p - 0.54F) / 0.46F));
+            if (glowFade > 0.012F) {
                 float fg = ZoltraakRenderPass.irisFadeGuard(glowFade);
-                float growth = (float) Math.pow(Mth.clamp(dt / 9.0F, 0.0F, 1.0F), 0.32);
-                double domeR = radius * 0.68 * growth;
+                float growth = (float) Math.pow(Mth.clamp(dt / 16.0F, 0.0F, 1.0F), 0.34);
+                double visualR = radius * ZoltraakCinematicClientConfig.getExplosionDomeScale();
+                double domeR = visualR * 0.88 * growth;
 
                 // Ground ignition bloom ring
                 ZoltraakRenderPass.emitFeatheredRing(
                         quadVc, mat, relTarget.add(0.0, 0.18, 0.0), axU, axV,
-                        domeR * 0.50, domeR * 1.10, domeR * 1.65, 28,
-                        0.96F * fg, 0.56F * fg, 0.12F * fg, glowFade * 0.22F
+                        domeR * 0.54, domeR * 1.12, domeR * 1.70, 28,
+                        0.98F * fg, 0.62F * fg, 0.16F * fg, glowFade * 0.66F
                 );
 
                 // Silhouette outer halo ring facing camera so shaderpack blooms the fireball rim cleanly
                 ZoltraakRenderPass.emitFeatheredRing(
                         quadVc, mat, relTarget.add(0.0, domeR * 0.38, 0.0), camRight, camUp,
-                        domeR * 0.72, domeR * 0.94, domeR * 1.18, 26,
-                        0.96F * fg, 0.40F * fg, 0.07F * fg, glowFade * 0.18F
+                        domeR * 0.78, domeR * 0.96, domeR * 1.16, 28,
+                        0.98F * fg, 0.48F * fg, 0.09F * fg, glowFade * 0.60F
                 );
 
                 // Center starburst flare for peak flash
                 ZoltraakRenderPass.emitFeatheredStarBurst(
-                        quadVc, mat, relTarget.add(0.0, domeR * 0.46, 0.0), camRight, camUp, domeR * 0.96,
-                        0.96F * fg, 0.66F * fg, 0.20F * fg, glowFade * 0.26F
+                        quadVc, mat, relTarget.add(0.0, domeR * 0.46, 0.0), camRight, camUp, domeR * 1.04,
+                        0.98F * fg, 0.72F * fg, 0.24F * fg, glowFade * 0.74F
+                );
+            }
+        }
+
+        // 6. Crater aftermath warm ember rim HDR bloom (dt = 16..186)
+        if (dt >= 16.0F && dt < 186.0F) {
+            float ep = (dt - 16.0F) / 170.0F;
+            float emberA = smoothstep(ep / 0.10F) * (1.0F - smoothstep(0.48F, 1.0F, ep)) * 0.45F;
+            float eg = ZoltraakRenderPass.irisFadeGuard(emberA);
+            if (emberA > 0.015F) {
+                double visualR = radius * ZoltraakCinematicClientConfig.getExplosionDomeScale();
+                ZoltraakRenderPass.emitFeatheredRing(
+                        quadVc, mat, relTarget.add(0.0, 0.16, 0.0), axU, axV,
+                        visualR * 0.28, visualR * 0.64, visualR * 0.98, 24,
+                        0.96F * eg, 0.38F * eg, 0.06F * eg, emberA
                 );
             }
         }
@@ -820,22 +986,24 @@ public class ExplosionMagicRenderer extends EntityRenderer<ExplosionMagicEntity>
     }
 
     /**
-     * Emits the 6 stacked inverted-cone (funnel) fiery sky vortex rings above the blast target
-     * (smallest ring at bottom tapering outward to a wide vortex ring at top).
+     * Emits the 8 stacked fiery sky vortex rings above the blast target matching the reference
+     * silhouette (+10 blocks lifted off ground with alternating lower bulge and upper crown).
      */
     public static void emitSkyVortexColumn(
             VertexConsumer vc, Matrix4f mat, Vec3 center, double radius,
             float castProgress, float scaleMult, float alpha, float seedNorm, double spinPhase
     ) {
         if (alpha <= 0.005F) return;
-        for (int i = 0; i < SKY_RING_HEIGHT_FACTORS.length; i++) {
-            float appearStart = 0.12F + i * 0.072F;
-            float ringReveal = smoothstep((castProgress - appearStart) / 0.15F);
+        int ringCount = SKY_RING_HEIGHT_FACTORS.length;
+        float denom = Math.max(1.0F, ringCount - 1.0F);
+        for (int i = 0; i < ringCount; i++) {
+            float appearStart = 0.12F + i * (0.36F / denom);
+            float ringReveal = smoothstep((castProgress - appearStart) / 0.14F);
             if (ringReveal <= 0.01F) continue;
 
-            float layerFade = alpha * ringReveal * (0.80F + 0.20F * (i / 5.0F));
+            float layerFade = alpha * ringReveal * (0.52F + 0.48F * (i / denom));
             double r = radius * SKY_RING_SCALE_FACTORS[i] * scaleMult * (0.72 + 0.28 * ringReveal);
-            Vec3 pos = center.add(0.0, radius * SKY_RING_HEIGHT_FACTORS[i], 0.0);
+            Vec3 pos = center.add(0.0, getSkyRingY(radius, i), 0.0);
             double dirSpin = (i % 2 == 0 ? 1.0 : -1.15) * spinPhase + i * 0.72;
             emitHorizDiscQuad(vc, mat, pos, r, dirSpin, castProgress, (seedNorm + i * 0.17F) % 1.0F, 0.5F, layerFade);
         }
@@ -1020,6 +1188,91 @@ public class ExplosionMagicRenderer extends EntityRenderer<ExplosionMagicEntity>
             float baseB = (float) (0.09 + 0.09 * skyDot + 0.04 * blastDot * blastDot);
             emitTri(vc, mat, v[f[0]], v[f[1]], v[f[2]], Mth.clamp(baseR, 0.0F, 1.0F), Mth.clamp(baseG, 0.0F, 1.0F), Mth.clamp(baseB, 0.0F, 1.0F), alpha);
         }
+    }
+
+    private static void emitPyroclasticExplosionDome(
+            VertexConsumer vc,
+            Matrix4f mat,
+            Vec3 center,
+            double radius,
+            float progress,
+            float heatFlash,
+            float shellLayer,
+            float fade,
+            float timeSec,
+            float lobeAmp
+    ) {
+        int rings = 30;
+        int sectors = 56;
+        double minPhi = -0.32 * (Math.PI * 0.5);
+        double maxPhi = Math.PI * 0.5;
+        double xzFlare = shellLayer <= 0.35F ? (1.06 + 0.04 * progress) : 1.04;
+        double yStretch = shellLayer <= 0.35F ? (0.98 + 0.12 * smoothstep(progress / 0.65F)) : 1.02;
+
+        float cr = Mth.clamp(progress, 0.0F, 1.0F);
+        float cg = Mth.clamp(heatFlash, 0.0F, 1.0F);
+        float cb = Mth.clamp(shellLayer, 0.0F, 1.0F);
+        float ca = Mth.clamp(fade, 0.0F, 1.0F);
+
+        for (int ri = 0; ri < rings; ri++) {
+            float tf1 = ri / (float) rings;
+            float tf2 = (ri + 1) / (float) rings;
+            double phi1 = Mth.lerp(tf1, minPhi, maxPhi);
+            double phi2 = Mth.lerp(tf2, minPhi, maxPhi);
+
+            for (int si = 0; si < sectors; si++) {
+                float sf1 = si / (float) sectors;
+                float sf2 = (si + 1) / (float) sectors;
+                double th1 = sf1 * Math.PI * 2.0;
+                double th2 = sf2 * Math.PI * 2.0;
+
+                if (ri < rings - 1) {
+                    emitPyroVertex(vc, mat, center, radius, xzFlare, yStretch, lobeAmp, timeSec, phi1, th1, sf1, tf1, cr, cg, cb, ca);
+                    emitPyroVertex(vc, mat, center, radius, xzFlare, yStretch, lobeAmp, timeSec, phi1, th2, sf2, tf1, cr, cg, cb, ca);
+                    emitPyroVertex(vc, mat, center, radius, xzFlare, yStretch, lobeAmp, timeSec, phi2, th2, sf2, tf2, cr, cg, cb, ca);
+                }
+                emitPyroVertex(vc, mat, center, radius, xzFlare, yStretch, lobeAmp, timeSec, phi1, th1, sf1, tf1, cr, cg, cb, ca);
+                emitPyroVertex(vc, mat, center, radius, xzFlare, yStretch, lobeAmp, timeSec, phi2, th2, sf2, tf2, cr, cg, cb, ca);
+                emitPyroVertex(vc, mat, center, radius, xzFlare, yStretch, lobeAmp, timeSec, phi2, th1, sf1, tf2, cr, cg, cb, ca);
+            }
+        }
+    }
+
+    private static void emitPyroVertex(
+            VertexConsumer vc,
+            Matrix4f mat,
+            Vec3 center,
+            double radius,
+            double xzFlare,
+            double yStretch,
+            float lobeAmp,
+            float timeSec,
+            double phi,
+            double th,
+            float u,
+            float v,
+            float r,
+            float g,
+            float b,
+            float a
+    ) {
+        double cp = Math.cos(phi);
+        double sp = Math.sin(phi);
+        double ct = Math.cos(th);
+        double st = Math.sin(th);
+
+        double lobeWave = Math.sin(th * 3.0 + timeSec * 1.4) * 0.50
+                + Math.cos(th * 5.0 - phi * 2.5 - timeSec * 1.9) * 0.35
+                + Math.sin(th * 7.0 + phi * 3.0 + timeSec * 1.1) * 0.15;
+        double radScale = 1.0 + lobeAmp * lobeWave * Math.max(0.15, cp);
+
+        float nx = (float) (cp * st);
+        float ny = (float) sp;
+        float nz = (float) (cp * ct);
+        float px = (float) (center.x + nx * radius * xzFlare * radScale);
+        float py = (float) (center.y + ny * radius * yStretch * radScale);
+        float pz = (float) (center.z + nz * radius * xzFlare * radScale);
+        vc.addVertex(mat, px, py, pz).setUv(u, v).setColor(r, g, b, a).setNormal(nx, ny, nz);
     }
 
     private static void emitTri(

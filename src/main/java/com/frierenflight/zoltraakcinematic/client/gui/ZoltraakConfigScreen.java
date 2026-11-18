@@ -23,7 +23,7 @@ import net.neoforged.neoforge.common.ModConfigSpec;
 public class ZoltraakConfigScreen extends Screen {
 
     private final Screen parent;
-    private int currentTab = 0; // 0: Barrier, 1: Camera, 2: Shaders, 3: Glow, 4: Audio
+    private int currentTab = 0; // 0: Barrier, 1: Camera, 2: Shaders, 3: Glow, 4: Explosion, 5: Audio
 
     public ZoltraakConfigScreen(Screen parent) {
         super(Component.translatable("config.zoltraak_cinematic.title"));
@@ -42,11 +42,11 @@ public class ZoltraakConfigScreen extends Screen {
 
         // --- Category Tabs ---
         int tabY = 36;
-        int tabWidth = 70;
-        int tabSpacing = 74;
-        String[] tabKeys = {"barrier", "camera", "shaders", "bloom", "audio"};
-        String[] tabIcons = {"🛡 ", "🎥 ", "✨ ", "✦ ", "🔊 "};
+        String[] tabKeys = {"barrier", "camera", "shaders", "bloom", "explosion", "audio"};
+        String[] tabIcons = {"🛡 ", "🎥 ", "✨ ", "✦ ", "💥 ", "🔊 "};
         int tabCount = tabKeys.length;
+        int tabSpacing = Math.min(64, Math.max(48, (this.width - 20) / tabCount));
+        int tabWidth = tabSpacing - 3;
         int tabStartX = centerX - (tabSpacing * tabCount - (tabSpacing - tabWidth)) / 2;
 
         for (int i = 0; i < tabCount; i++) {
@@ -78,7 +78,8 @@ public class ZoltraakConfigScreen extends Screen {
             case 1 -> buildCameraTab(col1X, col2X, contentY, btnW, btnH);
             case 2 -> buildShaderTab(col1X, col2X, contentY, btnW, btnH);
             case 3 -> buildBloomTab(col1X, col2X, contentY, btnW, btnH);
-            case 4 -> buildAudioTab(col1X, col2X, contentY, btnW, btnH);
+            case 4 -> buildExplosionTab(col1X, col2X, contentY, btnW, btnH);
+            case 5 -> buildAudioTab(col1X, col2X, contentY, btnW, btnH);
         }
 
         // --- Footer Controls ---
@@ -100,7 +101,7 @@ public class ZoltraakConfigScreen extends Screen {
     }
 
     private int getFooterY() {
-        return Math.max(176, this.height - 28);
+        return Math.max(198, this.height - 28);
     }
 
     // Tab 0: Barrier
@@ -282,7 +283,78 @@ public class ZoltraakConfigScreen extends Screen {
         this.addRenderableWidget(slider);
     }
 
-    // Tab 4: Audio
+    // Tab 4: Explosion Charge Particles & Flares
+    private void buildExplosionTab(int c1, int c2, int y, int w, int h) {
+        addIntSlider(c1, y, w, h, "explosion_gold_sparks",
+                ZoltraakCinematicClientConfig.EXPLOSION_GOLD_SPARKS, 20, 320, 10,
+                ZoltraakCinematicClientConfig.getExplosionGoldSparks(),
+                v -> Component.translatable("config.zoltraak_cinematic.option.explosion_gold_sparks.value", v));
+        addIntSlider(c2, y, w, h, "explosion_stars",
+                ZoltraakCinematicClientConfig.EXPLOSION_FOUR_POINT_STARS, 8, 160, 4,
+                ZoltraakCinematicClientConfig.getExplosionFourPointStars(),
+                v -> Component.translatable("config.zoltraak_cinematic.option.explosion_stars.value", v));
+
+        addIntSlider(c1, y + 26, w, h, "explosion_parabola",
+                ZoltraakCinematicClientConfig.EXPLOSION_PARABOLA_STREAMS, 8, 160, 4,
+                ZoltraakCinematicClientConfig.getExplosionParabolaStreams(),
+                v -> Component.translatable("config.zoltraak_cinematic.option.explosion_parabola.value", v));
+        addIntSlider(c2, y + 26, w, h, "explosion_cross_rays",
+                ZoltraakCinematicClientConfig.EXPLOSION_CROSS_RAYS, 0, 12, 1,
+                ZoltraakCinematicClientConfig.getExplosionCrossRays(),
+                v -> v <= 0
+                        ? Component.translatable("config.zoltraak_cinematic.option.explosion_cross_rays.off")
+                        : Component.translatable("config.zoltraak_cinematic.option.explosion_cross_rays.value", v * 2));
+
+        addIntSlider(c1, y + 52, w, h, "explosion_suction",
+                ZoltraakCinematicClientConfig.EXPLOSION_SUCTION_LINES, 0, 60, 2,
+                ZoltraakCinematicClientConfig.getExplosionSuctionLines(),
+                v -> Component.translatable("config.zoltraak_cinematic.option.explosion_suction.value", v));
+        addPercentSlider(c2, y + 52, w, h, "explosion_sky_flare",
+                ZoltraakCinematicClientConfig.EXPLOSION_SKY_FLARE_STRENGTH, 0.0, 2.5,
+                ZoltraakCinematicClientConfig.getExplosionSkyFlareStrength());
+
+        addPercentSlider(c1, y + 78, w, h, "explosion_particle_scale",
+                ZoltraakCinematicClientConfig.EXPLOSION_PARTICLE_SCALE, 0.5, 2.0,
+                ZoltraakCinematicClientConfig.getExplosionParticleScale());
+        addGlowSlider(c2, y + 78, w, h, "bloom_explosion",
+                ZoltraakCinematicClientConfig.EXPLOSION_GLOW,
+                ZoltraakCinematicClientConfig.getExplosionGlow());
+
+        addPercentSlider(c1, y + 104, w, h, "explosion_sky_height",
+                ZoltraakCinematicClientConfig.EXPLOSION_SKY_HEIGHT, 0.5, 2.5,
+                ZoltraakCinematicClientConfig.getExplosionSkyHeight());
+        addPercentSlider(c2, y + 104, w, h, "explosion_dome_scale",
+                ZoltraakCinematicClientConfig.EXPLOSION_DOME_SCALE, 0.6, 2.0,
+                ZoltraakCinematicClientConfig.getExplosionDomeScale());
+    }
+
+    private void addIntSlider(int x, int y, int w, int h, String optionKey,
+                              ModConfigSpec.IntValue configValue, int min, int max, int step,
+                              int current, Function<Integer, Component> formatter) {
+        String keyPrefix = "config.zoltraak_cinematic.option." + optionKey;
+        ConfigSlider slider = new ConfigSlider(x, y, w, h, min, max, current,
+                val -> formatter.apply(snapInt(val, min, max, step)),
+                val -> safeSet(configValue, snapInt(val, min, max, step)));
+        slider.setTooltip(Tooltip.create(Component.translatable(keyPrefix + ".tooltip")));
+        this.addRenderableWidget(slider);
+    }
+
+    private void addPercentSlider(int x, int y, int w, int h, String optionKey,
+                                  ModConfigSpec.DoubleValue configValue, double min, double max, float current) {
+        String keyPrefix = "config.zoltraak_cinematic.option." + optionKey;
+        ConfigSlider slider = new ConfigSlider(x, y, w, h, min, max, current,
+                val -> Component.translatable(keyPrefix + ".value", Math.round(roundToStep(val, 20.0) * 100.0)),
+                val -> safeSet(configValue, Math.max(min, Math.min(max, roundToStep(val, 20.0)))));
+        slider.setTooltip(Tooltip.create(Component.translatable(keyPrefix + ".tooltip")));
+        this.addRenderableWidget(slider);
+    }
+
+    private static int snapInt(double raw, int min, int max, int step) {
+        int snapped = (int) (Math.round(raw / step) * (long) step);
+        return Math.max(min, Math.min(max, snapped));
+    }
+
+    // Tab 5: Audio
     private void buildAudioTab(int c1, int c2, int y, int w, int h) {
         boolean ringing = ZoltraakCinematicClientConfig.isEarRingingEnabled();
         CycleButton<Boolean> ringBtn = CycleButton.onOffBuilder(ringing)
@@ -339,6 +411,15 @@ public class ZoltraakConfigScreen extends Screen {
         ZoltraakCinematicClientConfig.GARGANTUA_GLOW.set(1.0d);
         ZoltraakCinematicClientConfig.QUAL_GLOW.set(1.0d);
         ZoltraakCinematicClientConfig.EXPLOSION_GLOW.set(1.0d);
+        ZoltraakCinematicClientConfig.EXPLOSION_GOLD_SPARKS.set(160);
+        ZoltraakCinematicClientConfig.EXPLOSION_FOUR_POINT_STARS.set(64);
+        ZoltraakCinematicClientConfig.EXPLOSION_PARABOLA_STREAMS.set(64);
+        ZoltraakCinematicClientConfig.EXPLOSION_CROSS_RAYS.set(6);
+        ZoltraakCinematicClientConfig.EXPLOSION_SUCTION_LINES.set(28);
+        ZoltraakCinematicClientConfig.EXPLOSION_SKY_FLARE_STRENGTH.set(1.35d);
+        ZoltraakCinematicClientConfig.EXPLOSION_PARTICLE_SCALE.set(1.15d);
+        ZoltraakCinematicClientConfig.EXPLOSION_SKY_HEIGHT.set(1.0d);
+        ZoltraakCinematicClientConfig.EXPLOSION_DOME_SCALE.set(1.0d);
         saveConfig();
     }
 

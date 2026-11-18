@@ -6,6 +6,9 @@ import com.frierenflight.zoltraakcinematic.client.gui.ZoltraakConfigScreen;
 import com.frierenflight.zoltraakcinematic.config.ZoltraakCinematicClientConfig;
 import java.util.Locale;
 import java.util.function.DoubleSupplier;
+import java.util.function.IntConsumer;
+import java.util.function.IntFunction;
+import java.util.function.IntSupplier;
 import net.caffeinemc.mods.sodium.api.config.ConfigEntryPoint;
 import net.caffeinemc.mods.sodium.api.config.StorageEventHandler;
 import net.caffeinemc.mods.sodium.api.config.option.OptionImpact;
@@ -441,7 +444,66 @@ public class ZoltraakSodiumConfig implements ConfigEntryPoint {
                 .setName(Component.translatable("config.zoltraak_cinematic.page.bloom"))
                 .addOptionGroup(glowGroup));
 
-        // Page 4: Audio
+        // Page 4: Explosion Charge Particles & Flares (values scaled inside 0..50 to preserve Sodium IntegerCache safety)
+        OptionGroupBuilder expParticleGroup = builder.createOptionGroup()
+                .setName(Component.translatable("config.zoltraak_cinematic.group.explosion_particles"));
+        addScaledIntOption(builder, expParticleGroup, "explosion_gold_sparks", "explosion_gold_sparks",
+                2, 32, 16,
+                v -> Component.translatable("config.zoltraak_cinematic.option.explosion_gold_sparks.value", v * 10),
+                v -> safeSetInt(ZoltraakCinematicClientConfig.EXPLOSION_GOLD_SPARKS, v * 10),
+                () -> snapToRange(ZoltraakCinematicClientConfig.getExplosionGoldSparks() / 10.0f, 2, 32, 1));
+        addScaledIntOption(builder, expParticleGroup, "explosion_stars", "explosion_stars",
+                2, 40, 16,
+                v -> Component.translatable("config.zoltraak_cinematic.option.explosion_stars.value", v * 4),
+                v -> safeSetInt(ZoltraakCinematicClientConfig.EXPLOSION_FOUR_POINT_STARS, v * 4),
+                () -> snapToRange(ZoltraakCinematicClientConfig.getExplosionFourPointStars() / 4.0f, 2, 40, 1));
+        addScaledIntOption(builder, expParticleGroup, "explosion_parabola", "explosion_parabola",
+                2, 40, 16,
+                v -> Component.translatable("config.zoltraak_cinematic.option.explosion_parabola.value", v * 4),
+                v -> safeSetInt(ZoltraakCinematicClientConfig.EXPLOSION_PARABOLA_STREAMS, v * 4),
+                () -> snapToRange(ZoltraakCinematicClientConfig.getExplosionParabolaStreams() / 4.0f, 2, 40, 1));
+        addScaledIntOption(builder, expParticleGroup, "explosion_particle_scale", "explosion_particle_scale",
+                10, 40, 23,
+                v -> Component.literal((v * 5) + "%"),
+                v -> safeSetDouble(ZoltraakCinematicClientConfig.EXPLOSION_PARTICLE_SCALE, (v * 5) / 100.0d),
+                () -> snapToRange(ZoltraakCinematicClientConfig.getExplosionParticleScale() * 20.0f, 10, 40, 1));
+
+        OptionGroupBuilder expFlareGroup = builder.createOptionGroup()
+                .setName(Component.translatable("config.zoltraak_cinematic.group.explosion_flares"));
+        addScaledIntOption(builder, expFlareGroup, "explosion_cross_rays", "explosion_cross_rays",
+                0, 12, 6,
+                v -> v <= 0
+                        ? Component.translatable("config.zoltraak_cinematic.option.explosion_cross_rays.off")
+                        : Component.translatable("config.zoltraak_cinematic.option.explosion_cross_rays.value", v * 2),
+                v -> safeSetInt(ZoltraakCinematicClientConfig.EXPLOSION_CROSS_RAYS, v),
+                () -> snapToRange(ZoltraakCinematicClientConfig.getExplosionCrossRays(), 0, 12, 1));
+        addScaledIntOption(builder, expFlareGroup, "explosion_suction", "explosion_suction",
+                0, 30, 14,
+                v -> Component.translatable("config.zoltraak_cinematic.option.explosion_suction.value", v * 2),
+                v -> safeSetInt(ZoltraakCinematicClientConfig.EXPLOSION_SUCTION_LINES, v * 2),
+                () -> snapToRange(ZoltraakCinematicClientConfig.getExplosionSuctionLines() / 2.0f, 0, 30, 1));
+        addScaledIntOption(builder, expFlareGroup, "explosion_sky_flare", "explosion_sky_flare",
+                0, 50, 27,
+                v -> Component.literal((v * 5) + "%"),
+                v -> safeSetDouble(ZoltraakCinematicClientConfig.EXPLOSION_SKY_FLARE_STRENGTH, (v * 5) / 100.0d),
+                () -> snapToRange(ZoltraakCinematicClientConfig.getExplosionSkyFlareStrength() * 20.0f, 0, 50, 1));
+        addScaledIntOption(builder, expFlareGroup, "explosion_sky_height", "explosion_sky_height",
+                10, 50, 20,
+                v -> Component.literal((v * 5) + "%"),
+                v -> safeSetDouble(ZoltraakCinematicClientConfig.EXPLOSION_SKY_HEIGHT, (v * 5) / 100.0d),
+                () -> snapToRange(ZoltraakCinematicClientConfig.getExplosionSkyHeight() * 20.0f, 10, 50, 1));
+        addScaledIntOption(builder, expFlareGroup, "explosion_dome_scale", "explosion_dome_scale",
+                12, 40, 20,
+                v -> Component.literal((v * 5) + "%"),
+                v -> safeSetDouble(ZoltraakCinematicClientConfig.EXPLOSION_DOME_SCALE, (v * 5) / 100.0d),
+                () -> snapToRange(ZoltraakCinematicClientConfig.getExplosionDomeScale() * 20.0f, 12, 40, 1));
+
+        mod.addPage(builder.createOptionPage()
+                .setName(Component.translatable("config.zoltraak_cinematic.page.explosion"))
+                .addOptionGroup(expParticleGroup)
+                .addOptionGroup(expFlareGroup));
+
+        // Page 5: Audio
         mod.addPage(builder.createOptionPage()
                 .setName(Component.translatable("config.zoltraak_cinematic.page.audio"))
                 .addOptionGroup(builder.createOptionGroup()
@@ -517,6 +579,42 @@ public class ZoltraakSodiumConfig implements ConfigEntryPoint {
                             }
                         },
                         () -> snapToRange((float) (getter.getAsDouble() * 20.0d), 0, 40, 1)));
+    }
+
+    private static void addScaledIntOption(
+            ConfigBuilder builder,
+            OptionGroupBuilder group,
+            String idPath,
+            String optionKey,
+            int min,
+            int max,
+            int defVal,
+            IntFunction<Component> formatter,
+            IntConsumer setter,
+            IntSupplier getter
+    ) {
+        String keyPrefix = "config.zoltraak_cinematic.option." + optionKey;
+        group.addOption(builder.createIntegerOption(id(idPath))
+                .setName(Component.translatable(keyPrefix))
+                .setTooltip(Component.translatable(keyPrefix + ".tooltip"))
+                .setRange(min, max, 1)
+                .setValueFormatter(formatter::apply)
+                .setImpact(OptionImpact.LOW)
+                .setStorageHandler(STORAGE)
+                .setDefaultValue(defVal)
+                .setBinding(setter::accept, getter::getAsInt));
+    }
+
+    private static void safeSetInt(ModConfigSpec.IntValue spec, int val) {
+        if (ZoltraakCinematicClientConfig.SPEC.isLoaded()) {
+            spec.set(val);
+        }
+    }
+
+    private static void safeSetDouble(ModConfigSpec.DoubleValue spec, double val) {
+        if (ZoltraakCinematicClientConfig.SPEC.isLoaded()) {
+            spec.set(val);
+        }
     }
 
     private static int snapToRange(float raw, int min, int max, int step) {

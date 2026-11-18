@@ -6,6 +6,7 @@ import com.frierenflight.zoltraakcinematic.config.ZoltraakCinematicConfig;
 import com.frierenflight.zoltraakcinematic.registry.ModCinematicEntities;
 import com.frierenflight.zoltraakcinematic.registry.ModCinematicSounds;
 import com.frierenflight.zoltraakcinematic.registry.ModCinematicSpells;
+import com.frierenflight.zoltraakcinematic.spell.ExplosionSpell;
 import io.redspace.ironsspellbooks.damage.DamageSources;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
@@ -32,8 +33,10 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -44,8 +47,8 @@ import java.util.UUID;
  */
 public class ExplosionMagicEntity extends Entity implements TraceableEntity, OwnableEntity {
 
-    public static final int DETONATE_TICK = 6;
-    public static final int LIFETIME_TICKS = 115;
+    public static final int DETONATE_TICK = 28;
+    public static final int LIFETIME_TICKS = 220;
 
     private static final EntityDataAccessor<Integer> DATA_CASTER_ID =
             SynchedEntityData.defineId(ExplosionMagicEntity.class, EntityDataSerializers.INT);
@@ -69,6 +72,8 @@ public class ExplosionMagicEntity extends Entity implements TraceableEntity, Own
             SynchedEntityData.defineId(ExplosionMagicEntity.class, EntityDataSerializers.FLOAT);
     private static final EntityDataAccessor<Integer> DATA_SEED =
             SynchedEntityData.defineId(ExplosionMagicEntity.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Float> DATA_TIME_SCALE =
+            SynchedEntityData.defineId(ExplosionMagicEntity.class, EntityDataSerializers.FLOAT);
 
     private UUID casterUuid;
     private boolean blastResolved = false;
@@ -94,6 +99,7 @@ public class ExplosionMagicEntity extends Entity implements TraceableEntity, Own
         this.entityData.set(DATA_RADIUS, (float) ZoltraakCinematicConfig.getExplosionRadius());
         this.entityData.set(DATA_CRATER_DEPTH, (float) ZoltraakCinematicConfig.getExplosionCraterDepth());
         this.entityData.set(DATA_SEED, level.random.nextInt());
+        this.entityData.set(DATA_TIME_SCALE, ZoltraakCinematicConfig.getExplosionAnimationScale());
     }
 
     @Override
@@ -109,6 +115,7 @@ public class ExplosionMagicEntity extends Entity implements TraceableEntity, Own
         builder.define(DATA_RADIUS, 22.0f);
         builder.define(DATA_CRATER_DEPTH, 6.0f);
         builder.define(DATA_SEED, 1337);
+        builder.define(DATA_TIME_SCALE, 1.0f);
     }
 
     public void setOwner(LivingEntity owner) {
@@ -161,23 +168,49 @@ public class ExplosionMagicEntity extends Entity implements TraceableEntity, Own
         return this.entityData.get(DATA_SEED);
     }
 
+    public float getTimeScale() {
+        return Math.max(0.4f, Math.min(2.5f, this.entityData.get(DATA_TIME_SCALE)));
+    }
+
+    public int getDetonateTick() {
+        return Math.max(4, Math.round(DETONATE_TICK * getTimeScale()));
+    }
+
+    public int getLifetimeTicks() {
+        return Math.max(getDetonateTick() + 20, Math.round(LIFETIME_TICKS * getTimeScale()));
+    }
+
     @Override
     public void tick() {
         super.tick();
         if (!this.level().isClientSide && this.level() instanceof ServerLevel serverLevel) {
+            float timeScale = getTimeScale();
+            int skyLockTick = Math.max(2, Math.round(7.0f * timeScale));
+            int pillarDropTick = Math.max(skyLockTick + 2, Math.round(15.0f * timeScale));
+            int detonateTick = getDetonateTick();
+
             if (this.tickCount == 1) {
                 Vec3 s = getStartPos();
+                serverLevel.playSound(null, s.x, s.y, s.z, ModCinematicSounds.ZOLTRAAK_GREAT_FIRE.get(), SoundSource.PLAYERS, 2.0f, 1.48f);
+            }
+            if (this.tickCount == skyLockTick) {
                 Vec3 t = getTargetPos();
-                serverLevel.playSound(null, s.x, s.y, s.z, ModCinematicSounds.ZOLTRAAK_GREAT_FIRE.get(), SoundSource.PLAYERS, 2.2f, 1.35f);
-                serverLevel.playSound(null, t.x, t.y, t.z, SoundEvents.LIGHTNING_BOLT_IMPACT, SoundSource.PLAYERS, 2.0f, 0.72f);
+                double apexY = t.y + 22.0 + getRadius() * 2.15;
+                serverLevel.playSound(null, t.x, apexY, t.z, ModCinematicSounds.ZOLTRAAK_CHARGE.get(), SoundSource.PLAYERS, 2.2f, 1.72f);
+                serverLevel.playSound(null, t.x, t.y + 22.0, t.z, SoundEvents.BEACON_ACTIVATE, SoundSource.PLAYERS, 1.8f, 1.65f);
+            }
+            if (this.tickCount == pillarDropTick) {
+                Vec3 t = getTargetPos();
+                serverLevel.playSound(null, t.x, t.y, t.z, ModCinematicSounds.ZOLTRAAK_FIRE.get(), SoundSource.PLAYERS, 2.2f, 0.85f);
+                serverLevel.playSound(null, t.x, t.y, t.z, SoundEvents.LIGHTNING_BOLT_IMPACT, SoundSource.PLAYERS, 2.2f, 0.78f);
             }
 
-            if (this.tickCount >= DETONATE_TICK && !this.blastResolved) {
+            if (this.tickCount >= detonateTick && !this.blastResolved) {
                 this.blastResolved = true;
                 resolveDetonation(serverLevel);
             }
 
-            if (this.tickCount >= LIFETIME_TICKS) {
+            if (this.tickCount >= getLifetimeTicks()) {
                 this.discard();
             }
         }
@@ -189,10 +222,11 @@ public class ExplosionMagicEntity extends Entity implements TraceableEntity, Own
         Entity owner = getOwner();
 
         // Multi-layered thunderous detonation stack
-        level.playSound(null, center.x, center.y, center.z, ModCinematicSounds.SINGULARITY_EXPLODE.get(), SoundSource.PLAYERS, 4.0f, 0.72f);
-        level.playSound(null, center.x, center.y, center.z, ModCinematicSounds.ZOLTRAAK_IMPACT.get(), SoundSource.PLAYERS, 3.2f, 0.65f);
-        level.playSound(null, center.x, center.y, center.z, SoundEvents.WARDEN_SONIC_BOOM, SoundSource.PLAYERS, 2.8f, 0.70f);
-        level.playSound(null, center.x, center.y, center.z, SoundEvents.LIGHTNING_BOLT_THUNDER, SoundSource.PLAYERS, 3.2f, 0.80f);
+        level.playSound(null, center.x, center.y, center.z, ModCinematicSounds.SINGULARITY_EXPLODE.get(), SoundSource.PLAYERS, 4.2f, 0.68f);
+        level.playSound(null, center.x, center.y, center.z, ModCinematicSounds.ZOLTRAAK_IMPACT.get(), SoundSource.PLAYERS, 3.5f, 0.60f);
+        level.playSound(null, center.x, center.y, center.z, ModCinematicSounds.ZOLTRAAK_GREAT_FIRE.get(), SoundSource.PLAYERS, 3.6f, 0.62f);
+        level.playSound(null, center.x, center.y, center.z, SoundEvents.WARDEN_SONIC_BOOM, SoundSource.PLAYERS, 2.8f, 0.66f);
+        level.playSound(null, center.x, center.y, center.z, SoundEvents.LIGHTNING_BOLT_THUNDER, SoundSource.PLAYERS, 3.4f, 0.76f);
 
         applyBlastDamage(level, center, radius, owner);
 
@@ -207,29 +241,32 @@ public class ExplosionMagicEntity extends Entity implements TraceableEntity, Own
                 center.x - reach, center.y - reach * 0.75, center.z - reach,
                 center.x + reach, center.y + reach * 1.25, center.z + reach
         );
-        float baseDamage = (float) ((40.0 + getPower() * 0.85) * ZoltraakCinematicConfig.getExplosionDamageScale());
+        float baseDamage = ExplosionSpell.computeBlastDamage(getPower());
         var school = ModCinematicSpells.EXPLOSION.get().getSchoolType();
         var dmgSource = ExplosionDamage.source(level, this, owner);
+        boolean respectFF = ZoltraakCinematicConfig.isProtectAllies();
 
-        List<LivingEntity> targets = level.getEntitiesOfClass(LivingEntity.class, bounds, target -> {
-            if (!target.isAlive() || target instanceof ArmorStand) return false;
-            if (owner != null && target == owner) return false;
-            if (owner != null && DamageSources.isFriendlyFireBetween(owner, target)) return false;
-            if (target instanceof Player player && (player.isCreative() || player.isSpectator())) return false;
-            return true;
-        });
+        List<Entity> candidates = level.getEntities(this, bounds, Entity::isAlive);
+        Set<UUID> hitTargets = new HashSet<>();
 
-        for (LivingEntity target : targets) {
-            Vec3 delta = target.position().add(0.0, target.getBbHeight() * 0.5, 0.0).subtract(center);
-            double dist = delta.length();
-            if (dist > reach) continue;
+        for (Entity e : candidates) {
+            LivingEntity target = ZoltraakDamage.resolveLivingTarget(e);
+            if (target == null || !target.isAlive() || target instanceof ArmorStand) continue;
+            if (owner != null && target == owner) continue;
+            if (owner != null && respectFF && DamageSources.isFriendlyFireBetween(owner, target)) continue;
+            if (target instanceof Player player && (player.isCreative() || player.isSpectator())) continue;
+
+            double dist = Math.sqrt(e.getBoundingBox().distanceToSqr(center));
+            if (dist > reach || !hitTargets.add(target.getUUID())) continue;
 
             double norm = Mth.clamp(dist / reach, 0.0, 1.0);
             float dmg = (float) (baseDamage * (1.0 - 0.68 * Math.pow(norm, 1.3)));
             ZoltraakDamage.apply(target, dmg, dmgSource, school, true);
 
-            Vec3 dir = dist > 0.05 ? delta.scale(1.0 / dist) : new Vec3(0.0, 1.0, 0.0);
-            double kb = (1.6 + (1.0 - norm) * 2.2);
+            Vec3 delta = target.getBoundingBox().getCenter().subtract(center);
+            double deltaLen = delta.length();
+            Vec3 dir = deltaLen > 0.05 ? delta.scale(1.0 / deltaLen) : new Vec3(0.0, 1.0, 0.0);
+            double kb = 1.6 + (1.0 - norm) * 2.2;
             target.push(dir.x * kb, 0.45 + (1.0 - norm) * 0.85, dir.z * kb);
             target.hurtMarked = true;
         }
@@ -292,6 +329,7 @@ public class ExplosionMagicEntity extends Entity implements TraceableEntity, Own
         this.entityData.set(DATA_RADIUS, tag.contains("Radius") ? tag.getFloat("Radius") : 22.0f);
         this.entityData.set(DATA_CRATER_DEPTH, tag.contains("Depth") ? tag.getFloat("Depth") : 6.0f);
         this.entityData.set(DATA_SEED, tag.getInt("Seed"));
+        this.entityData.set(DATA_TIME_SCALE, tag.contains("TimeScale") ? tag.getFloat("TimeScale") : 1.0f);
     }
 
     @Override
@@ -308,6 +346,7 @@ public class ExplosionMagicEntity extends Entity implements TraceableEntity, Own
         tag.putFloat("Radius", this.entityData.get(DATA_RADIUS));
         tag.putFloat("Depth", this.entityData.get(DATA_CRATER_DEPTH));
         tag.putInt("Seed", this.entityData.get(DATA_SEED));
+        tag.putFloat("TimeScale", this.entityData.get(DATA_TIME_SCALE));
     }
 
     @Override
@@ -329,7 +368,7 @@ public class ExplosionMagicEntity extends Entity implements TraceableEntity, Own
         double minY = Math.min(start.y, target.y) - r;
         double minZ = Math.min(start.z, target.z) - r;
         double maxX = Math.max(start.x, target.x) + r;
-        double maxY = Math.max(start.y, target.y + getRadius() * 1.4d) + r;
+        double maxY = Math.max(start.y, target.y + getRadius() * 3.5d) + r + 48.0d;
         double maxZ = Math.max(start.z, target.z) + r;
         return new AABB(minX, minY, minZ, maxX, maxY, maxZ);
     }

@@ -171,7 +171,8 @@ public final class FlightEvents {
                 }
                 heightMult = (float) Math.min(heightMult, ZoltraakCinematicConfig.getMaxHeightScale());
 
-                float drainThisTick = basePerTick * speedMult * heightMult;
+                float totalMult = 1.0f + (speedMult - 1.0f) + (heightMult - 1.0f);
+                float drainThisTick = basePerTick * totalMult;
 
                 if (!player.isCreative()) {
                     MagicData magicData = MagicData.getPlayerMagicData(player);

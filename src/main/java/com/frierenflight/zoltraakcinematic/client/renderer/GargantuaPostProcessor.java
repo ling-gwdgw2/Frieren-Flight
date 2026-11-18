@@ -20,7 +20,6 @@ import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 import org.joml.Vector4f;
-import org.lwjgl.BufferUtils;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL12;
 import org.lwjgl.opengl.GL13;
@@ -39,7 +38,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * Pass 1 (gargantua): Relativistic volumetric raymarching into GL_RGBA16F HDR target.
  * Pass 2 (gargantua_bloom_down): 6-level energy-preserving downsample + Gaussian pyramid.
  * Pass 3 (gargantua_bloom_up): 5-level B-spline bicubic + tent upsample pyramid.
- * Pass 4 (gargantua_composite): Analytic gravitational lensing, galactic sky reveal, and filmic tonemapping.
+ * Pass 4 (gargantua_composite): Analytic gravitational lensing, world glow, and filmic tonemapping.
  */
 public final class GargantuaPostProcessor {
     private static final ResourceLocation NOISE_TEX =
@@ -67,7 +66,6 @@ public final class GargantuaPostProcessor {
     private static final int[] mipHeights = new int[BLOOM_LEVELS];
 
     private static int configuredNoiseTexId = -1;
-    private static int fallbackBlackTexId = 0;
     private static boolean hasPendingIrisPostPass = false;
     private static boolean hasCapturedIrisProjection = false;
     private static boolean irisRenderedThisFrame = false;
@@ -78,7 +76,6 @@ public final class GargantuaPostProcessor {
     // Reusable scratch buffers to eliminate per-frame allocations in the post pass
     private static final Matrix4f SCRATCH_INV_PROJ = new Matrix4f();
     private static final Matrix4f SCRATCH_VIEW_ROT = new Matrix4f();
-    private static final Matrix4f SCRATCH_INV_VIEW_ROT = new Matrix4f();
     private static final Vector3f SCRATCH_REL_POS = new Vector3f();
     private static final Vector3f SCRATCH_EYE_CENTER = new Vector3f();
     private static final Vector3f SCRATCH_EYE_AXIS = new Vector3f();
@@ -284,16 +281,11 @@ public final class GargantuaPostProcessor {
                 }
             }
             int noiseId = getNoiseTextureId(mc);
-            int cosmicId = CosmicTextures.getMilkyWayTextureId();
-            if (cosmicId <= 0) {
-                cosmicId = getFallbackBlackTexId();
-            }
             GL11.glBindTexture(GL11.GL_TEXTURE_2D, savedTex0Binding);
             GlStateManager._activeTexture(prevActiveTex != 0 ? prevActiveTex : GL13.GL_TEXTURE0);
 
             SCRATCH_INV_PROJ.set(projection).invert();
             SCRATCH_VIEW_ROT.set(view).setTranslation(0.0f, 0.0f, 0.0f);
-            SCRATCH_INV_VIEW_ROT.set(SCRATCH_VIEW_ROT).invert();
             Vec3 camPos = camera.getPosition();
 
             boolean worldGlowActive = com.frierenflight.zoltraakcinematic.config.ZoltraakCinematicClientConfig.isWorldGlowActive(isShaderPack);
@@ -497,7 +489,7 @@ public final class GargantuaPostProcessor {
                 }
 
                 // =========================================================================
-                // PASS 4: Analytic Lensing, Galactic Sky & Filmic Composite
+                // PASS 4: Analytic Lensing, World Glow & Filmic Composite
                 // =========================================================================
                 postTarget.bindWrite(true);
                 if (useScissor) {
@@ -509,7 +501,6 @@ public final class GargantuaPostProcessor {
 
                 compShader.setSampler("SceneSampler", sceneCopy.getColorTextureId());
                 compShader.setSampler("DepthSampler", depthSamplerId);
-                compShader.setSampler("CosmicSampler", cosmicId);
                 compShader.setSampler("HdrSampler", hdrTex);
                 compShader.setSampler("BloomSampler", upTexs[0]);
 
@@ -519,7 +510,6 @@ public final class GargantuaPostProcessor {
                 compShader.safeGetUniform("HoleState").set(opened, critAndBlast, timeSec, swallowed);
                 compShader.safeGetUniform("DiskShape").set(worldGlowFlag, diskSizeCfg, lensFlareFlag, effectiveBrightness);
                 compShader.safeGetUniform("InverseProjectionMat").set(SCRATCH_INV_PROJ);
-                compShader.safeGetUniform("InvViewRotMat").set(SCRATCH_INV_VIEW_ROT);
 
                 RenderSystem.setShader(() -> compShader);
                 drawScreenQuad(ndcX0, ndcY0, ndcX1, ndcY1, u0, v0, u1, v1);
@@ -720,21 +710,6 @@ public final class GargantuaPostProcessor {
         return 1;
     }
 
-    private static int getFallbackBlackTexId() {
-        if (fallbackBlackTexId > 0 && GL11.glIsTexture(fallbackBlackTexId)) {
-            return fallbackBlackTexId;
-        }
-        int id = GlStateManager._genTexture();
-        GL11.glBindTexture(GL11.GL_TEXTURE_2D, id);
-        GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_NEAREST);
-        GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_NEAREST);
-        ByteBuffer px = BufferUtils.createByteBuffer(4);
-        px.put((byte) 2).put((byte) 3).put((byte) 6).put((byte) 255).flip();
-        GL11.glTexImage2D(GL11.GL_TEXTURE_2D, 0, GL11.GL_RGBA8, 1, 1, 0, GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, px);
-        fallbackBlackTexId = id;
-        return id;
-    }
-
     private static int getNoiseTextureId(Minecraft mc) {
         AbstractTexture tex = mc.getTextureManager().getTexture(NOISE_TEX);
         if (tex == null) {
@@ -782,10 +757,6 @@ public final class GargantuaPostProcessor {
         if (sceneCopy != null) {
             sceneCopy.destroyBuffers();
             sceneCopy = null;
-        }
-        if (fallbackBlackTexId > 0) {
-            GlStateManager._deleteTexture(fallbackBlackTexId);
-            fallbackBlackTexId = 0;
         }
     }
 

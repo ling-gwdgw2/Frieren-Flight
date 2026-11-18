@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Aling7788565. All Rights Reserved.
 package com.frierenflight.zoltraakcinematic.event;
 
+import com.frierenflight.zoltraakcinematic.ZoltraakDamage;
 import com.frierenflight.zoltraakcinematic.entity.DefenseBarrierEntity;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
@@ -20,6 +21,9 @@ public final class DefenseEvents {
     }
 
     public static void onLivingHurt(LivingHurtEvent event) {
+        if (ZoltraakDamage.isBypassingBarriers()) {
+            return;
+        }
         if (!event.getEntity().level().isClientSide && event.getAmount() > 0.0F) {
             DamageSource source = event.getSource();
             Entity direct = source.getDirectEntity();

@@ -61,7 +61,12 @@ public class ExplosionSpell extends AbstractSpell {
         this.manaCostPerLevel = 0;
         this.baseSpellPower = 600;
         this.spellPowerPerLevel = 20;
-        this.castTime = 70; // ~3.5 seconds chant
+        this.castTime = 110; // ~5.5 seconds default dramatic chant
+    }
+
+    @Override
+    public int getCastTime(int spellLevel) {
+        return Math.max(20, ZoltraakCinematicConfig.getExplosionCastTimeTicks());
     }
 
     @Override
@@ -123,12 +128,28 @@ public class ExplosionSpell extends AbstractSpell {
         int remaining = playerMagicData.getCastDurationRemaining();
         int elapsed = total - remaining;
 
-        if (elapsed == 25) {
+        int sealTick = Math.max(4, Math.round(total * 0.14f));
+        int skyTick = Math.max(sealTick + 4, Math.round(total * 0.38f));
+        int gatherTick = Math.max(skyTick + 4, Math.round(total * 0.66f));
+        int peakTick = Math.max(gatherTick + 4, Math.round(total * 0.85f));
+
+        if (elapsed == sealTick) {
             level.playSound(null, entity.getX(), entity.getY(), entity.getZ(),
-                    SoundEvents.BEACON_ACTIVATE, SoundSource.PLAYERS, 1.3f, 1.15f);
-        } else if (elapsed == 50) {
+                    SoundEvents.BEACON_ACTIVATE, SoundSource.PLAYERS, 1.25f, 0.88f);
+        } else if (elapsed == skyTick) {
             level.playSound(null, entity.getX(), entity.getY(), entity.getZ(),
-                    ModCinematicSounds.ZOLTRAAK_CHARGE.get(), SoundSource.PLAYERS, 1.6f, 1.45f);
+                    SoundEvents.BEACON_ACTIVATE, SoundSource.PLAYERS, 1.45f, 1.25f);
+            Vec3 target = computeTargetPosition(level, entity, 1.0f, CAST_RANGE);
+            level.playSound(null, target.x, target.y + 18.0, target.z,
+                    SoundEvents.LIGHTNING_BOLT_THUNDER, SoundSource.PLAYERS, 0.65f, 0.82f);
+        } else if (elapsed == gatherTick) {
+            level.playSound(null, entity.getX(), entity.getY(), entity.getZ(),
+                    ModCinematicSounds.ZOLTRAAK_CHARGE.get(), SoundSource.PLAYERS, 1.55f, 1.28f);
+        } else if (elapsed == peakTick) {
+            level.playSound(null, entity.getX(), entity.getY(), entity.getZ(),
+                    ModCinematicSounds.ZOLTRAAK_CHARGE.get(), SoundSource.PLAYERS, 1.85f, 1.62f);
+            level.playSound(null, entity.getX(), entity.getY(), entity.getZ(),
+                    SoundEvents.BEACON_ACTIVATE, SoundSource.PLAYERS, 1.35f, 1.65f);
         }
     }
 
@@ -186,10 +207,16 @@ public class ExplosionSpell extends AbstractSpell {
         return end;
     }
 
+    /**
+     * Shared center blast damage formula (~1200 at baseSpellPower 600).
+     */
+    public static float computeBlastDamage(float power) {
+        return (float) ((120.0 + power * 1.80) * ZoltraakCinematicConfig.getExplosionDamageScale());
+    }
+
     @Override
     public List<MutableComponent> getUniqueInfo(int spellLevel, LivingEntity caster) {
-        float estDamage = (float) ((40.0 + getSpellPower(spellLevel, caster) * 0.85)
-                * ZoltraakCinematicConfig.getExplosionDamageScale());
+        float estDamage = computeBlastDamage(getSpellPower(spellLevel, caster));
         return List.of(
                 Component.translatable("ui.irons_spellbooks.damage", Utils.stringTruncation(estDamage, 1)),
                 Component.translatable("ui.irons_spellbooks.radius", Utils.stringTruncation((float) ZoltraakCinematicConfig.getExplosionRadius(), 1)),

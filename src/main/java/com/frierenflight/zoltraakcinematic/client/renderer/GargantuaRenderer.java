@@ -125,8 +125,8 @@ public class GargantuaRenderer extends EntityRenderer<GargantuaEntity> {
                 c.add(wingDir.scale(outerWingR)),
                 camUp,
                 rg * 0.03 * open, rg * 0.14 * open,
-                1.00f * gg, 0.90f * gg, 0.70f * gg, Mth.clamp(vis * 0.38f, 0.0f, 0.44f),
-                0.96f * gg, 0.68f * gg, 0.34f * gg, Mth.clamp(vis * 0.18f, 0.0f, 0.26f)
+                1.00f * gg, 0.90f * gg, 0.70f * gg, Mth.clamp(vis * 0.62f, 0.0f, 0.68f),
+                0.96f * gg, 0.68f * gg, 0.34f * gg, Mth.clamp(vis * 0.34f, 0.0f, 0.42f)
         );
         ZoltraakRenderPass.emitFeatheredBeamSegment(
                 vc, mat,
@@ -134,30 +134,30 @@ public class GargantuaRenderer extends EntityRenderer<GargantuaEntity> {
                 c.add(wingDir.scale(midWingR)),
                 camUp,
                 rg * 0.02 * open, rg * 0.08 * open,
-                1.00f * gg, 0.96f * gg, 0.86f * gg, Mth.clamp(vis * 0.48f, 0.0f, 0.50f),
-                1.00f * gg, 0.82f * gg, 0.54f * gg, Mth.clamp(vis * 0.22f, 0.0f, 0.30f)
+                1.00f * gg, 0.96f * gg, 0.86f * gg, Mth.clamp(vis * 0.74f, 0.0f, 0.78f),
+                1.00f * gg, 0.82f * gg, 0.54f * gg, Mth.clamp(vis * 0.40f, 0.0f, 0.48f)
         );
         ZoltraakRenderPass.emitFeatheredRing(
                 vc, mat, c, diskU, diskV,
                 rg * 1.86 * open, rg * 3.25 * open, outerWingR, 48,
-                1.00f * gg, 0.84f * gg, 0.56f * gg, Mth.clamp(vis * 0.30f, 0.0f, 0.38f)
+                1.00f * gg, 0.84f * gg, 0.56f * gg, Mth.clamp(vis * 0.54f, 0.0f, 0.62f)
         );
 
         // 2. Razor-thin n=2 Hairline Photon Sub-Ring & Primary Champagne Lensed Arches (dark annular gap preserved!)
         ZoltraakRenderPass.emitFeatheredRing(
                 vc, mat, c, camRight, camUp,
                 rg * 1.56 * open, rg * 1.63 * open, rg * 1.72 * open, 48,
-                1.00f * gg, 0.78f * gg, 0.46f * gg, Mth.clamp(vis * 0.42f, 0.0f, 0.46f)
+                1.00f * gg, 0.78f * gg, 0.46f * gg, Mth.clamp(vis * 0.68f, 0.0f, 0.74f)
         );
         ZoltraakRenderPass.emitFeatheredRing(
                 vc, mat, c, camRight, camUp,
                 rg * 1.88 * open, rg * 2.55 * open, rg * 3.70 * open, 48,
-                1.00f * gg, 0.88f * gg, 0.66f * gg, Mth.clamp(vis * 0.32f, 0.0f, 0.40f)
+                1.00f * gg, 0.88f * gg, 0.66f * gg, Mth.clamp(vis * 0.54f, 0.0f, 0.62f)
         );
         ZoltraakRenderPass.emitFeatheredRing(
                 vc, mat, c, camRight, camUp,
                 rg * 1.85 * open, rg * 2.22 * open, rg * 2.85 * open, 48,
-                1.00f * gg, 0.95f * gg, 0.82f * gg, Mth.clamp(vis * 0.38f, 0.0f, 0.44f)
+                1.00f * gg, 0.95f * gg, 0.82f * gg, Mth.clamp(vis * 0.64f, 0.0f, 0.70f)
         );
 
         ZoltraakRenderTypes.endIrisBatch(buffer, ZoltraakRenderTypes.IRIS_EMISSIVE_QUAD);

@@ -51,13 +51,11 @@ Modpack Inclusion Permitted:
 Notwithstanding the All Rights Reserved restriction on the mod's code above,
 the copyright holder explicitly permits anyone to extract, use, reuse, modify,
 adapt, and redistribute the mod's ORIGINAL sound and image files freely as
-desired (for resource packs, creative works, videos, or other projects),
-subject only to the third-party exceptions in Section 4:
+desired (for resource packs, creative works, videos, or other projects):
   - Original sound effects and audio files:
     assets/zoltraak_cinematic/sounds/*.ogg
   - Original textures, spell icons, item/entity/block textures, and UI/logo images:
     assets/zoltraak_cinematic/textures/**/*.png and logo.png
-    (EXCLUDING files under assets/zoltraak_cinematic/textures/cosmic/)
 
 This permission applies ONLY to the mod's original audio (.ogg) and image/
 texture (.png) files. It does NOT grant permission to copy, imitate, or
@@ -65,29 +63,10 @@ redistribute any Java source code, compiled bytecode, Mixins, GLSL shader code,
 or procedural rendering/build scripts.
 
 ================================================================================
-4. THIRD-PARTY EXCEPTIONS — COSMIC TEXTURES, PLATFORMS & LIBRARIES
+4. THIRD-PARTY EXCEPTIONS — PLATFORMS, LIBRARIES & FAN WORK
 ================================================================================
 
-A. Astronomical & Cosmic Textures (assets/zoltraak_cinematic/textures/cosmic/):
-  The terms above do not override third-party licenses for the astronomical and
-  planetary textures located in:
-    assets/zoltraak_cinematic/textures/cosmic/
-
-  Those files remain governed strictly by their respective Public Domain and
-  Creative Commons licenses (attribution required where applicable):
-    - NASA Earth Observatory / Goddard Space Flight Center / SVS:
-      Public Domain (17 U.S.C. § 105)
-    - European Southern Observatory (ESO / S. Brunier & R. Hurt):
-      Creative Commons Attribution 4.0 International (CC BY 4.0)
-      https://creativecommons.org/licenses/by/4.0/
-    - Solar System Scope / INOVE:
-      Creative Commons Attribution 4.0 International (CC BY 4.0)
-      https://creativecommons.org/licenses/by/4.0/
-
-  Full source URLs and required attributions are preserved in:
-    assets/zoltraak_cinematic/textures/cosmic/CREDITS.txt and NOTICE.txt.
-
-B. Third-Party Platforms, Game Files, Dependencies & Mapping Data:
+A. Third-Party Platforms, Game Files, Dependencies & Mapping Data:
   This All Rights Reserved license applies EXCLUSIVELY to original code and
   assets authored by Aling7788565 for Zoltraak: Cinematic Edition. It claims NO
   ownership, copyright, or rights over any third-party software, game files,
@@ -101,7 +80,7 @@ B. Third-Party Platforms, Game Files, Dependencies & Mapping Data:
       which are NOT distributed in this repository and remain governed solely by
       their respective owners' licenses and terms (including the Minecraft EULA).
 
-C. Non-Commercial Fan Work Disclaimer:
+B. Non-Commercial Fan Work Disclaimer:
   Zoltraak: Cinematic Edition is a free, non-commercial fan modification
   inspired by "Sousou no Frieren" created by Kanehito Yamada and Tsukasa Abe,
   and "KonoSuba: God's Blessing on This Wonderful World!" (Kono Subarashii Sekai
@@ -132,8 +111,6 @@ Copyright (c) 2026 Aling7788565. All Rights Reserved.
   Modpack ทั้งแบบสาธารณะและส่วนตัวได้ (เช่น CurseForge / Modrinth)
 - ไฟล์เสียงและรูปภาพ: อนุญาตให้สามารถนำไฟล์เสียง (.ogg) และไฟล์รูปภาพ/เท็กซ์เจอร์
   ต้นฉบับของม็อด (.png และ logo.png) ไปใช้งาน ดัดแปลง หรือเผยแพร่ต่อได้ตามต้องการ
-  (ยกเว้นภาพถ่ายอวกาศใน textures/cosmic/ ที่ยังคงอยู่ภายใต้ Public Domain และ
-  CC BY 4.0 ซึ่งต้องระบุเครดิตตาม CREDITS.txt)
 - ข้อแม้เพียงประการเดียว (Code): ไม่อนุญาตให้คัดลอก code ลอกเลียน ถอดรหัสเพื่อนำ
   โค้ดไปใช้ซ้ำ แก้ไขดัดแปลง หรือเผยแพร่ซ้ำซึ่ง code ของม็อด (รวมถึงโค้ด Java,
   bytecode, Mixins, GLSL Shaders และสคริปต์ต่าง ๆ) รวมถึงห้ามอัปโหลดหรือ

@@ -1,7 +1,10 @@
 // Copyright (c) 2026 Aling7788565. All Rights Reserved.
 package com.frierenflight.zoltraakcinematic.entity;
 
+import com.frierenflight.zoltraakcinematic.ZoltraakDamage;
 import com.frierenflight.zoltraakcinematic.registry.ModCinematicEntities;
+import com.frierenflight.zoltraakcinematic.registry.ModCinematicSchools;
+import com.frierenflight.zoltraakcinematic.registry.ModCinematicSpells;
 import io.redspace.ironsspellbooks.damage.DamageSources;
 import io.redspace.ironsspellbooks.entity.spells.AbstractMagicProjectile;
 import net.minecraft.nbt.CompoundTag;
@@ -12,6 +15,9 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
@@ -454,8 +460,29 @@ public final class DefenseBarrierEntity extends Entity {
                                     pDmg = bp.getDamage();
                                 }
 
-                                float absorbed = this.absorb(pDmg, contact.get());
-                                if (absorbed >= pDmg && pDmg > 0.0F) {
+                                // Corrupted Barrage shreds barrier capacity 2x faster and pierces 25% wither bleed.
+                                boolean corruptedBolt = (p instanceof ZoltraakBarrageProjectileEntity bp && bp.black());
+                                float barrierMult = corruptedBolt ? 2.0F : 1.0F;
+                                float absorbed = this.absorb(pDmg * barrierMult, contact.get());
+                                float remainingOrig = pDmg * Math.max(0.0F, 1.0F - absorbed / Math.max(0.001F, pDmg * barrierMult));
+
+                                if (corruptedBolt && pDmg > 0.0F) {
+                                    ZoltraakBarrageProjectileEntity bp = (ZoltraakBarrageProjectileEntity) p;
+                                    if (remainingOrig <= 0.001F) {
+                                        float bleedDmg = pDmg * 0.25F;
+                                        DamageSource bleedSrc = (bp.getOwner() instanceof LivingEntity livingShooter)
+                                                ? ModCinematicSpells.CORRUPTED_BARRAGE.get().getDamageSource(bp, livingShooter)
+                                                : serverLevel.damageSources().magic();
+                                        ZoltraakDamage.runBypassingBarriers(() -> {
+                                            if (ZoltraakDamage.apply(caster, bleedDmg, bleedSrc, ModCinematicSchools.ORDINARY_MAGIC.get(), true)) {
+                                                caster.addEffect(new MobEffectInstance(MobEffects.WITHER, 60, 0));
+                                            }
+                                        });
+                                        bp.stopOnImpact(contact.get());
+                                    } else {
+                                        bp.setDamage(remainingOrig);
+                                    }
+                                } else if (absorbed >= pDmg && pDmg > 0.0F) {
                                     if (p instanceof ZoltraakBarrageProjectileEntity bp) {
                                         bp.stopOnImpact(contact.get());
                                     } else {

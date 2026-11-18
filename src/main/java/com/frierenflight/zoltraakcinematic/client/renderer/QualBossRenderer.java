@@ -135,7 +135,7 @@ public class QualBossRenderer extends GeoEntityRenderer<QualBossEntity> {
             float offset = i * 1.618f;
             float lifeProgress = (gameTime * 0.020f + offset) % 1.0f;
             float alphaFactor = Mth.sin(lifeProgress * (float) Math.PI);
-            float wispA = Mth.clamp(alphaFactor * (isOverdrive ? 0.85f : 0.65f) * 0.48f, 0.0f, 0.44f);
+            float wispA = Mth.clamp(alphaFactor * (isOverdrive ? 0.85f : 0.65f) * 0.74f, 0.0f, 0.72f);
             float size = (0.32f + 0.09f * Mth.sin(offset + gameTime * 0.08f)) * alphaFactor;
             if (wispA <= 0.015f || size <= 0.01f) continue;
 
@@ -155,11 +155,11 @@ public class QualBossRenderer extends GeoEntityRenderer<QualBossEntity> {
             float corePulse = 2.05f + 0.40f * Mth.sin(gameTime * 0.8f);
             ZoltraakRenderPass.emitFeatheredStarBurst(
                     quadVc, baseMat, vortexCenter, camRight, camUp, corePulse,
-                    0.80f, 0.24f, 1.00f, 0.42f
+                    0.80f, 0.24f, 1.00f, 0.68f
             );
             ZoltraakRenderPass.emitFeatheredStarBurst(
                     quadVc, baseMat, vortexCenter, camRight, camUp, corePulse * 0.52f,
-                    0.96f, 0.52f, 1.00f, 0.48f
+                    0.96f, 0.52f, 1.00f, 0.78f
             );
             int arms = 4;
             int steps = 12;
@@ -178,7 +178,7 @@ public class QualBossRenderer extends GeoEntityRenderer<QualBossEntity> {
                     if (seg.lengthSqr() < 1.0E-6) continue;
                     Vec3 segSide = seg.cross(camRight.cross(camUp));
                     segSide = segSide.lengthSqr() < 1.0E-5 ? camUp : segSide.normalize();
-                    float sa = Mth.clamp(0.88f * (1.0f - u0) * 0.48f, 0.0f, 0.46f);
+                    float sa = Mth.clamp(0.88f * (1.0f - u0) * 0.72f, 0.0f, 0.70f);
                     float sg = ZoltraakRenderPass.irisFadeGuard(sa);
                     ZoltraakRenderPass.emitFeatheredBeamSegment(
                             quadVc, baseMat, p0, p1, segSide,
@@ -195,7 +195,7 @@ public class QualBossRenderer extends GeoEntityRenderer<QualBossEntity> {
             float progress = 1.0f - Math.max(0.0f, (flashTicks - partialTick) / 12.0f);
             if (progress >= 0.0f && progress <= 1.0f) {
                 float radius = 5.2f * (1.0f - (float) Math.exp(-4.5 * progress));
-                float a = Mth.clamp((1.0f - progress) * (1.0f - progress) * 0.42f, 0.0f, 0.44f);
+                float a = Mth.clamp((1.0f - progress) * (1.0f - progress) * 0.70f, 0.0f, 0.72f);
                 if (a > 0.02f) {
                     float ag = ZoltraakRenderPass.irisFadeGuard(a);
                     ZoltraakRenderPass.emitFeatheredRing(

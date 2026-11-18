@@ -80,15 +80,10 @@ public class ZoltraakCinematicSpell extends AbstractSpell {
         if (!level.isClientSide && level instanceof ServerLevel serverLevel) {
             float damage = getSpellPower(spellLevel, entity);
             Vec3 spawnPos = ZoltraakCinematicBeamEntity.getStaffAnchorPos(entity);
-            boolean isLarge = entity.isCrouching();
-            float range = (float) (isLarge
-                    ? com.frierenflight.zoltraakcinematic.config.ZoltraakCinematicConfig.getGreatBeamRange()
-                    : com.frierenflight.zoltraakcinematic.config.ZoltraakCinematicConfig.getBeamRange());
+            // Great Zoltraak (crouch trigger) temporarily disabled; planned as a separate spell.
+            float range = (float) com.frierenflight.zoltraakcinematic.config.ZoltraakCinematicConfig.getBeamRange();
 
             ZoltraakCinematicBeamEntity beam = new ZoltraakCinematicBeamEntity(serverLevel, entity, damage, range);
-            if (isLarge) {
-                beam.setMode(com.frierenflight.zoltraakcinematic.client.renderer.ZoltraakMode.LARGE);
-            }
             beam.setPos(spawnPos.x, spawnPos.y, spawnPos.z);
             beam.setYRot(net.minecraft.util.Mth.wrapDegrees(entity.getYRot()));
             beam.setXRot(net.minecraft.util.Mth.clamp(entity.getXRot(), -90.0f, 90.0f));

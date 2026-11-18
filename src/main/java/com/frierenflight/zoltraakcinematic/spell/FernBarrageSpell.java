@@ -39,11 +39,11 @@ public class FernBarrageSpell extends AbstractSpell {
             .setMinRarity(SpellRarity.EPIC)
             .setSchoolResource(com.frierenflight.zoltraakcinematic.registry.ModCinematicSchools.ORDINARY_MAGIC_RESOURCE)
             .setMaxLevel(1)
-            .setCooldownSeconds(1.5)
+            .setCooldownSeconds(7.0)
             .build();
 
     public static final int BARRAGE_CIRCLE_COUNT = 24;
-    public static final int BARRAGE_FIRE_INTERVAL = 10; // Rhythmic firing interval: every 10 ticks (0.5s = 2 volleys/sec)
+    public static final int BARRAGE_FIRE_INTERVAL = 14; // Rhythmic firing interval: every 14 ticks (0.7s)
     public static final int BARRAGE_INITIAL_DELAY = 8;   // 8 ticks (~0.4s) for opening celestial circle blossom
 
     // 24-Circle Grand Celestial Array (Parabolic Wings & Staggered Diamond Matrix)
@@ -97,14 +97,12 @@ public class FernBarrageSpell extends AbstractSpell {
     };
 
     public FernBarrageSpell() {
-        // Note: Iron's Spells deducts continuous mana every 10 ticks (0.5s) and cancels on Tick 0 if
-        // currentMana < getManaCost(level) * 2. 15 mana per 0.5s = 300 total mana over full 10s channel,
-        // while requiring only 30 mana on Tick 0 so default-mana (100) and Creative players can cast!
-        this.baseManaCost = 15;
+        // 22 mana per 10-tick ISS deduct interval (~308 mana over full 7s channel); 44 mana needed on Tick 0.
+        this.baseManaCost = 22;
         this.manaCostPerLevel = 2;
-        this.baseSpellPower = 5;
-        this.spellPowerPerLevel = 7;
-        this.castTime = 200; // Continuous channel up to 10 seconds (or until released/out of mana)
+        this.baseSpellPower = 4;
+        this.spellPowerPerLevel = 4;
+        this.castTime = 140; // Continuous channel up to 7.0 seconds (~10 volleys at 14-tick interval)
     }
 
     @Override

@@ -619,15 +619,16 @@ public class ZoltraakCinematicBeamEntity extends Entity implements IZoltraakVisu
                         double blastRadius = mode() == ZoltraakMode.LARGE ? 21.0 : 12.0;
                         AABB blastBox = new AABB(impactPos.x - blastRadius, impactPos.y - blastRadius, impactPos.z - blastRadius,
                                 impactPos.x + blastRadius, impactPos.y + blastRadius, impactPos.z + blastRadius);
-                        boolean respectFF = com.frierenflight.zoltraakcinematic.config.ZoltraakCinematicConfig.isProtectAllies();
-                        List<LivingEntity> blastTargets = serverLevel.getEntitiesOfClass(LivingEntity.class, blastBox,
-                                e -> e != owner && e.isAlive() && (owner == null || !respectFF || !DamageSources.isFriendlyFireBetween(owner, e))
-                        );
+                        List<Entity> rawBlastEntities = serverLevel.getEntities(this, blastBox, Entity::isAlive);
 
-                        float directBeamDamage = damage * (mode() == ZoltraakMode.LARGE ? 2.0f : 1.0f) * (float) com.frierenflight.zoltraakcinematic.config.ZoltraakCinematicConfig.getBeamDamageScale();
+                        float directBeamDamage = effectiveBeamDamage();
                         net.minecraft.world.damagesource.DamageSource spellSource = getSpellDamageSource();
 
-                        for (LivingEntity target : blastTargets) {
+                        for (Entity rawEntity : rawBlastEntities) {
+                            LivingEntity target = ZoltraakDamage.resolveLivingTarget(rawEntity);
+                            if (!isValidTarget(target)) {
+                                continue;
+                            }
                             if (barrierAbsorbed) {
                                 List<DefenseBarrierEntity> prot = serverLevel.getEntitiesOfClass(
                                         DefenseBarrierEntity.class, target.getBoundingBox().inflate(3.5),
@@ -637,35 +638,21 @@ public class ZoltraakCinematicBeamEntity extends Entity implements IZoltraakVisu
                                 }
                             }
 
-                            double dist = target.position().distanceTo(impactPos);
+                            double dist = Math.sqrt(rawEntity.getBoundingBox().distanceToSqr(impactPos));
                             if (dist <= blastRadius) {
-                                if (hitEntityIds.contains(target.getId())) {
+                                if (!hitEntityIds.add(target.getId())) {
                                     continue; // Already took full direct core beam damage
                                 }
-                                hitEntityIds.add(target.getId());
 
                                 float factor = (float) (1.0 - (dist / blastRadius));
                                 float effectiveBaseDamage = Math.max(0.0f, directBeamDamage - barrierAbsorbedAmount);
                                 if (effectiveBaseDamage <= 0.001f) {
                                     continue;
                                 }
-                                float blastDmg = Math.max(12.0f * factor, effectiveBaseDamage * factor);
+                                float minFloor = (barrierAbsorbedAmount > 0.0f) ? 0.0f : 12.0f * factor;
+                                float blastDmg = Math.max(minFloor, effectiveBaseDamage * factor);
 
-                                if (owner != null) {
-                                    ZoltraakDamage.apply(target, blastDmg, spellSource, ModCinematicSchools.ORDINARY_MAGIC.get(), true);
-                                } else {
-                                    target.hurt(damageSources().magic(), blastDmg);
-                                }
-
-                                if (black()) {
-                                    int witherTicks = com.frierenflight.zoltraakcinematic.config.ZoltraakCinematicConfig.getBlackWitherTicks();
-                                    target.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.WITHER, witherTicks, 1));
-                                    target.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN, 80, 1));
-                                }
-
-                                if (com.frierenflight.zoltraakcinematic.config.ZoltraakCinematicConfig.isBreakShieldOnHit() && target.isBlocking() && target instanceof Player p) {
-                                    p.disableShield();
-                                }
+                                applyBeamDamage(target, blastDmg, spellSource);
 
                                 Vec3 knockVec = target.position().subtract(impactPos);
                                 if (knockVec.lengthSqr() > 0.001) {
@@ -723,7 +710,7 @@ public class ZoltraakCinematicBeamEntity extends Entity implements IZoltraakVisu
                                                 BlockPos bp = centerBp.offset(dx, dy, dz);
                                                 if (drilledPositions.add(bp)) {
                                                     BlockState state = serverLevel.getBlockState(bp);
-                                                    if (!state.isAir() && state.getDestroySpeed(serverLevel, bp) >= 0.0f && state.getDestroySpeed(serverLevel, bp) < 55.0f) {
+                                                    if (!state.isAir() && !isBeamUnbreakable(serverLevel, bp, state)) {
                                                         if (random.nextFloat() < 0.20f) {
                                                             serverLevel.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, state),
                                                                     bp.getX() + 0.5, bp.getY() + 0.5, bp.getZ() + 0.5, 6, 0.25, 0.25, 0.25, 0.15);
@@ -743,53 +730,77 @@ public class ZoltraakCinematicBeamEntity extends Entity implements IZoltraakVisu
 
             // Piercing beam active raycast damage (Full Base Power dealt once per pierced entity)
             if (level() instanceof ServerLevel serverLevel) {
-                float beamDamage = damage * (mode() == ZoltraakMode.LARGE ? 2.0f : 1.0f) * (float) com.frierenflight.zoltraakcinematic.config.ZoltraakCinematicConfig.getBeamDamageScale();
-                Vec3 pStart = start;
-                Vec3 pEnd = start.add(look.scale(getBeamLength()));
-                AABB beamBox = new AABB(pStart, pEnd).inflate(mode() == ZoltraakMode.LARGE ? 5.25 : 2.25);
-                boolean respectFF = com.frierenflight.zoltraakcinematic.config.ZoltraakCinematicConfig.isProtectAllies();
-                List<LivingEntity> beamTargets = serverLevel.getEntitiesOfClass(LivingEntity.class, beamBox,
-                        e -> e != owner && e.isAlive() && (owner == null || !respectFF || !DamageSources.isFriendlyFireBetween(owner, e))
-                );
+                float beamDamage = Math.max(0.0f, effectiveBeamDamage() - barrierAbsorbedAmount);
+                if (beamDamage > 0.001f) {
+                    Vec3 pStart = start;
+                    Vec3 pEnd = start.add(look.scale(getBeamLength()));
+                    AABB beamBox = new AABB(pStart, pEnd).inflate(mode() == ZoltraakMode.LARGE ? 5.25 : 2.25);
+                    List<Entity> rawBeamEntities = serverLevel.getEntities(this, beamBox, Entity::isAlive);
 
-                net.minecraft.world.damagesource.DamageSource spellSource = getSpellDamageSource();
+                    net.minecraft.world.damagesource.DamageSource spellSource = getSpellDamageSource();
 
-                for (LivingEntity target : beamTargets) {
-                    if (hitEntityIds.contains(target.getId())) {
-                        continue;
-                    }
+                    for (Entity rawEntity : rawBeamEntities) {
+                        LivingEntity target = ZoltraakDamage.resolveLivingTarget(rawEntity);
+                        if (!isValidTarget(target) || hitEntityIds.contains(target.getId())) {
+                            continue;
+                        }
 
-                    Vec3 toTarget = target.getBoundingBox().getCenter().subtract(pStart);
-                    double proj = toTarget.dot(look);
-                    if (proj >= 0 && proj <= getBeamLength()) {
-                        Vec3 closest = pStart.add(look.scale(proj));
-                        if (target.getBoundingBox().distanceToSqr(closest) <= (mode() == ZoltraakMode.LARGE ? 20.25 : 4.05)) {
-                            hitEntityIds.add(target.getId());
+                        Vec3 toTarget = rawEntity.getBoundingBox().getCenter().subtract(pStart);
+                        double proj = toTarget.dot(look);
+                        if (proj >= 0 && proj <= getBeamLength()) {
+                            Vec3 closest = pStart.add(look.scale(proj));
+                            if (rawEntity.getBoundingBox().distanceToSqr(closest) <= (mode() == ZoltraakMode.LARGE ? 20.25 : 4.05)) {
+                                hitEntityIds.add(target.getId());
 
-                            if (owner != null) {
-                                ZoltraakDamage.apply(target, beamDamage, spellSource, ModCinematicSchools.ORDINARY_MAGIC.get(), true);
-                            } else {
-                                target.hurt(damageSources().magic(), beamDamage);
+                                applyBeamDamage(target, beamDamage, spellSource);
+
+                                Vec3 pushVec = look.normalize().scale(mode() == ZoltraakMode.LARGE ? 1.5 : 0.8);
+                                target.push(pushVec.x, 0.25, pushVec.z);
+                                target.hurtMarked = true;
                             }
-
-                            if (black()) {
-                                int witherTicks = com.frierenflight.zoltraakcinematic.config.ZoltraakCinematicConfig.getBlackWitherTicks();
-                                target.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.WITHER, witherTicks, 1));
-                                target.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN, 80, 1));
-                            }
-
-                            if (com.frierenflight.zoltraakcinematic.config.ZoltraakCinematicConfig.isBreakShieldOnHit() && target.isBlocking() && target instanceof Player p) {
-                                p.disableShield();
-                            }
-
-                            Vec3 pushVec = look.normalize().scale(mode() == ZoltraakMode.LARGE ? 1.5 : 0.8);
-                            target.push(pushVec.x, 0.25, pushVec.z);
-                            target.hurtMarked = true;
                         }
                     }
                 }
             }
         }
+    }
+
+    private float effectiveBeamDamage() {
+        float largeMult = (mode() == ZoltraakMode.LARGE)
+                ? ((owner instanceof com.frierenflight.zoltraakcinematic.entity.boss.QualBossEntity) ? 1.35f : 2.0f)
+                : 1.0f;
+        return this.damage * largeMult * (float) com.frierenflight.zoltraakcinematic.config.ZoltraakCinematicConfig.getBeamDamageScale();
+    }
+
+    private boolean isValidTarget(LivingEntity target) {
+        if (target == null || target == owner || !target.isAlive() || target.isSpectator()) {
+            return false;
+        }
+        if (target instanceof net.minecraft.world.entity.decoration.ArmorStand) {
+            return false;
+        }
+        boolean respectFF = com.frierenflight.zoltraakcinematic.config.ZoltraakCinematicConfig.isProtectAllies();
+        return owner == null || !respectFF || !DamageSources.isFriendlyFireBetween(owner, target);
+    }
+
+    private void applyBeamDamage(LivingEntity target, float amount, net.minecraft.world.damagesource.DamageSource spellSource) {
+        ZoltraakDamage.apply(target, amount, spellSource, ModCinematicSchools.ORDINARY_MAGIC.get(), true);
+        if (black()) {
+            int witherTicks = com.frierenflight.zoltraakcinematic.config.ZoltraakCinematicConfig.getBlackWitherTicks();
+            target.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.WITHER, witherTicks, 1));
+            target.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN, 80, 1));
+        }
+        if (com.frierenflight.zoltraakcinematic.config.ZoltraakCinematicConfig.isBreakShieldOnHit() && target.isBlocking() && target instanceof Player p) {
+            p.disableShield();
+        }
+    }
+
+    private static boolean isBeamUnbreakable(Level level, BlockPos pos, BlockState state) {
+        if (state.hasBlockEntity() || state.getBlock().getExplosionResistance() >= 900.0f) {
+            return true;
+        }
+        float speed = state.getDestroySpeed(level, pos);
+        return speed < 0.0f || speed >= 50.0f;
     }
 
     private net.minecraft.world.damagesource.DamageSource getSpellDamageSource() {
@@ -847,26 +858,29 @@ public class ZoltraakCinematicBeamEntity extends Entity implements IZoltraakVisu
         Vec3 firstHitNormal = look.scale(-1.0);
 
         if (hitBarrier != null && barrierHitDist <= blockHitDist) {
-            hitAnyObstacle = true;
-            firstHitDist = barrierHitDist;
-            Vec3 bNorm = hitBarrier.normal();
-            firstHitNormal = (bNorm != null && bNorm.lengthSqr() > 0.001) ? bNorm : look.scale(-1.0);
+            float beamDamage = effectiveBeamDamage();
+            float barrierMult = black() ? 1.75f : 1.0f;
+            float absorbed = hitBarrier.absorb(beamDamage * barrierMult, barrierContact);
+            this.barrierAbsorbedAmount = absorbed / barrierMult;
 
-            float beamDamage = this.damage * (mode() == ZoltraakMode.LARGE ? 2.0f : 1.0f) * (float) com.frierenflight.zoltraakcinematic.config.ZoltraakCinematicConfig.getBeamDamageScale();
-            float absorbed = hitBarrier.absorb(beamDamage, barrierContact);
-            this.barrierAbsorbedAmount = absorbed;
-            if (absorbed >= beamDamage || hitBarrier.active()) {
+            // Corrupted Zoltraak breaks barriers 1.75x faster and pierces through if shattered.
+            if (!black() || hitBarrier.active() || this.barrierAbsorbedAmount >= beamDamage) {
+                hitAnyObstacle = true;
+                firstHitDist = barrierHitDist;
+                Vec3 bNorm = hitBarrier.normal();
+                firstHitNormal = (bNorm != null && bNorm.lengthSqr() > 0.001) ? bNorm : look.scale(-1.0);
                 this.barrierAbsorbed = true;
+
+                this.entityData.set(DATA_DID_IMPACT, true);
+                this.entityData.set(DATA_IMPACT_DIST, firstHitDist);
+                this.entityData.set(DATA_IMPACT_NORMAL_X, (float) firstHitNormal.x);
+                this.entityData.set(DATA_IMPACT_NORMAL_Y, (float) firstHitNormal.y);
+                this.entityData.set(DATA_IMPACT_NORMAL_Z, (float) firstHitNormal.z);
+
+                return firstHitDist;
             }
-
-            this.entityData.set(DATA_DID_IMPACT, true);
-            this.entityData.set(DATA_IMPACT_DIST, firstHitDist);
-            this.entityData.set(DATA_IMPACT_NORMAL_X, (float) firstHitNormal.x);
-            this.entityData.set(DATA_IMPACT_NORMAL_Y, (float) firstHitNormal.y);
-            this.entityData.set(DATA_IMPACT_NORMAL_Z, (float) firstHitNormal.z);
-
-            return firstHitDist;
-        } else if (blockHitPos != null && blockHitDist < maxDist) {
+        }
+        if (blockHitPos != null && blockHitDist < maxDist) {
             hitAnyObstacle = true;
             firstHitDist = blockHitDist;
             firstHitNormal = blockNormal;
@@ -905,7 +919,7 @@ public class ZoltraakCinematicBeamEntity extends Entity implements IZoltraakVisu
             BlockPos bp = BlockPos.containing(checkPos);
             BlockState bs = level().getBlockState(bp);
             if (!bs.isAir() && bs.blocksMotion()) {
-                if (bs.getDestroySpeed(level(), bp) < 0.0f || bs.getDestroySpeed(level(), bp) >= 55.0f) {
+                if (isBeamUnbreakable(level(), bp, bs)) {
                     return d;
                 }
             }

@@ -65,9 +65,9 @@ import java.util.List;
  * Originator of Zoltraak (Killing Magic).
  *
  * Core Specifications:
- * - Base HP: 1500 (Scales +200 HP per nearby player within 48 blocks)
+ * - Base HP: 2000 (Scales +200 HP per nearby player within 48 blocks)
  * - Armor: 30, Armor Toughness: 10, Knockback Resistance: 0.8
- * - Magic Resistance: +40%, Spell Power: +40% (Zoltraak +50%)
+ * - Magic Resistance: +35%, Spell Power: +20% (Zoltraak +20%)
  * - Movement: 3D Demonic Aerial Flight (Hovering 4–15 blocks above terrain)
  * - Boss Bar: PURPLE, PROGRESS, World Fog & Darken Screen enabled
  * - 4-Phase Combat Progression State Machine (100% -> 75% -> 40% -> 20% -> 0%)
@@ -90,7 +90,7 @@ public class QualBossEntity extends AbstractSpellCastingMob implements Enemy, Ge
     public static final int CAST_STATE_BARRAGE = 2;
     public static final int CAST_STATE_CATACLYSMIC = 3;
 
-    public static final double BASE_MAX_HEALTH = 1500.0;
+    public static final double BASE_MAX_HEALTH = 2000.0;
     public static final double HEALTH_PER_PLAYER = 200.0;
 
     private final ServerBossEvent bossEvent = (ServerBossEvent) new ServerBossEvent(
@@ -146,12 +146,12 @@ public class QualBossEntity extends AbstractSpellCastingMob implements Enemy, Ge
                 .add(Attributes.ATTACK_DAMAGE, 12.0)
                 .add(AttributeRegistry.MAX_MANA, 6000.0)
                 .add(AttributeRegistry.MANA_REGEN, 20.0)
-                .add(AttributeRegistry.SPELL_POWER, 1.4)
-                .add(AttributeRegistry.SPELL_RESIST, 1.4)
+                .add(AttributeRegistry.SPELL_POWER, 1.20)
+                .add(AttributeRegistry.SPELL_RESIST, 1.35)
                 .add(AttributeRegistry.CAST_TIME_REDUCTION, 0.35)
                 .add(AttributeRegistry.COOLDOWN_REDUCTION, 0.30)
-                .add(ModCinematicAttributes.ZOLTRAAK_SPELL_POWER, 1.5)
-                .add(ModCinematicAttributes.ZOLTRAAK_MAGIC_RESIST, 1.4);
+                .add(ModCinematicAttributes.ZOLTRAAK_SPELL_POWER, 1.20)
+                .add(ModCinematicAttributes.ZOLTRAAK_MAGIC_RESIST, 1.35);
     }
 
     @Override

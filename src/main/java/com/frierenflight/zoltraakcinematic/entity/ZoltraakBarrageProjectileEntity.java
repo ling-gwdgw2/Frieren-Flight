@@ -37,7 +37,9 @@ import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * High-Speed Tapered Projectile for Fern's Rapid Barrage.
@@ -466,6 +468,9 @@ public class ZoltraakBarrageProjectileEntity extends ThrowableProjectile impleme
 
     @Override
     protected void onHit(HitResult hitResult) {
+        LivingEntity directTarget = (hitResult instanceof EntityHitResult ehr)
+                ? ZoltraakDamage.resolveLivingTarget(ehr.getEntity())
+                : null;
         super.onHit(hitResult);
         if (isImpactStopped()) return;
 
@@ -511,30 +516,29 @@ public class ZoltraakBarrageProjectileEntity extends ThrowableProjectile impleme
                         hitPos.x, hitPos.y, hitPos.z, 4, 0.14, 0.14, 0.14, 0.04);
                 }
 
-                // Explosive splash damage around impact point
+                // Splash damage to nearby targets ONLY (excluding the already directly-hit entity)
                 double blastR = com.frierenflight.zoltraakcinematic.config.ZoltraakCinematicConfig.getBarrageSplashRadius();
                 if (blastR > 0.1) {
                     Entity shooter = getOwner();
                     AABB blastBox = new AABB(hitPos.x - blastR, hitPos.y - blastR, hitPos.z - blastR,
                             hitPos.x + blastR, hitPos.y + blastR, hitPos.z + blastR);
-                    boolean respectFF = com.frierenflight.zoltraakcinematic.config.ZoltraakCinematicConfig.isProtectAllies();
-                    List<LivingEntity> splashTargets = serverLevel.getEntitiesOfClass(LivingEntity.class, blastBox,
-                            e -> e != shooter && e.isAlive() && (shooter == null || !respectFF || !DamageSources.isFriendlyFireBetween(shooter, e))
-                    );
                     float splashBase = damage * (float) com.frierenflight.zoltraakcinematic.config.ZoltraakCinematicConfig.getBarrageDamageScale() * 0.5f;
-                    for (LivingEntity spTarget : splashTargets) {
-                        double dist = spTarget.position().distanceTo(hitPos);
+                    Set<Integer> splashedIds = new HashSet<>();
+
+                    for (Entity candidate : serverLevel.getEntities(this, blastBox, Entity::isAlive)) {
+                        LivingEntity spTarget = ZoltraakDamage.resolveLivingTarget(candidate);
+                        if (spTarget == null || spTarget == directTarget || !splashedIds.add(spTarget.getId())) {
+                            continue;
+                        }
+                        if (!isValidHostileTarget(spTarget, shooter)) {
+                            continue;
+                        }
+                        double dist = Math.sqrt(candidate.getBoundingBox().distanceToSqr(hitPos));
                         if (dist <= blastR) {
                             float factor = (float) (1.0 - (dist / blastR));
                             float splashDmg = Math.max(1.0f, splashBase * factor);
-                            if (shooter instanceof LivingEntity livingShooter) {
-                                net.minecraft.world.damagesource.DamageSource source = isPurple
-                                        ? ModCinematicSpells.CORRUPTED_BARRAGE.get().getDamageSource(this, livingShooter)
-                                        : ModCinematicSpells.ZOLTRAAK_BARRAGE.get().getDamageSource(this, livingShooter);
-                                ZoltraakDamage.apply(spTarget, splashDmg, source, ModCinematicSchools.ORDINARY_MAGIC.get(), false);
-                            } else {
-                                spTarget.hurt(damageSources().magic(), splashDmg);
-                            }
+                            net.minecraft.world.damagesource.DamageSource source = buildDamageSource(isPurple, shooter);
+                            ZoltraakDamage.apply(spTarget, splashDmg, source, ModCinematicSchools.ORDINARY_MAGIC.get(), false);
                         }
                     }
                 }
@@ -547,30 +551,48 @@ public class ZoltraakBarrageProjectileEntity extends ThrowableProjectile impleme
         }
     }
 
+    private net.minecraft.world.damagesource.DamageSource buildDamageSource(boolean isPurple, Entity shooter) {
+        if (shooter instanceof LivingEntity livingShooter) {
+            return isPurple
+                    ? ModCinematicSpells.CORRUPTED_BARRAGE.get().getDamageSource(this, livingShooter)
+                    : ModCinematicSpells.ZOLTRAAK_BARRAGE.get().getDamageSource(this, livingShooter);
+        }
+        return damageSources().magic();
+    }
+
+    private boolean isValidHostileTarget(LivingEntity target, Entity owner) {
+        if (target == null || target == owner || !target.isAlive() || target.isSpectator()) {
+            return false;
+        }
+        if (target instanceof ArmorStand) {
+            return false;
+        }
+        if (target instanceof Player p && (p.isCreative() || (owner instanceof Player op && !op.canHarmPlayer(p)))) {
+            return false;
+        }
+        boolean respectFF = com.frierenflight.zoltraakcinematic.config.ZoltraakCinematicConfig.isProtectAllies();
+        if (owner != null && respectFF && DamageSources.isFriendlyFireBetween(owner, target)) {
+            return false;
+        }
+        return true;
+    }
+
     @Override
     protected void onHitEntity(EntityHitResult entityHitResult) {
         super.onHitEntity(entityHitResult);
         if (isImpactStopped()) return;
 
-        Entity target = entityHitResult.getEntity();
+        LivingEntity livingTarget = ZoltraakDamage.resolveLivingTarget(entityHitResult.getEntity());
         Entity shooter = getOwner();
 
-        if (target instanceof LivingEntity livingTarget && !level().isClientSide) {
+        if (livingTarget != null && isValidHostileTarget(livingTarget, shooter) && !level().isClientSide) {
             boolean isPurple = getColorTheme() == 1;
-            boolean damaged;
-
             float finalDamage = damage * (float) com.frierenflight.zoltraakcinematic.config.ZoltraakCinematicConfig.getBarrageDamageScale();
-            if (shooter instanceof LivingEntity livingShooter) {
-                net.minecraft.world.damagesource.DamageSource source = isPurple
-                        ? ModCinematicSpells.CORRUPTED_BARRAGE.get().getDamageSource(this, livingShooter)
-                        : ModCinematicSpells.ZOLTRAAK_BARRAGE.get().getDamageSource(this, livingShooter);
-                damaged = ZoltraakDamage.apply(livingTarget, finalDamage, source, ModCinematicSchools.ORDINARY_MAGIC.get(), true);
-            } else {
-                damaged = livingTarget.hurt(damageSources().magic(), finalDamage);
-            }
+            net.minecraft.world.damagesource.DamageSource source = buildDamageSource(isPurple, shooter);
+            boolean damaged = ZoltraakDamage.apply(livingTarget, finalDamage, source, ModCinematicSchools.ORDINARY_MAGIC.get(), true);
 
             // Stagger effect and knockback: cancel item use & disable shield when attack is effective
-            if (damaged || shooter == null || !DamageSources.isFriendlyFireBetween(shooter, livingTarget)) {
+            if (damaged) {
                 if (livingTarget.isUsingItem()) {
                     livingTarget.stopUsingItem();
                 }
@@ -599,20 +621,11 @@ public class ZoltraakBarrageProjectileEntity extends ThrowableProjectile impleme
 
     @Override
     protected boolean canHitEntity(Entity target) {
-        if (isImpactStopped()) {
+        if (isImpactStopped() || target == null || target instanceof ArmorStand || target instanceof ZoltraakBarrageProjectileEntity) {
             return false;
         }
-        Entity owner = getOwner();
-        if (target == null || target == owner || !target.isAlive() || target.isSpectator()) {
-            return false;
-        }
-        if (target instanceof ArmorStand || target instanceof ZoltraakBarrageProjectileEntity) {
-            return false;
-        }
-        if (target instanceof Player p && (p.isCreative() || (owner instanceof Player op && !op.canHarmPlayer(p)))) {
-            return false;
-        }
-        if (owner != null && DamageSources.isFriendlyFireBetween(owner, target)) {
+        LivingEntity resolved = ZoltraakDamage.resolveLivingTarget(target);
+        if (!isValidHostileTarget(resolved, getOwner())) {
             return false;
         }
         return super.canHitEntity(target);

@@ -728,15 +728,7 @@ public class GargantuaEntity extends Entity implements TraceableEntity, OwnableE
 
             // --- DAMAGE LOGIC (Accretion Disk & Event Horizon) ---
             if (doDamageTick && boxDist <= diskRadius) {
-                LivingEntity targetLiving = null;
-                if (e instanceof LivingEntity living) {
-                    targetLiving = living;
-                } else {
-                    Entity parent = Services.PLATFORM.getPartParent(e);
-                    if (parent instanceof LivingEntity parentLiving) {
-                        targetLiving = parentLiving;
-                    }
-                }
+                LivingEntity targetLiving = ZoltraakDamage.resolveLivingTarget(e);
 
                 if (targetLiving != null && targetLiving.isAlive() && !isEntityImmuneToVortex(targetLiving, caster)
                         && damagedThisTick.add(targetLiving.getUUID())) {
@@ -747,6 +739,7 @@ public class GargantuaEntity extends Entity implements TraceableEntity, OwnableE
                     }
 
                     float spellPowerMult = Math.max(0.1f, getSpellPower() / 500.0f);
+                    float maxTidalCap = 200.0f * spellPowerMult;
                     float dmg;
                     if (boxDist <= eventHorizonDist) {
                         dmg = Math.max(35.0f * spellPowerMult, targetLiving.getMaxHealth() * (tidalPct * spellPowerMult));
@@ -755,6 +748,7 @@ public class GargantuaEntity extends Entity implements TraceableEntity, OwnableE
                         float plasmaFactor = (float) (0.30 + 0.70 * proximity);
                         dmg = Math.max(20.0f * spellPowerMult, targetLiving.getMaxHealth() * (tidalPct * plasmaFactor * spellPowerMult));
                     }
+                    dmg = Math.min(maxTidalCap, dmg);
 
                     ZoltraakDamage.apply(targetLiving, dmg, damageSource, ModCinematicSchools.BLACK_HOLE.get(), true);
                     noteSwallowed();
@@ -874,15 +868,7 @@ public class GargantuaEntity extends Entity implements TraceableEntity, OwnableE
         float baseDamage = baseBlast + swallowedBonus;
 
         for (Entity e : list) {
-            LivingEntity target = null;
-            if (e instanceof LivingEntity living) {
-                target = living;
-            } else {
-                Entity parent = Services.PLATFORM.getPartParent(e);
-                if (parent instanceof LivingEntity parentLiving) {
-                    target = parentLiving;
-                }
-            }
+            LivingEntity target = ZoltraakDamage.resolveLivingTarget(e);
             if (target == null || !target.isAlive() || isEntityImmuneToVortex(target, caster)) continue;
             if (!hitTargets.add(target.getUUID())) continue;
 

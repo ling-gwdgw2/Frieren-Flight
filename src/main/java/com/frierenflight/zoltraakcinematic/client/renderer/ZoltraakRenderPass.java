@@ -358,13 +358,13 @@ public final class ZoltraakRenderPass {
             : (first ? 0.78 : 1.0);
          double mSize = (0.55 + charge * 0.85 + (shot >= 0.0F ? 1.35 * Math.exp(-shot * 0.22) : 0.0)) * mSizeScale * entity.scale();
          float mg = irisFadeGuard(muzzle);
-         float ma = Mth.clamp(muzzle * irisMuzzleScale * (black && shot >= 0.0F ? 0.34F : 0.46F), 0.0F, 0.48F);
+         float ma = Mth.clamp(muzzle * irisMuzzleScale * (black && shot >= 0.0F ? 0.52F : 0.74F), 0.0F, 0.78F);
          if (black) {
-            emitFeatheredStarBurst(quadVc, mat, primaryCenter, camRight, camUp, mSize * 1.25, 0.56F * mg, 0.14F * mg, 0.96F * mg, ma * 0.46F);
-            emitFeatheredStarBurst(quadVc, mat, primaryCenter, camRight, camUp, mSize * 0.52, 0.78F * mg, 0.28F * mg, 1.00F * mg, ma * 0.54F);
+            emitFeatheredStarBurst(quadVc, mat, primaryCenter, camRight, camUp, mSize * 1.25, 0.56F * mg, 0.14F * mg, 0.96F * mg, ma * 0.72F);
+            emitFeatheredStarBurst(quadVc, mat, primaryCenter, camRight, camUp, mSize * 0.52, 0.78F * mg, 0.28F * mg, 1.00F * mg, ma * 0.82F);
          } else {
-            emitFeatheredStarBurst(quadVc, mat, primaryCenter, camRight, camUp, mSize * 0.48, 0.36F * mg, 0.60F * mg, 1.00F * mg, ma * 0.28F);
-            emitFeatheredStarBurst(quadVc, mat, primaryCenter, camRight, camUp, mSize * 0.28, 0.88F * mg, 0.96F * mg, 1.00F * mg, ma * 0.42F);
+            emitFeatheredStarBurst(quadVc, mat, primaryCenter, camRight, camUp, mSize * 0.48, 0.36F * mg, 0.60F * mg, 1.00F * mg, ma * 0.54F);
+            emitFeatheredStarBurst(quadVc, mat, primaryCenter, camRight, camUp, mSize * 0.28, 0.88F * mg, 0.96F * mg, 1.00F * mg, ma * 0.76F);
          }
       }
 
@@ -419,7 +419,7 @@ public final class ZoltraakRenderPass {
                emitFeatheredRing(
                   quadVc, mat, center, iu, iv,
                   Math.max(0.25, ringR - 1.15 * entity.scale()), ringR, ringR + 1.55 * entity.scale(), 28,
-                  cr * fg, cg * fg, cb * fg, Mth.clamp(flash * 0.46F, 0.0F, 0.48F)
+                  cr * fg, cg * fg, cb * fg, Mth.clamp(flash * 0.72F, 0.0F, 0.76F)
                );
             }
 
@@ -431,7 +431,7 @@ public final class ZoltraakRenderPass {
                emitFeatheredRing(
                   quadVc, mat, domeHaloCenter, camRight, camUp,
                   Math.max(0.4, domeR - 1.10 * entity.scale()), domeR, domeR + 1.30 * entity.scale(), 28,
-                  cr * dg, cg * dg, cb * dg, Mth.clamp(domeBloom * 0.28F, 0.0F, 0.36F)
+                  cr * dg, cg * dg, cb * dg, Mth.clamp(domeBloom * 0.46F, 0.0F, 0.54F)
                );
             }
 
@@ -441,11 +441,11 @@ public final class ZoltraakRenderPass {
                Vec3 flashPos = center.add(normal.scale(0.32 * entity.scale()));
                emitFeatheredStarBurst(
                   quadVc, mat, flashPos, camRight, camUp, (3.2 + impactDt * 0.16) * entity.scale(),
-                  cr * fg, cg * fg, cb * fg, Mth.clamp(flash * 0.42F, 0.0F, 0.46F)
+                  cr * fg, cg * fg, cb * fg, Mth.clamp(flash * 0.68F, 0.0F, 0.72F)
                );
                emitFeatheredStarBurst(
                   quadVc, mat, flashPos, camRight, camUp, (1.6 + impactDt * 0.07) * entity.scale(),
-                  (black ? 0.88F : 0.86F) * fg, (black ? 0.40F : 0.98F) * fg, 1.00F * fg, Mth.clamp(flash * 0.50F, 0.0F, 0.52F)
+                  (black ? 0.88F : 0.86F) * fg, (black ? 0.40F : 0.98F) * fg, 1.00F * fg, Mth.clamp(flash * 0.78F, 0.0F, 0.82F)
                );
             }
          }
@@ -499,13 +499,13 @@ public final class ZoltraakRenderPass {
                quadVc, mat, a, b, side,
                rimHalfW * 0.44, rimHalfW * 1.58,
                0.06F * bg, 0.01F * bg, 0.14F * bg, voidCoreA,
-               0.58F * bg, 0.12F * bg, 0.96F * bg, Mth.clamp(beamPower * 0.40F, 0.0F, 0.44F)
+               0.58F * bg, 0.12F * bg, 0.96F * bg, Mth.clamp(beamPower * 0.64F, 0.0F, 0.70F)
             );
             emitFeatheredBeamSegment(
                quadVc, mat, a, b, side,
                rimHalfW * 0.36, rimHalfW * 0.98,
                0.08F * bg, 0.02F * bg, 0.18F * bg, voidCoreA,
-               0.78F * bg, 0.24F * bg, 1.00F * bg, Mth.clamp(beamPower * 0.48F, 0.0F, 0.50F)
+               0.78F * bg, 0.24F * bg, 1.00F * bg, Mth.clamp(beamPower * 0.74F, 0.0F, 0.80F)
             );
          } else {
             emitIrisAnimeBeam(quadVc, mat, a, b, side, rimHalfW, beamPower, bg, 0.22, 0.42, 0.72, 0.96F);
@@ -528,15 +528,15 @@ public final class ZoltraakRenderPass {
             emitFeatheredRing(
                quadVc, mat, center.add(normal.scale(0.08)), iu, iv,
                Math.max(0.2, ringMid - 2.6), ringMid, ringMid + 5.2, 28,
-               cr * fg, cg * fg, cb * fg, Mth.clamp(flash * 0.46F, 0.0F, 0.48F)
+               cr * fg, cg * fg, cb * fg, Mth.clamp(flash * 0.74F, 0.0F, 0.78F)
             );
             emitFeatheredStarBurst(
                quadVc, mat, center, camRight, camUp, 15.5,
-               cr * fg, cg * fg, cb * fg, Mth.clamp(flash * 0.40F, 0.0F, 0.44F)
+               cr * fg, cg * fg, cb * fg, Mth.clamp(flash * 0.66F, 0.0F, 0.72F)
             );
             emitFeatheredStarBurst(
                quadVc, mat, center, camRight, camUp, 8.2,
-               (black ? 0.92F : 0.80F) * fg, (black ? 0.56F : 0.98F) * fg, 1.00F * fg, Mth.clamp(flash * 0.48F, 0.0F, 0.50F)
+               (black ? 0.92F : 0.80F) * fg, (black ? 0.56F : 0.98F) * fg, 1.00F * fg, Mth.clamp(flash * 0.78F, 0.0F, 0.84F)
             );
          }
       }
@@ -631,8 +631,8 @@ public final class ZoltraakRenderPass {
       Vec3 relCam = camPos.subtract(origin);
       double baseWidth = (black ? 0.22 : 0.20) * Math.sqrt(fade) * (entity.scale() / 0.6F);
       float rg = irisFadeGuard(fade);
-      float coreA = Mth.clamp(fade * 0.54F, 0.0F, 0.56F);
-      float haloA = Mth.clamp(fade * 0.32F, 0.0F, 0.34F);
+      float coreA = Mth.clamp(fade * 0.78F, 0.0F, 0.82F);
+      float haloA = Mth.clamp(fade * 0.48F, 0.0F, 0.54F);
 
       VertexConsumer quadVc = buffers.getBuffer(ZoltraakRenderTypes.IRIS_EMISSIVE_QUAD);
       for (int i = 0; i < samples - 1; i++) {
@@ -656,7 +656,7 @@ public final class ZoltraakRenderPass {
             float fg = irisFadeGuard(flash);
             emitFeatheredStarBurst(
                quadVc, mat, endRel, camRight, camUp, 2.15 * entity.scale(),
-               cr * fg, cg * fg, cb * fg, Mth.clamp(flash * 0.46F, 0.0F, 0.48F)
+               cr * fg, cg * fg, cb * fg, Mth.clamp(flash * 0.74F, 0.0F, 0.78F)
             );
          }
       }
@@ -711,9 +711,9 @@ public final class ZoltraakRenderPass {
       double halfWidth, float power, float guard,
       double coreRatio, double innerHaloRatio, double outerTentRatio, float intensityScale
    ) {
-      float outerTentA = Mth.clamp(power * 0.24F * intensityScale, 0.0F, 0.30F);
-      float coreA = Mth.clamp(power * 0.54F * intensityScale, 0.0F, 0.62F);
-      float innerHaloA = Mth.clamp(power * 0.24F * intensityScale, 0.0F, 0.30F);
+      float outerTentA = Mth.clamp(power * 0.38F * intensityScale, 0.0F, 0.46F);
+      float coreA = Mth.clamp(power * 0.78F * intensityScale, 0.0F, 0.86F);
+      float innerHaloA = Mth.clamp(power * 0.42F * intensityScale, 0.0F, 0.50F);
 
       emitTaperedIrisBeamSegment(
          quadVc, mat, a, b, side, fpCircle,
@@ -804,6 +804,41 @@ public final class ZoltraakRenderPass {
          coreHalfWidth, haloHalfWidth, coreHalfWidth, haloHalfWidth,
          coreR, coreG, coreB, coreA, haloR, haloG, haloB, haloA,
          coreR, coreG, coreB, coreA, haloR, haloG, haloB, haloA
+      );
+   }
+
+   /** Emits a symmetric streak or ray whose width and alpha taper smoothly to 0 at both endpoints. */
+   public static void emitFeatheredLensStreak(
+      VertexConsumer vc, Matrix4f mat, Vec3 center, Vec3 axisDir, Vec3 perpDir,
+      double halfLen, double coreHalfWidth, double haloHalfWidth,
+      float coreR, float coreG, float coreB, float coreA,
+      float haloR, float haloG, float haloB, float haloA
+   ) {
+      if (halfLen <= 1.0E-4 || haloHalfWidth <= 1.0E-4 || coreA <= 0.002F) {
+         return;
+      }
+      Vec3 innerLeft = center.subtract(axisDir.scale(halfLen * 0.25));
+      Vec3 innerRight = center.add(axisDir.scale(halfLen * 0.25));
+      Vec3 outerLeft = center.subtract(axisDir.scale(halfLen));
+      Vec3 outerRight = center.add(axisDir.scale(halfLen));
+
+      emitFeatheredBeamSegment(
+         vc, mat, innerLeft, innerRight, perpDir,
+         coreHalfWidth, haloHalfWidth, coreHalfWidth, haloHalfWidth,
+         coreR, coreG, coreB, coreA, haloR, haloG, haloB, haloA,
+         coreR, coreG, coreB, coreA, haloR, haloG, haloB, haloA
+      );
+      emitFeatheredBeamSegment(
+         vc, mat, outerLeft, innerLeft, perpDir,
+         0.0, haloHalfWidth * 0.18, coreHalfWidth, haloHalfWidth,
+         0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F,
+         coreR, coreG, coreB, coreA, haloR, haloG, haloB, haloA
+      );
+      emitFeatheredBeamSegment(
+         vc, mat, innerRight, outerRight, perpDir,
+         coreHalfWidth, haloHalfWidth, 0.0, haloHalfWidth * 0.18,
+         coreR, coreG, coreB, coreA, haloR, haloG, haloB, haloA,
+         0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F
       );
    }
 
@@ -920,7 +955,7 @@ public final class ZoltraakRenderPass {
    }
 
    public static float irisFadeGuard(float fade) {
-      return Mth.clamp(fade * 3.2F, 0.0F, 0.86F);
+      return Mth.clamp(fade * 5.0F, 0.0F, 1.00F);
    }
 
    private static final float[] POLAR_CIRCLE_BANDS = {0.0F, 0.28F, 0.54F, 0.74F, 1.01F};
@@ -1114,7 +1149,7 @@ public final class ZoltraakRenderPass {
    ) {
       if (alpha <= 0.015F) return;
       float guard = irisFadeGuard(alpha);
-      float aDisc = Mth.clamp(alpha * 0.48F * fpCircle.irisDiscAlphaScale(), 0.0F, 0.52F);
+      float aDisc = Mth.clamp(alpha * 0.72F * fpCircle.irisDiscAlphaScale(), 0.0F, 0.78F);
       if (aDisc > 0.004F) {
          RenderType circleType = ZoltraakRenderTypes.irisEmissiveTextured(ZoltraakRenderTypes.TEX_MAGIC_CIRCLE);
          VertexConsumer circleVc = buffers.getBuffer(circleType);
@@ -1130,7 +1165,7 @@ public final class ZoltraakRenderPass {
       }
 
       double rad = ru.length();
-      float haloAlpha = Mth.clamp(alpha * 0.16F * fpCircle.irisHaloAlphaScale(), 0.0F, 0.22F);
+      float haloAlpha = Mth.clamp(alpha * 0.34F * fpCircle.irisHaloAlphaScale(), 0.0F, 0.42F);
       if (rad > 0.01 && haloAlpha > 0.004F) {
          Vec3 uUnit = ru.scale(1.0 / rad);
          Vec3 vUnit = rv.lengthSqr() > 1.0E-8 ? rv.normalize() : uUnit;

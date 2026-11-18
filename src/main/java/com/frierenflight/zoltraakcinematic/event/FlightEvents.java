@@ -173,8 +173,9 @@ public final class FlightEvents {
                 }
                 heightMult = (float) Math.min(heightMult, com.frierenflight.zoltraakcinematic.config.ZoltraakCinematicConfig.getMaxHeightScale());
 
-                // Dynamic Total Mana Drain
-                float drainThisTick = basePerTick * speedMult * heightMult;
+                // Combined additive scaling prevents multiplicative runaway at high altitude + speed
+                float totalMult = 1.0f + (speedMult - 1.0f) + (heightMult - 1.0f);
+                float drainThisTick = basePerTick * totalMult;
 
                 if (!player.isCreative()) {
                     MagicData magicData = MagicData.getPlayerMagicData(player);

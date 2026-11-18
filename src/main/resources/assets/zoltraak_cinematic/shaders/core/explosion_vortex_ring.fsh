@@ -152,27 +152,33 @@ void main() {
         return;
     }
 
-    // MODE 3: Saturated Electric Cyan-Blue Fountain Ribbons with Controlled Cyan Halo
+    // MODE 3: Directional Mana-Gathering Energy Streams rushing INTO the staff orb (u: 0=tail -> 1=head)
     if (mode > 0.78) {
-        float u = vUv.x;
+        float u = clamp(vUv.x, 0.0, 1.0);
         float v = abs(vUv.y * 2.0 - 1.0);
 
-        float flow = u * 4.5 - anim * 0.85 + seedVal * 6.283;
-        float wave = (valNoise2(vec2(flow * 1.8, v * 3.2)) - 0.5) * 0.16;
-        float d = clamp(v + wave * (1.0 - u * 0.5), 0.0, 1.0);
+        float flow = u * 3.8 - progress * 8.0 + seedVal * 6.283;
+        float wave = (valNoise2(vec2(flow * 1.6, v * 2.8)) - 0.5) * 0.12 * (1.0 - u * 0.65);
+        float d = clamp(v + wave, 0.0, 1.0);
 
-        float outerBloom = exp(-pow(d * 1.85, 2.0)) * (1.0 - smoothstep(0.72, 1.0, v)) * 0.44;
-        float body = 1.0 - smoothstep(0.14, 0.62, d);
-        float coreLine = exp(-pow(d * 5.2, 2.0));
-        float streakPulse = 0.78 + 0.22 * sin(flow * 3.2);
-        float tipFade = smoothstep(0.0, 0.10, u) * smoothstep(1.0, 0.88, u);
+        float outerBloom = exp(-pow(d * 2.1, 2.0)) * (1.0 - smoothstep(0.68, 1.0, v)) * 0.36;
+        float body = 1.0 - smoothstep(0.12, 0.56, d);
+        float coreLine = exp(-pow(d * 5.8, 2.0));
 
-        vec3 deepBlueBloom = vec3(0.02, 0.38, 0.96);
-        vec3 electricCyan = vec3(0.10, 0.76, 1.02);
-        vec3 brightAqua = vec3(0.62, 0.94, 1.04);
+        // Directional comet ramp: wispy blue tail at u=0, bright aqua-white plasma head accelerating to u=1
+        float tailTaper = smoothstep(0.0, 0.32, u);
+        float headCore = smoothstep(0.35, 0.90, u);
+        float tipClose = smoothstep(1.0, 0.88, u);
+        float streamEnv = tailTaper * tipClose * (0.48 + 0.52 * headCore);
 
-        vec3 col = deepBlueBloom * outerBloom + mix(deepBlueBloom, electricCyan, body) * 0.86 + brightAqua * coreLine * 0.65;
-        float alpha = clamp((outerBloom * 0.62 + body * 0.82 + coreLine * 0.52) * streakPulse * tipFade * fade * ColorModulator.a, 0.0, 1.0);
+        vec3 deepBlueBloom = vec3(0.02, 0.36, 0.96);
+        vec3 electricCyan = vec3(0.12, 0.80, 1.04);
+        vec3 brightAquaWhite = vec3(0.76, 0.98, 1.06);
+
+        vec3 col = deepBlueBloom * outerBloom
+                 + mix(deepBlueBloom, electricCyan, clamp(body * (0.65 + 0.35 * headCore), 0.0, 1.0)) * 0.86
+                 + mix(electricCyan, brightAquaWhite, headCore) * coreLine * (0.58 + 0.42 * headCore);
+        float alpha = clamp((outerBloom * 0.55 + body * 0.78 + coreLine * 0.64) * streamEnv * fade * ColorModulator.a, 0.0, 1.0);
         if (alpha < 0.004) discard;
         fragColor = vec4(col * ColorModulator.rgb, alpha);
         return;

@@ -85,7 +85,11 @@ public class CorruptedZoltraakSpell extends AbstractSpell {
         if (!level.isClientSide && level instanceof ServerLevel serverLevel) {
             float damage = getSpellPower(spellLevel, entity);
             Vec3 spawnPos = ZoltraakCinematicBeamEntity.getStaffAnchorPos(entity);
-            boolean isLarge = entity.isCrouching() || (entity instanceof com.frierenflight.zoltraakcinematic.entity.boss.QualBossEntity qualBoss && qualBoss.getPhase() >= 4 && qualBoss.getRandom().nextFloat() < 0.45f);
+            // Player crouch trigger for Great Zoltraak is temporarily disabled (planned as a separate spell);
+            // keep Phase 4 overdrive burst exclusively for Qual Boss.
+            boolean isLarge = entity instanceof com.frierenflight.zoltraakcinematic.entity.boss.QualBossEntity qualBoss
+                    && qualBoss.getPhase() >= 4
+                    && qualBoss.getRandom().nextFloat() < 0.45f;
             float range = (float) (isLarge
                     ? com.frierenflight.zoltraakcinematic.config.ZoltraakCinematicConfig.getGreatBeamRange()
                     : com.frierenflight.zoltraakcinematic.config.ZoltraakCinematicConfig.getBeamRange());

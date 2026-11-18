@@ -279,7 +279,7 @@ public class ZoltraakBarrageArrayRenderer {
 
                     float currentRadius = baseR * scaleEase;
                     if (irisBridge) {
-                        float a = 0.46f * scaleEase;
+                        float a = 0.72f * scaleEase;
                         if (a > 0.015f && currentRadius > 0.01f) {
                             boolean black = state.colorTheme == 1;
                             float guard = ZoltraakRenderPass.irisFadeGuard(scaleEase);
@@ -299,18 +299,18 @@ public class ZoltraakBarrageArrayRenderer {
                                 ZoltraakRenderPass.emitFeatheredRing(
                                         circleBuilder, mat, Vec3.ZERO, uUnit, vUnit,
                                         currentRadius * 0.84, currentRadius * 1.00, currentRadius * 1.18, 22,
-                                        haloR, haloG, cb, 0.18f * scaleEase
+                                        haloR, haloG, cb, 0.36f * scaleEase
                                 );
                                 ZoltraakRenderPass.emitFeatheredStarBurst(
                                         circleBuilder, mat, Vec3.ZERO, uUnit, vUnit, currentRadius * 0.90,
-                                        cr, cg, cb, 0.14f * scaleEase
+                                        cr, cg, cb, 0.34f * scaleEase
                                 );
                                 if (state.muzzleTicks[i] > 0) {
                                     float muzzleFrac = Mth.clamp((state.muzzleTicks[i] - partialTick) / 4.0f, 0.0f, 1.0f);
                                     float shockR = currentRadius * (1.05f + (1.0f - muzzleFrac) * 0.75f);
                                     ZoltraakRenderPass.emitFeatheredStarBurst(
                                             circleBuilder, mat, Vec3.ZERO, uUnit, vUnit, shockR,
-                                            cr, cg, cb, 0.38f * muzzleFrac * scaleEase
+                                            cr, cg, cb, 0.68f * muzzleFrac * scaleEase
                                     );
                                 }
                             }

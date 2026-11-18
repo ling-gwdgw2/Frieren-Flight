@@ -19,7 +19,7 @@ Summary of Permissions & Sole Restriction:
     Original audio files (assets/zoltraak_cinematic/sounds/*.ogg) and original
     image/texture files (assets/zoltraak_cinematic/textures/**/*.png and
     logo.png) MAY be extracted, used, modified, and redistributed freely as
-    desired (subject only to Section 4 for third-party cosmic textures).
+    desired.
   - Sole Strict Restriction (No Code Copying, Imitation, or Redistribution):
     Copying, cloning/imitating, reverse-engineering/decompiling for reuse,
     modifying, or redistributing any part of the mod's CODE (Java source code,
@@ -81,7 +81,7 @@ Protected Code & GLSL 150 Core Shaders (26 Programs — All Rights Reserved):
 Original Image & Audio Assets (Freely Permitted for Use As Desired):
   - Image / Texture Assets (*.png, logo.png):
     * Entity, block, item, spell icon, GUI, and effect textures under
-      assets/zoltraak_cinematic/textures/ (except textures/cosmic/)
+      assets/zoltraak_cinematic/textures/
     * qual_boss.png, qual_boss_glowmask.png, qual_sealing_stone.png
     * zoltraak_glow.png, zoltraak_magic_circle.png, zoltraak_white.png,
       noise_tile.png, defense.png, and all spell/item icons
@@ -111,24 +111,7 @@ Original Image & Audio Assets (Freely Permitted for Use As Desired):
     zero third-party unlicensed shaderpack or mod code remains in this release.
 
 
-4. ASTRONOMICAL & COSMIC ASSETS EXCEPTION (PUBLIC DOMAIN / CC BY 4.0)
-----------------------------------------------------------------------
-All Rights Reserved and the author's custom asset grant DO NOT override the
-open licenses governing cosmic and celestial textures located in:
-  assets/zoltraak_cinematic/textures/cosmic/
-
-Those files remain subject to their original licenses (attribution required
-for CC BY 4.0 works):
-  - NASA Earth Observatory / SVS (Public Domain under 17 U.S.C. § 105):
-    earth_day.jpg, moon_color.jpg
-  - European Southern Observatory (ESO / S. Brunier & R. Hurt) (CC BY 4.0):
-    milky_way.jpg, milky_way_top.jpg (https://creativecommons.org/licenses/by/4.0/)
-  - Solar System Scope / INOVE (CC BY 4.0):
-    jupiter.jpg (https://creativecommons.org/licenses/by/4.0/)
-Detailed source URLs and attributions are preserved in textures/cosmic/CREDITS.txt.
-
-
-5. NON-COMMERCIAL FAN WORK DISCLAIMER
+4. NON-COMMERCIAL FAN WORK DISCLAIMER
 -------------------------------------
 Zoltraak: Cinematic Edition is a free, non-commercial fan modification inspired
 by "Sousou no Frieren" (Frieren: Beyond Journey's End) created by Kanehito
@@ -138,13 +121,12 @@ Mishima. Not an official product of Mojang AB, Microsoft Corporation,
 Shogakukan, Madhouse, Kadokawa Corporation, or Studio Deen.
 
 
-6. THAI SUMMARY / สรุปประกาศสิทธิ์การใช้งาน (ภาษาไทย)
+5. THAI SUMMARY / สรุปประกาศสิทธิ์การใช้งาน (ภาษาไทย)
 -----------------------------------------------------
 - สิทธิ์ผู้เล่นทั่วไป: เข้าถึงฟีเจอร์และเนื้อหาในเกมได้เต็มรูปแบบ (ฟรี)
 - Modpack: อนุญาตให้นำไฟล์ JAR ที่คอมไพล์อย่างเป็นทางการ (ไม่แก้ไข) ไปรวมใน Modpack ได้
 - ไฟล์เสียงและรูปภาพ: อนุญาตให้นำไฟล์เสียง (.ogg) และไฟล์รูปภาพ/เท็กซ์เจอร์ต้นฉบับ (.png)
-  ไปใช้ ดัดแปลง หรือเผยแพร่ต่อได้ตามต้องการ (ยกเว้น textures/cosmic/ ต้องคงเครดิตตาม
-  CREDITS.txt)
+  ไปใช้ ดัดแปลง หรือเผยแพร่ต่อได้ตามต้องการ
 - ข้อแม้เพียงประการเดียว: ห้ามคัดลอก code ลอกเลียน หรือเผยแพร่ซ้ำซึ่ง code ของม็อด
   (Java, bytecode, Mixins, GLSL Shaders, สคริปต์) และห้ามนำไฟล์ม็อดแบบเดี่ยวไปอัปโหลด
   เผยแพร่ซ้ำโดยไม่ได้รับอนุญาต

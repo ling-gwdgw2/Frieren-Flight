@@ -44,6 +44,17 @@ public class ZoltraakCinematicClientConfig {
     public static final ModConfigSpec.DoubleValue QUAL_GLOW;
     public static final ModConfigSpec.DoubleValue EXPLOSION_GLOW;
 
+    // Explosion Charging & Flare Details
+    public static final ModConfigSpec.IntValue EXPLOSION_GOLD_SPARKS;
+    public static final ModConfigSpec.IntValue EXPLOSION_FOUR_POINT_STARS;
+    public static final ModConfigSpec.IntValue EXPLOSION_PARABOLA_STREAMS;
+    public static final ModConfigSpec.IntValue EXPLOSION_CROSS_RAYS;
+    public static final ModConfigSpec.IntValue EXPLOSION_SUCTION_LINES;
+    public static final ModConfigSpec.DoubleValue EXPLOSION_SKY_FLARE_STRENGTH;
+    public static final ModConfigSpec.DoubleValue EXPLOSION_PARTICLE_SCALE;
+    public static final ModConfigSpec.DoubleValue EXPLOSION_SKY_HEIGHT;
+    public static final ModConfigSpec.DoubleValue EXPLOSION_DOME_SCALE;
+
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
 
@@ -177,6 +188,46 @@ public class ZoltraakCinematicClientConfig {
         EXPLOSION_GLOW = builder
                 .comment("Glow brightness for Crimson Explosion Magic rings, laser, and fireball dome.")
                 .defineInRange("explosion", 1.0d, 0.0d, 2.0d);
+
+        builder.pop();
+
+        builder.comment("Explosion Magic Charging Particles & Flares").push("explosion");
+
+        EXPLOSION_GOLD_SPARKS = builder
+                .comment("Number of rising golden spark dots (•) orbiting the caster while charging Explosion Magic.")
+                .defineInRange("goldSparkCount", 160, 20, 320);
+
+        EXPLOSION_FOUR_POINT_STARS = builder
+                .comment("Number of 4-color 4-point stars (✦) orbiting the caster while charging Explosion Magic.")
+                .defineInRange("fourPointStarCount", 64, 8, 160);
+
+        EXPLOSION_PARABOLA_STREAMS = builder
+                .comment("Number of sparks & stars arcing in a parabolic stream up to the sky vortex funnel.")
+                .defineInRange("parabolaStreamCount", 64, 8, 160);
+
+        EXPLOSION_CROSS_RAYS = builder
+                .comment("Number of intersecting golden cross-ray axes (*) through the rainbow ring (each axis draws 2 rays).")
+                .defineInRange("crossRayCount", 6, 0, 12);
+
+        EXPLOSION_SUCTION_LINES = builder
+                .comment("Number of inward suction energy lines converging toward the rainbow ring.")
+                .defineInRange("suctionLineCount", 28, 0, 60);
+
+        EXPLOSION_SKY_FLARE_STRENGTH = builder
+                .comment("Horizontal lens flare width and intensity across the sky vortex rings (0.0 = off, 1.35 = default).")
+                .defineInRange("skyFlareStrength", 1.35d, 0.0d, 2.5d);
+
+        EXPLOSION_PARTICLE_SCALE = builder
+                .comment("Size scale multiplier for Explosion charging particles, stars, and suction streaks.")
+                .defineInRange("particleScale", 1.15d, 0.5d, 2.0d);
+
+        EXPLOSION_SKY_HEIGHT = builder
+                .comment("Vertical altitude multiplier for the 8 stacked sky magic rings and downward beam (1.0 = ~69 blocks high at default radius).")
+                .defineInRange("skyRingHeight", 1.0d, 0.5d, 2.5d);
+
+        EXPLOSION_DOME_SCALE = builder
+                .comment("Visual size multiplier for the fireball dome, shockwaves, and dust plumes (does not alter block crater or damage).")
+                .defineInRange("blastDomeScale", 1.0d, 0.6d, 2.0d);
 
         builder.pop();
 
@@ -349,5 +400,41 @@ public class ZoltraakCinematicClientConfig {
 
     public static float getExplosionGlow() {
         return safeGlow(EXPLOSION_GLOW);
+    }
+
+    public static int getExplosionGoldSparks() {
+        return SPEC.isLoaded() ? Math.max(20, Math.min(320, EXPLOSION_GOLD_SPARKS.get())) : 160;
+    }
+
+    public static int getExplosionFourPointStars() {
+        return SPEC.isLoaded() ? Math.max(8, Math.min(160, EXPLOSION_FOUR_POINT_STARS.get())) : 64;
+    }
+
+    public static int getExplosionParabolaStreams() {
+        return SPEC.isLoaded() ? Math.max(8, Math.min(160, EXPLOSION_PARABOLA_STREAMS.get())) : 64;
+    }
+
+    public static int getExplosionCrossRays() {
+        return SPEC.isLoaded() ? Math.max(0, Math.min(12, EXPLOSION_CROSS_RAYS.get())) : 6;
+    }
+
+    public static int getExplosionSuctionLines() {
+        return SPEC.isLoaded() ? Math.max(0, Math.min(60, EXPLOSION_SUCTION_LINES.get())) : 28;
+    }
+
+    public static float getExplosionSkyFlareStrength() {
+        return SPEC.isLoaded() ? Math.max(0.0f, Math.min(2.5f, EXPLOSION_SKY_FLARE_STRENGTH.get().floatValue())) : 1.35f;
+    }
+
+    public static float getExplosionParticleScale() {
+        return SPEC.isLoaded() ? Math.max(0.5f, Math.min(2.0f, EXPLOSION_PARTICLE_SCALE.get().floatValue())) : 1.15f;
+    }
+
+    public static float getExplosionSkyHeight() {
+        return SPEC.isLoaded() ? Math.max(0.5f, Math.min(2.5f, EXPLOSION_SKY_HEIGHT.get().floatValue())) : 1.0f;
+    }
+
+    public static float getExplosionDomeScale() {
+        return SPEC.isLoaded() ? Math.max(0.6f, Math.min(2.0f, EXPLOSION_DOME_SCALE.get().floatValue())) : 1.0f;
     }
 }

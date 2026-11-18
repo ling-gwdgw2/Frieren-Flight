@@ -29,7 +29,7 @@ public class DefensiveMagicSpell extends AbstractSpell {
             .setMinRarity(SpellRarity.UNCOMMON)
             .setSchoolResource(ModCinematicSchools.ORDINARY_MAGIC_RESOURCE)
             .setMaxLevel(10)
-            .setCooldownSeconds(10.0)
+            .setCooldownSeconds(12.0)
             .build();
 
     public DefensiveMagicSpell() {
@@ -75,14 +75,16 @@ public class DefensiveMagicSpell extends AbstractSpell {
 
     public int getDurationTicks(int spellLevel, LivingEntity caster) {
         int baseDuration = com.frierenflight.zoltraakcinematic.config.ZoltraakCinematicConfig.getBarrierDurationTicks();
-        return baseDuration + (spellLevel - 1) * 22; // Scaled duration starting from config base duration
+        return baseDuration + (spellLevel - 1) * 18; // 12.0s at Lv.1 scaling to 20.1s at Lv.10
     }
 
     @Override
     public List<MutableComponent> getUniqueInfo(int spellLevel, LivingEntity caster) {
-        float effectiveCapacity = getSpellPower(spellLevel, caster) * (float) com.frierenflight.zoltraakcinematic.config.ZoltraakCinematicConfig.getBarrierHpScale();
+        float shieldCapacity = getSpellPower(spellLevel, caster) * (float) com.frierenflight.zoltraakcinematic.config.ZoltraakCinematicConfig.getBarrierHpScale();
+        float domeCapacity = shieldCapacity * 0.75f;
         return List.of(
-                Component.translatable("ui.zoltraak_cinematic.defense_capacity", Utils.stringTruncation(effectiveCapacity, 1)),
+                Component.translatable("ui.zoltraak_cinematic.defense_capacity",
+                        Utils.stringTruncation(shieldCapacity, 1) + " / Dome " + Utils.stringTruncation(domeCapacity, 1)),
                 Component.translatable("ui.zoltraak_cinematic.defense_duration", Utils.stringTruncation(getDurationTicks(spellLevel, caster) / 20.0f, 1))
         );
     }
@@ -92,7 +94,9 @@ public class DefensiveMagicSpell extends AbstractSpell {
         if (!level.isClientSide && level instanceof ServerLevel serverLevel) {
             DefenseBarrierEntity existing = DefenseBarrierEntity.find(caster);
             int mode = caster.isCrouching() ? DefenseBarrierEntity.MODE_DOME : DefenseBarrierEntity.MODE_DIRECTIONAL;
-            float capacity = getSpellPower(spellLevel, caster);
+            // 360-degree Dome trades 25% total absorption capacity for omnidirectional coverage.
+            float modeScale = (mode == DefenseBarrierEntity.MODE_DOME) ? 0.75f : 1.0f;
+            float capacity = getSpellPower(spellLevel, caster) * modeScale;
             int duration = getDurationTicks(spellLevel, caster);
 
             if (existing == null) {

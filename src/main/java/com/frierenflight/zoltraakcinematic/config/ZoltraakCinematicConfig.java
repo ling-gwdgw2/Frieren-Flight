@@ -83,6 +83,8 @@ public class ZoltraakCinematicConfig {
     public static final ModConfigSpec.BooleanValue EXPLOSION_DRAIN_MANA;
     public static final ModConfigSpec.BooleanValue EXPLOSION_EXHAUSTION_ENABLED;
     public static final ModConfigSpec.IntValue EXPLOSION_EXHAUSTION_TICKS;
+    public static final ModConfigSpec.IntValue EXPLOSION_CAST_TIME_TICKS;
+    public static final ModConfigSpec.DoubleValue EXPLOSION_ANIMATION_SCALE;
 
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
@@ -128,10 +130,10 @@ public class ZoltraakCinematicConfig {
         builder.comment("Flight Magic Settings").push("flight");
         BASE_MANA_PER_SEC = builder
                 .comment("Base mana cost per second at Flight level 1.")
-                .defineInRange("baseManaPerSec", 50.0d, 5.0d, 200.0d);
+                .defineInRange("baseManaPerSec", 30.0d, 5.0d, 200.0d);
         MANA_SAVE_PER_LEVEL = builder
                 .comment("Mana saved per second for each extra spell level.")
-                .defineInRange("manaSavePerLevel", 2.5d, 0.0d, 10.0d);
+                .defineInRange("manaSavePerLevel", 3.0d, 0.0d, 10.0d);
         SCALE_COST_WITH_MOTION = builder
                 .comment("Increase mana drain when flying fast or high above ground.")
                 .define("scaleCostWithMotion", true);
@@ -140,13 +142,13 @@ public class ZoltraakCinematicConfig {
                 .defineInRange("speedCostPower", 1.8d, 1.0d, 3.0d);
         MAX_SPEED_SCALE = builder
                 .comment("Maximum speed multiplier for mana drain.")
-                .defineInRange("maxSpeedScale", 8.0d, 1.0d, 20.0d);
+                .defineInRange("maxSpeedScale", 3.0d, 1.0d, 20.0d);
         HEIGHT_COST_POWER = builder
                 .comment("Curve exponent for extra mana drain when flying high above ground.")
                 .defineInRange("heightCostPower", 1.7d, 1.0d, 3.0d);
         MAX_HEIGHT_SCALE = builder
                 .comment("Maximum altitude multiplier for mana drain.")
-                .defineInRange("maxHeightScale", 15.0d, 1.0d, 30.0d);
+                .defineInRange("maxHeightScale", 4.0d, 1.0d, 30.0d);
         EMPTY_MANA_SAFE_TICKS = builder
                 .comment("Slow Falling ticks given if mana runs out midair (70 ticks = 3.5s).")
                 .defineInRange("emptyManaSafeTicks", 70, 0, 200);
@@ -201,8 +203,8 @@ public class ZoltraakCinematicConfig {
                 .comment("Max bolt lifetime in ticks before disappearing (60 ticks = 3.0s).")
                 .defineInRange("lifeTicks", 60, 20, 200);
         BARRAGE_FIRE_INTERVAL = builder
-                .comment("Ticks between barrage volleys (10 ticks = 0.5s).")
-                .defineInRange("fireIntervalTicks", 10, 4, 30);
+                .comment("Ticks between barrage volleys (14 ticks = 0.7s).")
+                .defineInRange("fireIntervalTicks", 14, 4, 30);
         BARRAGE_DAMAGE_SCALE = builder
                 .comment("Damage multiplier for barrage bolts.")
                 .defineInRange("damageScale", 1.0d, 0.1d, 5.0d);
@@ -217,8 +219,8 @@ public class ZoltraakCinematicConfig {
                 .comment("Health multiplier for directional shields and 360 domes.")
                 .defineInRange("hpScale", 1.0d, 0.1d, 10.0d);
         BARRIER_DURATION_TICKS = builder
-                .comment("Base barrier duration in ticks (300 ticks = 15.0s).")
-                .defineInRange("durationTicks", 300, 60, 1200);
+                .comment("Base barrier duration in ticks (240 ticks = 12.0s).")
+                .defineInRange("durationTicks", 240, 60, 1200);
         BARRIER_BLOCK_ARROWS = builder
                 .comment("Deflect arrows, tridents, and standard projectiles.")
                 .define("blockArrows", true);
@@ -231,7 +233,7 @@ public class ZoltraakCinematicConfig {
         builder.comment("Qual Boss Settings").push("qual_boss");
         QUAL_BASE_HEALTH = builder
                 .comment("Qual's base max health for solo fights.")
-                .defineInRange("baseHealth", 1500.0d, 200.0d, 10000.0d);
+                .defineInRange("baseHealth", 2000.0d, 200.0d, 10000.0d);
         QUAL_HEALTH_PER_PLAYER = builder
                 .comment("Extra health added for each nearby player.")
                 .defineInRange("healthPerPlayer", 200.0d, 0.0d, 2000.0d);
@@ -293,6 +295,12 @@ public class ZoltraakCinematicConfig {
         EXPLOSION_EXHAUSTION_TICKS = builder
                 .comment("Duration in ticks of the post-cast exhaustion effects (100 ticks = 5 seconds).")
                 .defineInRange("explosionExhaustionTicks", 100, 20, 400);
+        EXPLOSION_CAST_TIME_TICKS = builder
+                .comment("Chanting/cast time in ticks for Explosion Magic (110 ticks = 5.5 seconds).")
+                .defineInRange("explosionCastTimeTicks", 110, 40, 240);
+        EXPLOSION_ANIMATION_SCALE = builder
+                .comment("Duration multiplier for Explosion launch, sky strike, and aftermath VFX (1.0 = 11.0s post-cast sequence, 2.0 = ultra-cinematic slow burn).")
+                .defineInRange("explosionAnimationScale", 1.0d, 0.5d, 2.5d);
         builder.pop();
 
         SPEC = builder.build();
@@ -345,11 +353,11 @@ public class ZoltraakCinematicConfig {
 
     // --- Flight ---
     public static double getBaseManaPerSec() {
-        return SPEC.isLoaded() ? BASE_MANA_PER_SEC.get() : 50.0d;
+        return SPEC.isLoaded() ? BASE_MANA_PER_SEC.get() : 30.0d;
     }
 
     public static double getManaSavePerLevel() {
-        return SPEC.isLoaded() ? MANA_SAVE_PER_LEVEL.get() : 2.5d;
+        return SPEC.isLoaded() ? MANA_SAVE_PER_LEVEL.get() : 3.0d;
     }
 
     public static boolean isMotionCostScalingEnabled() {
@@ -361,7 +369,7 @@ public class ZoltraakCinematicConfig {
     }
 
     public static double getMaxSpeedScale() {
-        return SPEC.isLoaded() ? MAX_SPEED_SCALE.get() : 8.0d;
+        return SPEC.isLoaded() ? MAX_SPEED_SCALE.get() : 3.0d;
     }
 
     public static double getHeightCostPower() {
@@ -369,7 +377,7 @@ public class ZoltraakCinematicConfig {
     }
 
     public static double getMaxHeightScale() {
-        return SPEC.isLoaded() ? MAX_HEIGHT_SCALE.get() : 15.0d;
+        return SPEC.isLoaded() ? MAX_HEIGHT_SCALE.get() : 4.0d;
     }
 
     public static int getEmptyManaSafeTicks() {
@@ -435,7 +443,7 @@ public class ZoltraakCinematicConfig {
     }
 
     public static int getBarrageFireInterval() {
-        return SPEC.isLoaded() ? BARRAGE_FIRE_INTERVAL.get() : 10;
+        return SPEC.isLoaded() ? BARRAGE_FIRE_INTERVAL.get() : 14;
     }
 
     public static double getBarrageDamageScale() {
@@ -452,7 +460,7 @@ public class ZoltraakCinematicConfig {
     }
 
     public static int getBarrierDurationTicks() {
-        return SPEC.isLoaded() ? BARRIER_DURATION_TICKS.get() : 300;
+        return SPEC.isLoaded() ? BARRIER_DURATION_TICKS.get() : 240;
     }
 
     public static boolean isBarrierBlockArrows() {
@@ -465,7 +473,7 @@ public class ZoltraakCinematicConfig {
 
     // --- Qual Boss ---
     public static double getQualBaseHealth() {
-        return SPEC.isLoaded() ? QUAL_BASE_HEALTH.get() : 1500.0d;
+        return SPEC.isLoaded() ? QUAL_BASE_HEALTH.get() : 2000.0d;
     }
 
     public static double getQualHealthPerPlayer() {
@@ -539,5 +547,13 @@ public class ZoltraakCinematicConfig {
 
     public static int getExplosionExhaustionTicks() {
         return SPEC.isLoaded() ? EXPLOSION_EXHAUSTION_TICKS.get() : 100;
+    }
+
+    public static int getExplosionCastTimeTicks() {
+        return SPEC.isLoaded() ? EXPLOSION_CAST_TIME_TICKS.get() : 110;
+    }
+
+    public static float getExplosionAnimationScale() {
+        return SPEC.isLoaded() ? Math.max(0.5f, Math.min(2.5f, EXPLOSION_ANIMATION_SCALE.get().floatValue())) : 1.0f;
     }
 }

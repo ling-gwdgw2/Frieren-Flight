@@ -138,7 +138,6 @@ python build_multiloader.py --target neoforge --deploy --deploy-dir "path/to/ins
 - **[`ARCHITECTURE.md`](ARCHITECTURE.md)**: Technical architecture, rendering pipeline, dual-loader staging, and entity/shader diagrams.
 - **[`LICENSE`](LICENSE)**: Full proprietary license terms (`All Rights Reserved`) with explicit permissions and Thai summary.
 - **[`NOTICE.txt`](NOTICE.txt)**: Clean-room originality statement, asset/shader/audio inventory, third-party exceptions, and fan work disclaimer.
-- **[`CREDITS.txt`](src/main/resources/assets/zoltraak_cinematic/textures/cosmic/CREDITS.txt)**: Source URLs and CC BY 4.0 / Public Domain attributions for `textures/cosmic/`.
 
 ---
 
@@ -150,16 +149,15 @@ python build_multiloader.py --target neoforge --deploy --deploy-dir "path/to/ins
 | :--- | :---: | :--- |
 | **General Players (Full Gameplay)** | **YES (Free)** | Free, unrestricted access to all in-game features, spells, bosses, items, and shaders, plus servers, videos, and livestreams. |
 | **Modpacks (Public / Private)** | **YES** | Unmodified official compiled mod JARs may be included in public or private Minecraft modpacks (CurseForge, Modrinth, etc.). |
-| **Original Sound & Image Files** | **YES** | Original `.ogg` audio files (`sounds/`) and original `.png` textures (`textures/`, `logo.png`) may be used, modified, and redistributed freely as desired *(except third-party files in `textures/cosmic/` — see below)*. |
+| **Original Sound & Image Files** | **YES** | Original `.ogg` audio files (`sounds/`) and original `.png` textures (`textures/`, `logo.png`) may be used, modified, and redistributed freely as desired. |
 | **Copying, Cloning, or Redistributing Code** | **NO** | Copying, imitating/cloning, decompiling for reuse, modifying, or redistributing any mod **code** (Java source/bytecode, Mixins, GLSL 150 shaders, build/tooling scripts) — or re-uploading standalone copies of the mod JAR/code — is strictly prohibited. |
 
 ### สรุปสิทธิ์การใช้งาน (ภาษาไทย)
 - **ผู้เล่นทั่วไป**: เข้าถึงฟีเจอร์และเนื้อหาในเกมได้เต็มรูปแบบ (ฟรี) รวมถึงเล่นบนเซิร์ฟเวอร์ ทำคลิปวิดีโอ หรือไลฟ์สตรีมได้
 - **Modpack**: อนุญาตให้นำไฟล์ JAR ทางการที่ไม่ได้แก้ไขดัดแปลงไปรวมใน Modpack ทั้งแบบสาธารณะและส่วนตัวได้
-- **ไฟล์เสียงและรูปภาพ**: อนุญาตให้นำไฟล์เสียง (`.ogg`) และไฟล์รูปภาพ/เท็กซ์เจอร์ต้นฉบับ (`.png`, `logo.png`) ของม็อดไปใช้งาน ดัดแปลง หรือเผยแพร่ต่อได้ตามต้องการ *(ยกเว้นภาพถ่ายอวกาศใน `textures/cosmic/` ซึ่งอยู่ภายใต้ NASA Public Domain และ CC BY 4.0 ที่ต้องระบุเครดิตตาม [`CREDITS.txt`](src/main/resources/assets/zoltraak_cinematic/textures/cosmic/CREDITS.txt))*
+- **ไฟล์เสียงและรูปภาพ**: อนุญาตให้นำไฟล์เสียง (`.ogg`) และไฟล์รูปภาพ/เท็กซ์เจอร์ต้นฉบับ (`.png`, `logo.png`) ของม็อดไปใช้งาน ดัดแปลง หรือเผยแพร่ต่อได้ตามต้องการ
 - **ข้อแม้เพียงประการเดียว (Code)**: ไม่อนุญาตให้คัดลอก code ลอกเลียน ถอดรหัสเพื่อนำโค้ดไปใช้ซ้ำ แก้ไขดัดแปลง หรือเผยแพร่ซ้ำซึ่ง code ของม็อด (Java, bytecode, Mixins, GLSL Shaders, สคริปต์) และห้ามอัปโหลด/เผยแพร่ตัวม็อดหรือซอร์สโค้ดแบบเดี่ยวซ้ำโดยไม่ได้รับอนุญาตเป็นลายลักษณ์อักษร
 
 ### Third-Party Exceptions & Acknowledgments
-- **Cosmic Textures (`textures/cosmic/`)**: NASA Earth Observatory / SVS (Public Domain, 17 U.S.C. § 105) and European Southern Observatory / Solar System Scope (CC BY 4.0). See [`CREDITS.txt`](src/main/resources/assets/zoltraak_cinematic/textures/cosmic/CREDITS.txt).
 - **Ecosystem**: [Iron's Spells 'n Spellbooks](https://github.com/iron431/Irons-Spells-n-Spellbooks) by Iron431, [NeoForge](https://neoforged.net/), [Minecraft Forge](https://files.minecraftforge.net/), [GeckoLib](https://github.com/bernie-g/geckolib), [Curios](https://github.com/TheIllusiveC4/Curios), [Sodium](https://modrinth.com/mod/sodium), and [Iris](https://modrinth.com/mod/iris) / Oculus.
 - **Fan Work Disclaimer**: Non-commercial fan modification inspired by *"Sousou no Frieren"* created by Kanehito Yamada and Tsukasa Abe, and *"KonoSuba: God's Blessing on This Wonderful World!"* (*Kono Subarashii Sekai ni Shukufuku wo!*) created by Natsume Akatsuki and Kurone Mishima. Not an official product of Mojang AB, Microsoft Corporation, Shogakukan, Madhouse, Kadokawa Corporation, or Studio Deen.

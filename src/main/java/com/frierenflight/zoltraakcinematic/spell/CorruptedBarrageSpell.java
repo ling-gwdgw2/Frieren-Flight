@@ -26,17 +26,17 @@ public class CorruptedBarrageSpell extends FernBarrageSpell {
             .setMinRarity(SpellRarity.EPIC)
             .setSchoolResource(com.frierenflight.zoltraakcinematic.registry.ModCinematicSchools.ORDINARY_MAGIC_RESOURCE)
             .setMaxLevel(1)
-            .setCooldownSeconds(1.8)
+            .setCooldownSeconds(9.0)
             .build();
 
     public CorruptedBarrageSpell() {
         super();
-        // 20 mana per 10-tick interval (0.5s) = 160 mana over 4s channel, requiring only 40 mana on Tick 0
-        this.baseManaCost = 20;
+        // 28 mana per 10-tick ISS deduct interval (~196 mana over 3.5s burst); 56 mana needed on Tick 0.
+        this.baseManaCost = 28;
         this.manaCostPerLevel = 3;
-        this.baseSpellPower = 7;
-        this.spellPowerPerLevel = 8;
-        this.castTime = 80; // Continuous channel capped at exactly 4.0 seconds (80 ticks)
+        this.baseSpellPower = 5;
+        this.spellPowerPerLevel = 5;
+        this.castTime = 70; // Continuous channel capped at 3.5 seconds (70 ticks -> 5 volleys)
     }
 
     @Override

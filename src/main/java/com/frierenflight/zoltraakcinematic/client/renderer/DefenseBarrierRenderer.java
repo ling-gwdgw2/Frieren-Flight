@@ -286,8 +286,8 @@ public final class DefenseBarrierRenderer extends EntityRenderer<DefenseBarrierE
             double R = DefenseBarrierEntity.DOME_RADIUS * grow * 1.0008;
             float baseVis = fade * grow;
             float guard = ZoltraakRenderPass.irisFadeGuard(baseVis);
-            float coreA = Mth.clamp(baseVis * (0.76F + hitBoost) * 0.48F, 0.0F, 0.44F);
-            float haloA = Mth.clamp(baseVis * (0.44F + hitBoost * 0.65F) * 0.18F, 0.0F, 0.16F);
+            float coreA = Mth.clamp(baseVis * (0.76F + hitBoost) * 0.72F, 0.0F, 0.70F);
+            float haloA = Mth.clamp(baseVis * (0.44F + hitBoost * 0.65F) * 0.34F, 0.0F, 0.36F);
 
             if (life > 0.0F && coreA > 0.01F) {
                 float coreR = 0.42F * guard;
@@ -349,7 +349,7 @@ public final class DefenseBarrierRenderer extends EntityRenderer<DefenseBarrierE
                     double tLenSqr = tx * tx + ty * ty + tz * tz;
                     if (tLenSqr < 1.0E-8) continue;
                     double invTLen = 1.0 / Math.sqrt(tLenSqr);
-                    float segA = Mth.clamp(arcWeight * baseVis * 0.50F * arcAttn * 0.28F, 0.0F, 0.20F);
+                    float segA = Mth.clamp(arcWeight * baseVis * 0.50F * arcAttn * 0.58F, 0.0F, 0.44F);
                     float segG = ZoltraakRenderPass.irisFadeGuard(segA) * (fpView.active() ? Mth.sqrt(arcAttn) : 1.0F);
                     double arcWidth = arcWeight * fpView.irisWidthScale();
                     ZoltraakRenderPass.emitFeatheredBeamSegment(
@@ -363,7 +363,7 @@ public final class DefenseBarrierRenderer extends EntityRenderer<DefenseBarrierE
             }
 
             if (hasHit) {
-                float impactFade = Mth.clamp((float) Math.exp(-hitAge * 0.22) * fade * 0.95F * 0.48F, 0.0F, 0.46F);
+                float impactFade = Mth.clamp((float) Math.exp(-hitAge * 0.22) * fade * 0.95F * 0.74F, 0.0F, 0.76F);
                 if (impactFade > 0.02F) {
                     float ig = ZoltraakRenderPass.irisFadeGuard(impactFade);
                     Vec3 hitNormal = hit.lengthSqr() > 1.0E-4 ? hit.normalize() : new Vec3(0, 1, 0);
@@ -380,7 +380,7 @@ public final class DefenseBarrierRenderer extends EntityRenderer<DefenseBarrierE
                     );
                     ZoltraakRenderPass.emitFeatheredStarBurst(
                             vc, m, sparkCenter, camRight, camUp, 1.40 + hitAge * 0.16,
-                            0.60F * ig, 0.94F * ig, 1.00F * ig, Mth.clamp(impactFade * 0.72F, 0.0F, 0.42F)
+                            0.60F * ig, 0.94F * ig, 1.00F * ig, Mth.clamp(impactFade * 0.85F, 0.0F, 0.68F)
                     );
                 }
             }
@@ -393,8 +393,8 @@ public final class DefenseBarrierRenderer extends EntityRenderer<DefenseBarrierE
             Vec3 normal = pose.normal();
             float baseVis = fade * grow;
             float guard = ZoltraakRenderPass.irisFadeGuard(baseVis);
-            float coreA = Mth.clamp(baseVis * (0.90F + hitBoost) * 0.48F, 0.0F, 0.48F);
-            float haloA = Mth.clamp(baseVis * (0.60F + hitBoost * 0.70F) * 0.18F, 0.0F, 0.18F);
+            float coreA = Mth.clamp(baseVis * (0.90F + hitBoost) * 0.72F, 0.0F, 0.74F);
+            float haloA = Mth.clamp(baseVis * (0.60F + hitBoost * 0.70F) * 0.34F, 0.0F, 0.36F);
 
             if (life > 0.0F && coreA > 0.01F) {
                 float coreR = 0.45F * guard;
