@@ -71,6 +71,10 @@ public class ZoltraakBarrageProjectileEntity extends ThrowableProjectile impleme
     public float getDamage() {
         return this.damage;
     }
+
+    public void setDamage(float damage) {
+        this.damage = Math.max(0.0F, damage);
+    }
     private LivingEntity targetEntity;
     private final List<Vec3> pathHistory = new ArrayList<>();
     private Vec3 impactNormal = new Vec3(0, 1, 0);
@@ -339,8 +343,10 @@ public class ZoltraakBarrageProjectileEntity extends ThrowableProjectile impleme
         if (doneAge >= 0.0f) {
             return 1.0f - Mth.clamp((rawAge(partial) - doneAge) / 12.0f, 0.0f, 1.0f);
         }
-        if (tickCount > MAX_LIFETIME - 12) {
-            return Math.max(0.0f, (float)(MAX_LIFETIME - tickCount) / 12.0f);
+        int maxLife = Math.max(12, com.frierenflight.zoltraakcinematic.config.ZoltraakCinematicConfig.getBarrageLifeTicks());
+        float age = (float) tickCount + partial;
+        if (age > (float) (maxLife - 12)) {
+            return Mth.clamp(((float) maxLife - age) / 12.0f, 0.0f, 1.0f);
         }
         return 1.0f;
     }

@@ -2,6 +2,7 @@
 package com.frierenflight.zoltraakcinematic.client.cinematic;
 
 import com.frierenflight.zoltraakcinematic.spell.GargantuaSpell;
+import io.redspace.ironsspellbooks.capabilities.magic.SyncedSpellData;
 import io.redspace.ironsspellbooks.player.ClientMagicData;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.geom.ModelPart;
@@ -9,43 +10,88 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+
 /**
  * 🪄 GargantuaCasterPose
  * Computes elegant arcane casting postures, arm rotations, and gravitational levitation offsets
- * for entities channeling Gargantua.
+ * for entities channeling Gargantua (both local and remote multiplayer players).
  */
 public final class GargantuaCasterPose {
 
-    private static float prevActiveWeight = 0.0f;
-    private static float activeWeight = 0.0f;
+    private static final class PoseState {
+        float prevWeight;
+        float weight;
+    }
+
+    private static final Map<UUID, PoseState> POSE_STATES = new HashMap<>();
 
     private GargantuaCasterPose() {}
 
+    private static boolean isCastingGargantua(Minecraft mc, Player player) {
+        String gargantuaId = GargantuaSpell.ID.toString();
+        if (mc.player != null && mc.player.getId() == player.getId()) {
+            if (ClientMagicData.isCasting() && gargantuaId.equals(ClientMagicData.getCastingSpellId())) {
+                return true;
+            }
+        }
+        SyncedSpellData synced = ClientMagicData.getSyncedSpellData(player);
+        return synced != null && synced.isCasting() && gargantuaId.equals(synced.getCastingSpellId());
+    }
+
     public static void clientTick(Minecraft mc) {
-        prevActiveWeight = activeWeight;
-        if (mc.player == null) {
-            activeWeight = 0.0f;
-            prevActiveWeight = 0.0f;
+        if (mc.level == null) {
+            POSE_STATES.clear();
             return;
         }
 
-        boolean isCastingGargantua = ClientMagicData.isCasting() &&
-                GargantuaSpell.ID.toString().equals(ClientMagicData.getCastingSpellId());
+        Set<UUID> presentIds = POSE_STATES.isEmpty() ? null : new HashSet<>();
+        for (Player player : mc.level.players()) {
+            UUID id = player.getUUID();
+            boolean casting = isCastingGargantua(mc, player);
+            PoseState state = POSE_STATES.get(id);
+            if (!casting && state == null) {
+                continue;
+            }
+            if (state == null) {
+                state = new PoseState();
+                POSE_STATES.put(id, state);
+            }
+            if (presentIds != null) {
+                presentIds.add(id);
+            }
+            state.prevWeight = state.weight;
+            state.weight = casting
+                    ? Math.min(1.0f, state.weight + 0.10f)
+                    : Math.max(0.0f, state.weight - 0.15f);
+        }
 
-        if (isCastingGargantua) {
-            activeWeight = Math.min(1.0f, activeWeight + 0.10f);
-        } else {
-            activeWeight = Math.max(0.0f, activeWeight - 0.15f);
+        if (!POSE_STATES.isEmpty()) {
+            Iterator<Map.Entry<UUID, PoseState>> it = POSE_STATES.entrySet().iterator();
+            while (it.hasNext()) {
+                Map.Entry<UUID, PoseState> entry = it.next();
+                PoseState s = entry.getValue();
+                boolean disappeared = presentIds != null && !presentIds.contains(entry.getKey());
+                if (disappeared || (s.weight <= 0.0f && s.prevWeight <= 0.0f)) {
+                    it.remove();
+                }
+            }
         }
     }
 
     public static float getPoseWeight(LivingEntity entity) {
         if (!(entity instanceof Player player)) return 0.0f;
-        Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null || mc.player.getId() != player.getId()) {
+        PoseState state = POSE_STATES.get(player.getUUID());
+        if (state == null || (state.prevWeight <= 0.0f && state.weight <= 0.0f)) {
             return 0.0f;
         }
 
+        Minecraft mc = Minecraft.getInstance();
         float partial = 1.0f;
         if (mc.level != null && !mc.isPaused()) {
             try {
@@ -55,7 +101,7 @@ public final class GargantuaCasterPose {
             }
         }
 
-        return Mth.lerp(partial, prevActiveWeight, activeWeight);
+        return Mth.lerp(partial, state.prevWeight, state.weight);
     }
 
     /**

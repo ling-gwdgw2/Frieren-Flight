@@ -389,11 +389,18 @@ public final class DefenseBarrierEntity extends Entity {
     private void follow(LivingEntity caster) {
         Vec3 n = caster.getLookAngle().normalize();
         this.setPos(this.clippedCenter(caster, caster.getEyePosition(), n));
-        CompoundTag t = this.entityData.get(STATE).copy();
-        t.putDouble("NX", n.x);
-        t.putDouble("NY", n.y);
-        t.putDouble("NZ", n.z);
-        this.entityData.set(STATE, t);
+        CompoundTag current = this.entityData.get(STATE);
+        double dx = n.x - current.getDouble("NX");
+        double dy = n.y - current.getDouble("NY");
+        double dz = n.z - current.getDouble("NZ");
+        // Skip full CompoundTag copy & SynchedEntityData dirtiness unless normal changed noticeably
+        if (!current.contains("NX") || (dx * dx + dy * dy + dz * dz) > 2.5E-5) {
+            CompoundTag t = current.copy();
+            t.putDouble("NX", n.x);
+            t.putDouble("NY", n.y);
+            t.putDouble("NZ", n.z);
+            this.entityData.set(STATE, t);
+        }
     }
 
     @Override
@@ -444,7 +451,6 @@ public final class DefenseBarrierEntity extends Entity {
                                     pDmg = (float) (arrow.getBaseDamage() * p.getDeltaMovement().length());
                                 } else if (p instanceof ZoltraakBarrageProjectileEntity bp) {
                                     pDmg = bp.getDamage();
-                                    bp.stopOnImpact(contact.get());
                                 }
 
                                 float absorbed = this.absorb(pDmg, contact.get());
@@ -458,6 +464,8 @@ public final class DefenseBarrierEntity extends Entity {
                                     m.setDamage(Math.max(0.0F, pDmg - absorbed));
                                 } else if (p instanceof AbstractArrow arrow && pDmg > 0.0F) {
                                     arrow.setBaseDamage(arrow.getBaseDamage() * (1.0F - absorbed / pDmg));
+                                } else if (p instanceof ZoltraakBarrageProjectileEntity bp) {
+                                    bp.setDamage(Math.max(0.0F, pDmg - absorbed));
                                 }
                             }
                         }

@@ -71,25 +71,8 @@ public class GargantuaRenderer extends EntityRenderer<GargantuaEntity> {
 
     @Override
     public void render(GargantuaEntity entity, float entityYaw, float partialTick, PoseStack poseStack, MultiBufferSource buffer, int packedLight) {
-        // Safeguard registration for the level post pass
+        // Safeguard registration for the 4-pass RGBA16F post-processing pipeline (runs in both Vanilla and Iris/Oculus)
         GargantuaPostProcessor.registerClientInstance(entity);
-
-        // Defer Iris glow proxy to AFTER_WEATHER so sky and water stay behind bloom
-        if (ShaderCompatibility.useFullDetailPass()
-                && !ShaderCompatibility.isShadowPass()
-                && ZoltraakCinematicClientConfig.isWorldGlowActive(true)) {
-            PoseStack copy = new PoseStack();
-            copy.last().pose().set(poseStack.last().pose());
-            copy.last().normal().set(poseStack.last().normal());
-            DEFERRED_IRIS_DRAWS.add(new DeferredGargantuaIrisDraw(
-                    this,
-                    entity,
-                    partialTick,
-                    copy,
-                    new Matrix4f(RenderSystem.getModelViewMatrix()),
-                    new Matrix4f(RenderSystem.getProjectionMatrix())
-            ));
-        }
     }
 
     private void emitIrisAccretionProxy(GargantuaEntity entity, float partialTick, PoseStack poseStack, MultiBufferSource buffer) {
@@ -110,37 +93,71 @@ public class GargantuaRenderer extends EntityRenderer<GargantuaEntity> {
         Vec3 diskU = Math.abs(axis.y) < 0.99 ? axis.cross(new Vec3(0.0, 1.0, 0.0)).normalize() : axis.cross(new Vec3(1.0, 0.0, 0.0)).normalize();
         Vec3 diskV = axis.cross(diskU).normalize();
 
-        VertexConsumer vc = buffer.getBuffer(ZoltraakRenderTypes.IRIS_EMISSIVE_QUAD);
         Matrix4f mat = poseStack.last().pose();
 
         float vis = Mth.clamp(open * brightness, 0.0f, 1.0f);
         float gg = ZoltraakRenderPass.irisFadeGuard(vis);
 
-        // 1. Equatorial Accretion Ring (warm outer bloom band + incandescent inner core, shadow clear at > 1.35 * rg)
-        ZoltraakRenderPass.emitFeatheredRing(
-                vc, mat, c, diskU, diskV,
-                rg * 1.35 * open, rg * 2.75 * open, rg * 5.20 * open, 40,
-                1.00f * gg, 0.62f * gg, 0.20f * gg, Mth.clamp(vis * 0.86f, 0.0f, 0.94f)
-        );
-        ZoltraakRenderPass.emitFeatheredRing(
-                vc, mat, c, diskU, diskV,
-                rg * 1.35 * open, rg * 2.05 * open, rg * 3.25 * open, 40,
-                1.00f * gg, 0.84f * gg, 0.46f * gg, Mth.clamp(vis * 0.92f, 0.0f, 0.96f)
-        );
-
-        // 2. Camera-aligned Einstein Photon Ring (circumscribing the Schwarzschild shadow cleanly without blocking it)
         Minecraft mc = Minecraft.getInstance();
         Vec3 camRight = new Vec3(new Vector3f(1.0f, 0.0f, 0.0f).rotate(mc.getEntityRenderDispatcher().cameraOrientation()));
         Vec3 camUp = new Vec3(new Vector3f(0.0f, 1.0f, 0.0f).rotate(mc.getEntityRenderDispatcher().cameraOrientation()));
+
+        // 0. Pitch-black central Event Horizon core disc to occlude background sky/terrain in Iris
+        VertexConsumer vcBlack = buffer.getBuffer(ZoltraakRenderTypes.magicTranslucent(ZoltraakRenderTypes.TEX_WHITE));
+        ZoltraakRenderPass.emitFeatheredRing(
+                vcBlack, mat, c, camRight, camUp,
+                0.0, rg * 1.48 * open, rg * 1.50 * open, 48,
+                0.0f, 0.0f, 0.0f, 1.0f
+        );
+        ZoltraakRenderTypes.endIrisBatch(buffer, ZoltraakRenderTypes.magicTranslucent(ZoltraakRenderTypes.TEX_WHITE));
+
+        // 1. Equatorial Accretion Ring & Tapered Champagne Knife-Blade Wings (outer arches clear at >= 1.85 * rg)
+        VertexConsumer vc = buffer.getBuffer(ZoltraakRenderTypes.IRIS_EMISSIVE_QUAD);
+        Vec3 projWing = diskU.scale(diskU.dot(camRight)).add(diskV.scale(diskV.dot(camRight)));
+        Vec3 wingDir = projWing.lengthSqr() > 1.0e-4 ? projWing.normalize() : camRight;
+        double outerWingR = rg * 6.40 * open;
+        double midWingR = rg * 3.40 * open;
+
+        // Horizontal foreground champagne blade spine + warm honey outer wing ribbons for Iris HDR Bloom
+        ZoltraakRenderPass.emitFeatheredBeamSegment(
+                vc, mat,
+                c.subtract(wingDir.scale(outerWingR)),
+                c.add(wingDir.scale(outerWingR)),
+                camUp,
+                rg * 0.03 * open, rg * 0.14 * open,
+                1.00f * gg, 0.90f * gg, 0.70f * gg, Mth.clamp(vis * 0.68f, 0.0f, 0.85f),
+                0.96f * gg, 0.68f * gg, 0.34f * gg, Mth.clamp(vis * 0.34f, 0.0f, 0.55f)
+        );
+        ZoltraakRenderPass.emitFeatheredBeamSegment(
+                vc, mat,
+                c.subtract(wingDir.scale(midWingR)),
+                c.add(wingDir.scale(midWingR)),
+                camUp,
+                rg * 0.02 * open, rg * 0.08 * open,
+                1.00f * gg, 0.96f * gg, 0.86f * gg, Mth.clamp(vis * 0.84f, 0.0f, 0.92f),
+                1.00f * gg, 0.82f * gg, 0.54f * gg, Mth.clamp(vis * 0.45f, 0.0f, 0.65f)
+        );
+        ZoltraakRenderPass.emitFeatheredRing(
+                vc, mat, c, diskU, diskV,
+                rg * 1.86 * open, rg * 3.25 * open, outerWingR, 48,
+                1.00f * gg, 0.84f * gg, 0.56f * gg, Mth.clamp(vis * 0.58f, 0.0f, 0.78f)
+        );
+
+        // 2. Razor-thin n=2 Hairline Photon Sub-Ring & Primary Champagne Lensed Arches (dark annular gap preserved!)
         ZoltraakRenderPass.emitFeatheredRing(
                 vc, mat, c, camRight, camUp,
-                rg * 1.08 * open, rg * 1.52 * open, rg * 2.45 * open, 40,
-                1.00f * gg, 0.78f * gg, 0.44f * gg, Mth.clamp(vis * 0.88f, 0.0f, 0.95f)
+                rg * 1.56 * open, rg * 1.63 * open, rg * 1.72 * open, 48,
+                1.00f * gg, 0.78f * gg, 0.46f * gg, Mth.clamp(vis * 0.74f, 0.0f, 0.86f)
         );
         ZoltraakRenderPass.emitFeatheredRing(
                 vc, mat, c, camRight, camUp,
-                rg * 1.06 * open, rg * 1.32 * open, rg * 1.72 * open, 40,
-                1.00f * gg, 0.94f * gg, 0.76f * gg, Mth.clamp(vis * 0.84f, 0.0f, 0.92f)
+                rg * 1.88 * open, rg * 2.55 * open, rg * 3.70 * open, 48,
+                1.00f * gg, 0.88f * gg, 0.66f * gg, Mth.clamp(vis * 0.64f, 0.0f, 0.82f)
+        );
+        ZoltraakRenderPass.emitFeatheredRing(
+                vc, mat, c, camRight, camUp,
+                rg * 1.85 * open, rg * 2.22 * open, rg * 2.85 * open, 48,
+                1.00f * gg, 0.95f * gg, 0.82f * gg, Mth.clamp(vis * 0.72f, 0.0f, 0.86f)
         );
 
         ZoltraakRenderTypes.endIrisBatch(buffer, ZoltraakRenderTypes.IRIS_EMISSIVE_QUAD);

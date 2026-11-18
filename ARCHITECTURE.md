@@ -14,7 +14,7 @@ This document provides a comprehensive technical reference for **Zoltraak: Cinem
 **Zoltraak: Cinematic Edition** is a magic, combat, and visual effects mod inspired by *Sousou no Frieren* and built upon **Iron's Spells 'n Spellbooks**, **GeckoLib**, and **Curios**. Its architecture emphasizes zero external particle-library lock-in, full cross-loader portability, and shader-pack compatibility:
 
 - **Dual-Loader Trunk & Sparse Override Pipeline**: A single Python build orchestrator ([`build_multiloader.py`](build_multiloader.py)) compiles **91** NeoForge 1.21.1 Java classes with JDK 21 (`-source 21 -target 21`), then stages and adapts the trunk alongside **16** Forge 1.20.1 adapter files (**96** compiled classes total, targeting Java 17 bytecode via `-source 17 -target 17`) and remaps them to SRG via `tiny-remapper`.
-- **18 Procedural Core GLSL 150 Shaders**: Dedicated fragment/vertex pipelines for relativistic Kerr black hole raymarching (`gargantua`), pre-cast spatial horizon previews (`gargantua_disk_preview`, `gargantua_sphere_preview`), Frequency-7 geodesic shields (`defense_barrier`), Qual's accretion corona (`cinematic_singularity_corona`), 24-circle barrage shockwaves (`barrage_fx`, `rapid_zoltraak_bullet`), optical flares, plumes, and unsealing rituals.
+- **21 Procedural Core GLSL 150 Shaders**: Dedicated fragment/vertex pipelines including a 4-pass `GL_RGBA16F` volumetric black hole & multi-octave HDR bloom chain (`gargantua`, `gargantua_bloom_down`, `gargantua_bloom_up`, `gargantua_composite`), pre-cast spatial horizon previews (`gargantua_disk_preview`, `gargantua_sphere_preview`), Frequency-7 geodesic shields (`defense_barrier`), Qual's accretion corona (`cinematic_singularity_corona`), 24-circle barrage shockwaves (`barrage_fx`, `rapid_zoltraak_bullet`), optical flares, plumes, and unsealing rituals.
 - **Iris Dual-Pass Emissive Bridge & Deferred Sorting**: Zero-overhead vanilla rendering paired with automatic Iris/Oculus detection via [`ShaderCompatibility`](src/main/java/com/frierenflight/zoltraakcinematic/client/renderer/ShaderCompatibility.java), routing emissive spell geometry through `RENDERTYPE_EYES_SHADER` (`AFTER_WEATHER`) before fullscreen lensing capture (`AFTER_ENTITIES`).
 - **Keyframe Timeline Camera Rig & Mixins**: Priority-based multi-phase cutscene playback ([`CinematicRigController`](src/main/java/com/frierenflight/zoltraakcinematic/client/cinematic/CinematicRigController.java)) backed by [`CameraMixin`](src/main/java/com/frierenflight/zoltraakcinematic/mixin/CameraMixin.java), [`GameRendererMixin`](src/main/java/com/frierenflight/zoltraakcinematic/mixin/GameRendererMixin.java), and [`PlayerModelPoseMixin`](src/main/java/com/frierenflight/zoltraakcinematic/mixin/PlayerModelPoseMixin.java).
 - **Real-Time Studio UI & Official Sodium 0.8+ Integration**: Instant live-preview client tuning via [`ZoltraakConfigScreen`](src/main/java/com/frierenflight/zoltraakcinematic/client/gui/ZoltraakConfigScreen.java) (`\` key / Mod screen / Sodium shortcut) and native Sodium Video Options pages via [`ZoltraakSodiumConfig`](src/main/java/com/frierenflight/zoltraakcinematic/compat/sodium/ZoltraakSodiumConfig.java).
@@ -67,7 +67,7 @@ flowchart TB
         GargPost["GargantuaPostProcessor (FBO Ping-Pong & Raymarch)"]
         PreviewRend["GargantuaPreviewRenderer & CosmicTextures"]
         EntityRend["Beam, Array (24-Circle), Barrier, Qual & Ritual Renderers"]
-        Shaders["18 Core GLSL 150 Shaders (.json / .vsh / .fsh)"]
+        Shaders["21 Core GLSL 150 Shaders (.json / .vsh / .fsh)"]
         RenderPass --> ShaderComp
         GargPost --> ShaderComp
         GargPost --> PreviewRend
@@ -109,13 +109,13 @@ flowchart TB
 flowchart LR
     subgraph Trunk ["Primary Source Trunk (NeoForge 1.21.1)"]
         NF_Src["src/main/java (91 Java files)"]
-        NF_Res["src/main/resources (Assets, 18 Shaders, Data)"]
+        NF_Res["src/main/resources (Assets, 21 Shaders, Data)"]
     end
 
     subgraph Forge_Overlay ["Sparse Forge Adapter Layer (1.20.1)"]
         FG_Exclude["Exclude 3 NeoForge-Only Files"]
         FG_Src["forge/src/main/java (16 Adapter Files)"]
-        FG_Res["forge/src/main/resources (mods.toml & forge mixins)"]
+        FG_Res["forge/src/main/resources (mods.toml, refmap, mixins, tags)"]
     end
 
     subgraph Compilers ["Dual-Target Compilation & Remapping"]
@@ -142,11 +142,12 @@ flowchart LR
 ### 3.1 Code Sharing & Staging Mechanics
 
 - **Primary Trunk (`src/main/java`)**: Contains **91** Java source files written against Mojang mappings for NeoForge 1.21.1.
-- **Exclusion Filter on Forge Staging**: When staging Forge 1.20.1, `build_multiloader.py` excludes **3** NeoForge-specific files (`NeoForgePlatformHelper.java`, `ModCinematicNetworking.java`, and `ZoltraakSodiumConfig.java`), leaving 88 trunk files.
-- **Sparse Adapter Layer (`forge/src/main/java`)**: Contains **16** Forge 1.20.1 files covering `ZoltraakCinematicForgeMod`, `ForgePlatformHelper`, `ForgeNetworkHandler` (`SimpleChannel` packets), Forge event adapters, block/item 1.20.1 signatures, and Forge mixin variants (`forge/mixin/*`). **8** of these override identical relative trunk paths (`ZoltraakCinematicMod`, `QualSealingStoneBlock`, `QualSealingStoneBlockEntity`, `DefenseEvents`, `FlightEvents`, `FrierenStaffItem`, `DefenseCastPayload`, `FlightTogglePayload`).
+- **Exclusion Filter on Forge Staging**: When staging Forge 1.20.1, `build_multiloader.py` excludes **3** NeoForge-specific files (`NeoForgePlatformHelper.java`, `ModCinematicNetworking.java`, and `ZoltraakSodiumConfig.java`), leaving **88** trunk files before Forge override substitution.
+- **Sparse Adapter Layer (`forge/src/main/java` & `forge/src/main/resources`)**: Contains **16** Forge 1.20.1 Java files covering `ZoltraakCinematicForgeMod`, `ForgePlatformHelper`, `ForgeNetworkHandler` (`SimpleChannel` packets), Forge event adapters, block/item 1.20.1 signatures, and Forge mixin variants (`forge/mixin/*`). **8** of these override identical relative trunk paths (`ZoltraakCinematicMod`, `QualSealingStoneBlock`, `QualSealingStoneBlockEntity`, `DefenseEvents`, `FlightEvents`, `FrierenStaffItem`, `DefenseCastPayload`, `FlightTogglePayload`), alongside Forge resources (`META-INF/mods.toml`, `pack.mcmeta`, `zoltraak_cinematic.forge.mixins.json`, `zoltraak_cinematic.forge.refmap.json`, and 1.20.1 tags).
 - **Verified Reuse Breakdown**:
-  - **80** files from `src/main/java` are compiled verbatim into the Forge build alongside the **16** Forge-specific/overridden files (**96** compiled Java source files total in Forge staging), representing **83.3%** verbatim file reuse in the Forge compilation unit (`80 / 96`).
-- **Platform SPI Decoupling (`platform/`)**: Shared gameplay code calls [`Services.PLATFORM`](src/main/java/com/frierenflight/zoltraakcinematic/platform/Services.java) (`IPlatformHelper`), abstracting `getPartParent`, `sendDefenseCastToServer`, `sendFlightToggleToServer`, `syncPlayerMana`, and `applyStaffAttributes` across NeoForge 1.21.1 DataComponents vs Forge 1.20.1 attribute modifiers.
+  - **80** files from `src/main/java` are adapted cleanly (`adapt_common_source_for_forge`) and compiled into the Forge build alongside the **16** Forge-specific/overridden files (**96** compiled Java source files total in Forge staging), representing **83.3%** shared trunk file reuse in the Forge compilation unit (`80 / 96`).
+- **Resource & Packaging Adaptation**: During Forge staging, `build_multiloader.py` adapts 1.21+ resource structures into MC 1.20.1 (`pack_format: 15`) layout (`data/zoltraak_cinematic/recipe/*.json` with `result.id` -> `data/zoltraak_cinematic/recipes/*.json` with `result.item`, and `tags/item/` -> `tags/items/`), and passes `MixinConfigs: zoltraak_cinematic.forge.mixins.json` via `--manifest` into `jar --create` prior to SRG remapping.
+- **Platform SPI Decoupling (`platform/`)**: Shared gameplay code calls [`Services.PLATFORM`](src/main/java/com/frierenflight/zoltraakcinematic/platform/Services.java) (`IPlatformHelper`), abstracting `getPlatformName`, `isClient`, `isModLoaded`, `getPartParent`, `sendDefenseCastToServer`, `sendFlightToggleToServer`, `syncPlayerMana`, and `applyStaffAttributes` across NeoForge 1.21.1 DataComponents vs Forge 1.20.1 attribute modifiers.
 
 ---
 
@@ -154,7 +155,7 @@ flowchart LR
 
 ```text
 Zoltraak Cinematic - NeoForge 1.21.1/
-├── build_multiloader.py                        # Dual-loader compiler, SRG remapper, packager, optional deployer & --test suite
+├── build_multiloader.py                        # Dual-loader compiler, recipe/tag/SRG adapter, --clean, --deploy & --test/--verify suite
 ├── ARCHITECTURE.md                             # System architecture & technical specification (v2.0.0)
 ├── LICENSE                                     # Proprietary All Rights Reserved license with modpack & audio/image grants
 ├── NOTICE.txt                                  # Clean-room statement, asset inventory, third-party notices & disclaimers
@@ -162,15 +163,17 @@ Zoltraak Cinematic - NeoForge 1.21.1/
 ├── tools/
 │   ├── generate_noise_tile.py                  # Procedural 512x512 seamless FBM/Worley/Blue-Noise generator
 │   └── generate_qual_assets.py                 # Procedural Qual boss GeckoLib geometry, texture & animation generator
-├── forge/                                      # Sparse Forge 1.20.1 adapter layer (16 Java files + META-INF/mods.toml)
-│   └── src/main/java/com/frierenflight/zoltraakcinematic/
-│       ├── ZoltraakCinematicMod.java           # Forge-adapted shared mod bootstrap
-│       ├── block/, event/, item/, network/     # 1.20.1 signature adapters
-│       └── forge/
-│           ├── ZoltraakCinematicForgeMod.java  # Forge @Mod entrypoint & ConfigScreenFactory registration
-│           ├── mixin/                          # Forge 1.20.1 Mixin variants (3 files)
-│           ├── network/                        # SimpleChannel & packet codecs (3 files)
-│           └── platform/ForgePlatformHelper.java
+├── forge/                                      # Sparse Forge 1.20.1 adapter layer (16 Java files + Forge resources)
+│   └── src/main/
+│       ├── java/com/frierenflight/zoltraakcinematic/
+│       │   ├── ZoltraakCinematicMod.java       # Forge-adapted shared mod bootstrap
+│       │   ├── block/, event/, item/, network/ # 1.20.1 signature adapters
+│       │   └── forge/
+│       │       ├── ZoltraakCinematicForgeMod.java # Forge @Mod entrypoint & ConfigScreenFactory registration
+│       │       ├── mixin/                      # Forge 1.20.1 Mixin variants (3 files)
+│       │       ├── network/                    # SimpleChannel & packet codecs (3 files)
+│       │       └── platform/ForgePlatformHelper.java
+│       └── resources/                          # mods.toml, pack.mcmeta, forge mixins/refmap, 1.20.1 tags & SPI
 └── src/
     ├── main/java/com/frierenflight/zoltraakcinematic/ (91 Java files)
     │   ├── ZoltraakCinematicMod.java           # NeoForge @Mod entrypoint & IConfigScreenFactory registration
@@ -186,7 +189,7 @@ Zoltraak Cinematic - NeoForge 1.21.1/
     │   │   │   └── GargantuaCasterPose.java / GargantuaScreenFx.java
     │   │   ├── gui/ZoltraakConfigScreen.java   # Real-time 5-tab Studio Config UI
     │   │   ├── model/QualBossModel.java
-    │   │   └── renderer/ (24 classes)          # 18-shader registries, Iris bridge, raymarch & entity renderers
+    │   │   └── renderer/ (24 classes)          # 21-shader registries, Iris bridge, raymarch & entity renderers
     │   │       ├── ZoltraakCinematicShaders.java / ZoltraakRenderTypes.java / ZoltraakRenderPass.java
     │   │       ├── GargantuaPostProcessor.java / GargantuaPreviewRenderer.java / CosmicTextures.java
     │   │       ├── DefenseBarrierRenderer.java / GeodesicDomeData.java / ShaderCompatibility.java
@@ -201,7 +204,7 @@ Zoltraak Cinematic - NeoForge 1.21.1/
     │   │   ├── DefenseBarrierEntity.java
     │   │   ├── GargantuaDamage.java & GargantuaEntity.java
     │   │   ├── ZoltraakBarrageProjectileEntity.java & ZoltraakCinematicBeamEntity.java
-    │   │   └── boss/ (QualBossEntity + 4 AI goal classes)
+    │   │   └── boss/ (QualBossEntity + ai/ 4 goal classes)
     │   ├── event/ (DefenseEvents.java, FlightEvents.java)
     │   ├── item/ (9 custom item & relic classes)
     │   ├── mixin/ (CameraMixin.java, GameRendererMixin.java, PlayerModelPoseMixin.java)
@@ -212,9 +215,9 @@ Zoltraak Cinematic - NeoForge 1.21.1/
     └── main/resources/
         ├── META-INF/neoforge.mods.toml         # Mod manifest + sodium:config_api_user declaration
         └── assets/zoltraak_cinematic/
-            ├── shaders/core/                   # 54 files (18 GLSL 150 programs: .json, .vsh, .fsh)
-            ├── textures/, models/, sounds/, lang/
-            └── geo/, animations/               # GeckoLib boss/monolith geometry & animations
+            ├── shaders/core/                   # 63 files (21 GLSL 150 programs: .json, .vsh, .fsh)
+            ├── textures/, models/, sounds/ (15 .ogg), lang/ (en_us.json, th_th.json — 203 keys each)
+            └── geo/, animations/               # GeckoLib boss geometry & animations
 ```
 
 > *Note: Local third-party dependency directories (`libs/`, `libs_forge/`, `tools/remapper/`) and compiled `.jar` outputs are excluded via `.gitignore`, are not part of this source repository, and remain governed by their respective third-party licenses/terms.*
@@ -252,13 +255,13 @@ Four syncable `MagicPercentAttribute` traits (default `1.0D`, range `-100.0D` to
 
 All **11** registered items are fire-resistant (`fireResistant()`):
 
-1. `frieren_staff` (`FrierenStaffItem`): Epic `StaffItem` with `+45%` Spell Power, `+500` Max Mana, `-20%` (`+0.20`) Cooldown Reduction via `Services.PLATFORM.applyStaffAttributes(...)`.
+1. `frieren_staff` (`FrierenStaffItem`): Epic `StaffItem` with `+45%` Spell Power, `+35%` Zoltraak Spell Power, `+500` Max Mana, `+20%` Cooldown Reduction, plus configurable Cast Time Reduction (`items.staffCastSpeedBonus`, default `+15%`) and Mana Regen (`items.staffManaRegenBonus`, default `5.0`) via `Services.PLATFORM.applyStaffAttributes(...)` on NeoForge and `FrierenStaffItem` on Forge.
 2. `ordinary_grimoire` (`OrdinaryGrimoireItem`): 10-slot Epic `SpellBook` (`+30%` Zoltraak Spell Power, `+15%` Spell Power, `+300` Max Mana, `+15%` Cooldown Reduction).
 3. `elder_sage_grimoire` (`ElderSageGrimoireItem`): 12-slot Epic `SpellBook` (`+50%` Zoltraak Spell Power, `+20%` Spell Power, `+1000` Max Mana, `+30%` Cooldown Reduction, `+20%` Cast Time Reduction).
 4. `mirror_lotus_ring` (`MirrorLotusRingItem`): Ring Curio (`+25%` Zoltraak Spell Power, `+15%` Cooldown Reduction, `+150` Max Mana, `+1.0` Mana Regen).
 5. `mana_concealment_pendant` (`ManaConcealmentPendantItem`): Necklace Curio (`+20%` Zoltraak Magic Resist, `+10%` Cast Time Reduction, `+200` Max Mana).
 6. `corruption_core` (`CorruptionCoreItem`): Necklace Curio (`+35%` Zoltraak Spell Power, `+350` Max Mana, `+2.5` Mana Regen).
-7. `chronos_dilatation_watch` (`ChronosDilatationWatchItem`): Charm Curio (`+15%` Cooldown Reduction, `+35%` Black Hole Spell Power); right-clicking unleashes a Time Dilation Field applying Slowness IV and Mining Fatigue IV (configured via `chronosWatchRadius`, `chronosWatchDurationTicks`, `chronosWatchCooldownSeconds`).
+7. `chronos_dilatation_watch` (`ChronosDilatationWatchItem`): Charm Curio (`+15%` Cooldown Reduction, `+35%` Black Hole Spell Power); right-clicking unleashes a Time Dilation Field applying Slowness IV and Mining Fatigue IV (configured via `items.watchRadius`, `items.watchDurationTicks`, `items.watchCooldownSec`).
 8. `horn_of_corruption` (`HornOfCorruptionItem`): Rare crafting catalyst dropped by Qual (`stacksTo(16)`).
 9. `gargantua_scroll` (`GargantuaScrollItem`): Epic `Scroll` pre-bound via `ISpellContainer` to `gargantua` Level 1 (`stacksTo(16)`).
 10. `qual_sealing_stone`: BlockItem for `ModCinematicBlocks.QUAL_SEALING_STONE` (Epic).
@@ -286,7 +289,7 @@ All **11** registered items are fire-resistant (`fireResistant()`):
 
 ### 6.3 `ZoltraakBarrageProjectileEntity`
 
-- Guided projectile (`MAX_LIFETIME = 35` default entity constant, configurable via `barrageMaxLifetimeTicks`) launched sequentially from the **24** celestial coordinates in `FernBarrageSpell.BARRAGE_CIRCLE_OFFSETS` (`Row 1` 5 Crown circles, `Row 2` 4 Upper-Mid circles, `Row 3` 6 Primary Battery wing circles, `Row 4` 4 Lower-Mid circles, `Row 5` 5 Base circles).
+- Guided projectile (`MAX_LIFETIME = 35` entity constant; configurable max flight lifetime via `barrage.lifeTicks`, default `60`) launched sequentially from the **24** celestial coordinates in `FernBarrageSpell.BARRAGE_CIRCLE_OFFSETS` (`Row 1` 5 Crown circles, `Row 2` 4 Upper-Mid circles, `Row 3` 6 Primary Battery wing circles, `Row 4` 4 Lower-Mid circles, `Row 5` 5 Base circles).
 - Tracks `DATA_TARGET_ID`, projectile path history for tapered trail geometry (`RapidZoltraakRenderer`), impact normal, and triggers staggered supersonic muzzle rings (`ZoltraakBarrageArrayRenderer.onCircleFired`).
 
 ### 6.4 `DefenseBarrierEntity` & Frequency-7 Geodesic Dome
@@ -307,7 +310,7 @@ All **11** registered items are fire-resistant (`fireResistant()`):
 
 - **Server Interception**: [`DefenseEvents`](src/main/java/com/frierenflight/zoltraakcinematic/event/DefenseEvents.java) intercepts `LivingIncomingDamageEvent`, sorts nearby barriers by distance to source origin, tests geometric ray intersection (`intersection`), and deducts absorbed capacity via `barrier.absorb(amount, contact)` using a fire-immune entity (`isOnFire() == false`).
 - **Procedural Frequency-7 Mesh ([`GeodesicDomeData`](src/main/java/com/frierenflight/zoltraakcinematic/client/renderer/GeodesicDomeData.java))**: Class-I Frequency-7 dual Goldberg subdivision (`generateDome(7)`) computes **492** dual cells and **1,470** deduplicated honeycomb edges directly at startup.
-- **First-Person Ergonomics**: [`DefenseBarrierRenderer`](src/main/java/com/frierenflight/zoltraakcinematic/client/renderer/DefenseBarrierRenderer.java) respects `firstPersonBarrierMode` (`SIGHT_WINDOW`, `MINIMAL`, `PERIMETER`, `FULL`) and `firstPersonBarrierOpacity` so full 360° domes remain optically clear around the player's camera sightline.
+- **First-Person Ergonomics**: [`DefenseBarrierRenderer`](src/main/java/com/frierenflight/zoltraakcinematic/client/renderer/DefenseBarrierRenderer.java) respects `visuals.barrierView` (`CENTER_FADE`, `MINIMAL`, `EDGE_ONLY`, `FULL`; accepting legacy aliases `LIGHT` -> `MINIMAL` and `PERIMETER` -> `EDGE_ONLY`) and `visuals.barrierOpacity` (default `0.35`) so full 360° domes remain optically clear around the player's camera sightline (paired with `visuals.circleView` / `visuals.circleOpacity` for magic circles in `ZoltraakRenderPass`).
 
 ### 6.5 `QualBossEntity` & 4-Goal Combat AI
 
@@ -321,11 +324,11 @@ All **11** registered items are fire-resistant (`fireResistant()`):
 
 ### 6.6 `GargantuaEntity` Relativistic Singularity System
 
-`GargantuaEntity` models a rotating Kerr black hole parameterized with astrophysical ratios (`GARG_HORIZON = 1.8 r_g`, photon shadow radius `sqrt(27) = 5.196 r_g`, ISCO `3.83 r_g`):
+`GargantuaEntity` models a rotating Kerr black hole parameterized with astrophysical ratios (`GRAVITATIONAL_RADIUS = 4.0f` blocks / `r_g`, `HORIZON_RADIUS = 1.8f` `r_g`, photon shadow `SHADOW_RADIUS = 5.196f` `r_g`, ISCO `DISK_INNER_RADIUS = 3.83f` `r_g`, `DISK_OUTER_RADIUS = 13.5f` `r_g`, `SPIN = 0.6f`):
 
-- **Shared Crosshair Target & Cave Protection**: `GargantuaSpell.computeTargetPosition(...)` and `GargantuaEntity.adjustSpawnHeight(...)` align server spawning and client preview 1:1 while clamping spawn height safely beneath cave or indoor ceilings.
-- **Torn Surface Debris & Optional Reconstruction**: Lifts terrain blocks into orbiting accretion debris capped by `maxTornDebris` (default `180`). Removed blocks are recorded in `tornBlocksHistory` (`Map<BlockPos, BlockState>`) and restored on collapse via `reconstructSurfaceBlocks()` when `autoReconstructBlocks` is enabled (default `false` for destructive destruction).
-- **Commands ([`GargantuaCommands`](src/main/java/com/frierenflight/zoltraakcinematic/command/GargantuaCommands.java))**: Permission-2 commands `/singularity`, `/gargantua`, `/gargantua night`, `/zoltraak singularity`, and `/zoltraak gargantua [night]`.
+- **Shared Crosshair Target & Cave Protection**: `GargantuaSpell.computeTargetPosition(...)`, `GargantuaSpell.computeSpinAxis(...)`, and `GargantuaEntity.applyGroundClearance(...)` align server spawning and client preview 1:1 while clamping spawn height safely beneath cave or indoor ceilings.
+- **Torn Surface Debris & Optional Reconstruction**: Lifts terrain blocks into orbiting accretion debris capped by `gargantua.maxDebrisBlocks` (default `180`). Removed blocks are recorded in `tornBlocksHistory` (`Map<BlockPos, BlockState>`) and restored on collapse via `reconstructSurfaceBlocks()` when `gargantua.reconstructBlocks` is enabled (default `false` for destructive impact).
+- **Commands ([`GargantuaCommands`](src/main/java/com/frierenflight/zoltraakcinematic/command/GargantuaCommands.java))**: Permission-2 commands `/singularity`, `/gargantua`, `/gargantua night`, `/zoltraak singularity`, `/zoltraak gargantua`, and `/zoltraak gargantua night`.
 - **160m Blast Flash Attenuation**: Supernova flash & camera trauma attenuate smoothly out to `160`–`240` blocks (`GargantuaScreenFx` & `GargantuaShake`).
 
 ---
@@ -336,10 +339,10 @@ All **11** registered items are fire-resistant (`fireResistant()`):
 
 ```mermaid
 flowchart TD
-    FrameStart["GameRendererMixin: zoltraak$beginWorld -> ZoltraakRenderPass.begin()"] --> WorldCheck{"ShaderCompatibility.isShaderPackActive()"}
+    FrameStart["GameRendererMixin: zoltraak$beginWorld -> ZoltraakRenderPass.begin()"] --> WorldCheck{"ShaderCompatibility.useFullDetailPass()"}
     WorldCheck -- "False (Vanilla)" --> VanillaDraws["ZoltraakRenderPass Deferred Queue (GLSL 150 Shaders)"]
-    WorldCheck -- "True (Iris / Oculus)" --> IrisCheck{"isWorldIlluminationActive(true)"}
-    IrisCheck -- "IRIS_ONLY / ALWAYS" --> IrisPhase1["AFTER_WEATHER: ZoltraakRenderPass Phase 1 (RENDERTYPE_EYES_SHADER + LIGHTNING_TRANSPARENCY)"]
+    WorldCheck -- "True (Iris / Oculus)" --> IrisCheck{"isWorldGlowActive(true)"}
+    IrisCheck -- "SHADERS_ONLY / ALWAYS" --> IrisPhase1["AFTER_WEATHER: ZoltraakRenderPass Phase 1 (RENDERTYPE_EYES_SHADER + LIGHTNING_TRANSPARENCY)"]
     IrisCheck -- "OFF" --> SkipPhase1["Skip Iris Native Bloom Phase"]
     IrisPhase1 --> IrisDeferred["AFTER_ENTITIES: Capture Proj/MV Matrices + GargantuaPostProcessor.renderDeferredIrisPass()"]
     SkipPhase1 --> IrisDeferred
@@ -351,11 +354,11 @@ flowchart TD
 - **Far-Plane Horizon Clamping**: Core `.vsh` shaders apply `gl_Position.z = min(gl_Position.z, gl_Position.w * 0.9995);` so cosmic/beam geometry at extreme distances avoids far-plane Z-clipping.
 - **Iris Dual-Pass Buffer Flush**: [`ZoltraakRenderTypes`](src/main/java/com/frierenflight/zoltraakcinematic/client/renderer/ZoltraakRenderTypes.java) supplies `IRIS_EMISSIVE_QUAD` and `irisEmissiveTextured(...)` using `DefaultVertexFormat.NEW_ENTITY` + `RENDERTYPE_EYES_SHADER` (`LIGHTNING_TRANSPARENCY` `SRC_ALPHA, ONE`), enabling Complementary/BSL/Solas HDR bloom and reflections without dark square cutout artifacts.
 - **Per-Spell Bloom & Emissive Scaling (`0%–200%`)**:
-  - **Vanilla / Deferred Pass**: `ZoltraakRenderPass.endBatchWithBloom(...)` wraps draws with `beginBloomColorScale(...)`, keeping `ColorModulator.rgb = max(1.0, scale)` so dimming (`0%–100%`) preserves hue saturation instead of darkening translucent beams, while `100%–200%` drives HDR overbright radiance (`minAlphaFloor = 0.22F` on `DEFENSE_SURFACE` preserves shield crystal silhouette at `0%`). `GargantuaPostProcessor` scales `DiskShape.w` directly (`max(DiskShape.w, 0.0)` in `gargantua.fsh`).
+  - **Vanilla / Deferred Pass**: `ZoltraakRenderPass.endBatchWithBloom(...)` wraps draws with `beginBloomColorScale(...)`, keeping `ColorModulator.rgb = max(1.0, scale)` so dimming (`0%–100%`) preserves hue saturation instead of darkening translucent beams, while `100%–200%` drives HDR overbright radiance (`DefenseBarrierRenderer` passes `minAlphaFloor = 0.22F` for `DEFENSE_SURFACE` so shield crystal silhouettes remain visible at `0%`). `GargantuaPostProcessor` scales `DiskShape.w` directly (`max(DiskShape.w, 0.0)` in `gargantua.fsh`).
   - **Iris / Oculus Phase 1**: `ZoltraakRenderPass.renderIrisScaled(...)` multiplies vertex alpha inside `addColorVertex` / `addProxyVertex` across `0%–100%` without modifying packed `Color.rgb` metadata, and executes a second additive emissive pass scaled to `scale - 1.0F` when configured above `100%`.
 - **Texture Unit Hygiene**: `GargantuaPostProcessor` saves and restores `GL_TEXTURE0` (`RenderSystem.activeTexture`) across passes so fullscreen post-processing never corrupts subsequent GUI or hand rendering.
 
-### 7.2 Core GLSL 150 Shader Inventory (**18 Programs**)
+### 7.2 Core GLSL 150 Shader Inventory (**21 Programs**)
 
 Registered in [`ZoltraakCinematicShaders`](src/main/java/com/frierenflight/zoltraakcinematic/client/renderer/ZoltraakCinematicShaders.java) (`assets/zoltraak_cinematic/shaders/core/`):
 
@@ -376,23 +379,26 @@ Registered in [`ZoltraakCinematicShaders`](src/main/java/com/frierenflight/zoltr
 | 13 | `zoltraak_impact` | `zoltraakImpact` | `POSITION_TEX_COLOR` | Additive / Translucent | Shockwave ripple & surface burn flash at beam impact point |
 | 14 | `barrage_fx` | `barrageFx` | `POSITION_TEX_COLOR` | Additive (`ADD`) | Sub-atlas transonic compression muzzle shockwave rings for 24-circle barrage |
 | 15 | `rapid_zoltraak_bullet` | `rapidBullet` | `POSITION_TEX_COLOR` | Additive / Translucent | Tapered high-velocity barrage light lances & dark thorns |
-| 16 | `gargantua` | `gargantua` | `POSITION_TEX` (Screen Quad) | Fullscreen FBO Post | Schwarzschild null-geodesic RK2 raymarching, Planck-law thermal disk, ESO Milky Way sky |
-| 17 | `gargantua_disk_preview` | `gargantuaDiskPreview` | `POSITION_TEX_COLOR` | Additive (`ADD`) | Crosshair equatorial disk & ISCO/blast-radius boundary preview (`GargantuaPreviewRenderer`) |
-| 18 | `gargantua_sphere_preview` | `gargantuaSpherePreview` | `POSITION_COLOR` | Additive (`ADD`) | Kerr frame-dragging latitude/longitude silhouette sphere preview (`GargantuaPreviewRenderer`) |
+| 16 | `gargantua` | `gargantua` | `POSITION_TEX` (Screen Quad) | `GL_RGBA16F` HDR Pass 1 | Local-frame volumetric black hole raymarching, curved space lensing & `GasDisc` / `Haze` emission |
+| 17 | `gargantua_bloom_down` | `gargantuaBloomDown` | `POSITION_TEX` (Screen Quad) | `GL_RGBA16F` Pass 2 (Mip `0..5`) | 13-tap energy-preserving Karis downsample + Gaussian cross-filter bloom pyramid |
+| 18 | `gargantua_bloom_up` | `gargantuaBloomUp` | `POSITION_TEX` (Screen Quad) | `GL_RGBA16F` Pass 3 (Mip `4..0`) | B-spline bicubic + 9-tap tent upsample bloom reconstruction |
+| 19 | `gargantua_composite` | `gargantuaComposite` | `POSITION_TEX` (Screen Quad) | Fullscreen Composite Pass 4 | Analytic background lensing, starfield reveal, anamorphic flare & filmic Power-Reinhard tonemapping |
+| 20 | `gargantua_disk_preview` | `gargantuaDiskPreview` | `POSITION_TEX_COLOR` | Additive (`ADD`) | Crosshair equatorial disk & ISCO/blast-radius boundary preview (`GargantuaPreviewRenderer`) |
+| 21 | `gargantua_sphere_preview` | `gargantuaSpherePreview` | `POSITION_TEX_COLOR_NORMAL` | Additive (`ADD`) | Kerr frame-dragging latitude/longitude silhouette sphere preview (`GargantuaPreviewRenderer`) |
 
-All core spell, circle, barrier, impact, and preview shaders support `ColorModulator` uniform scaling for per-spell bloom control, while `gargantua.fsh` reads scaled `DiskShape.w` (`max(DiskShape.w, 0.0)`).
+All core spell, circle, barrier, impact, and preview shaders support `ColorModulator` uniform scaling for per-spell bloom control, while the Gargantua 4-pass pipeline reads scaled `DiskShape.w` (`clamp(DiskShape.w, 0.0, 2.0)`).
 
-### 7.3 Gargantua Post-Processor & Astronomical Sky ([`GargantuaPostProcessor`](src/main/java/com/frierenflight/zoltraakcinematic/client/renderer/GargantuaPostProcessor.java), [`CosmicTextures`](src/main/java/com/frierenflight/zoltraakcinematic/client/renderer/CosmicTextures.java))
+### 7.3 Gargantua Multi-Pass HDR Post-Processor & Astronomical Sky ([`GargantuaPostProcessor`](src/main/java/com/frierenflight/zoltraakcinematic/client/renderer/GargantuaPostProcessor.java), [`CosmicTextures`](src/main/java/com/frierenflight/zoltraakcinematic/client/renderer/CosmicTextures.java))
 
-- **Fullscreen Ping-Pong Targets**: Resizable off-screen `TextureTarget` buffers (`sceneCopy`, `postTarget`) copy main color & depth textures (`SceneSampler`, `DepthSampler`) alongside procedural `NoiseSampler` and mipmapped/anisotropic `CosmicSampler` (`milky_way.jpg`).
-- **Packed Vector Uniform Contract (`gargantua.fsh`)**:
+- **4-Pass `GL_RGBA16F` Pipeline & Ping-Pong Targets**: Renders volumetric black hole HDR radiance into `hdrFbo`, executes a 6-level downsample pyramid (`downFbos[0..5]`) + 5-level bicubic tent upsample pyramid (`upFbos[0..4]`), and composites onto `postTarget` alongside `sceneCopy`, `DepthSampler`, `NoiseSampler` (3D white noise & organic streak channels), and mipmapped/anisotropic `CosmicSampler` (`milky_way.jpg`). Runs seamlessly in both Vanilla (`AFTER_LEVEL`) and Iris/Oculus (`renderDeferredIrisPass()`).
+- **Packed Vector Uniform Contract (`gargantua` & `gargantua_composite`)**:
   - `HoleCentre`: `vec4(eyePos.xyz, r_g)`
   - `SpinAxis`: `vec4(spinAxis.xyz, lensingMode)` (`0.0` off, `1.0` lensing, `2.0` lensing + chromatic aberration)
   - `HoleState`: `vec4(opened 0..1, criticality+blast 0..2, wrappedSeconds, swallowedCount)`
-  - `DiskShape`: `vec4(worldIlluminationFlag, outerRadiusRg [8..40, default 22.0], raymarchSteps [32|72|96|128], brightness)`
+  - `DiskShape`: `vec4(worldIlluminationFlag, outerRadiusRg [8..40, default 22.0], raymarchSteps [32|72|96|128] / lensFlares, brightness)`
   - `DiskU`: `vec4(tangentU.xyz, cutsceneWeight)`
   - `InverseProjectionMat` & `InvViewRotMat`: Reconstruct eye-space & galactic rays per pixel.
-- **Anti-Banding & Radiance Fidelity**: Integrates Roberts R2 quasirandom dithering (`r2ScreenDither`), Planck-law thermal spectrum emission (`blackbodyPlanckSpectrum`), pure-integer GLSL 150 starfield hashing (`pcgCellHash3`), analytic Gaussian disk slab integration (`gaussianSlabFraction`), continuous-LOD galactic panorama (`textureLod`) eliminating `atan()` seams, and soft Reinhard highlight rolloff.
+- **Anti-Banding & Radiance Fidelity**: Uses R2 spatial dithering (`r2Dither`) without temporal ghosting, `pcurve` radial density + 3D noise octaves on `NoiseSampler.b`, seamless 360-degree azimuth blending, localized photon-sphere `Haze`, emission-coupled sky transmittance, B-spline bicubic bloom, Power-Reinhard (`p = 1.5`) + Hermite S-curve + warm channel grading, and supernova shockwave/ray flares.
 
 ### 7.4 Cinematic Camera Choreography & Client Mixins (`client/cinematic/*` & `mixin/*`)
 
@@ -418,12 +424,12 @@ All core spell, circle, barrier, impact, and preview shaders support `ColorModul
 | **`\`** | `KEY_CONFIG` | Opens [`ZoltraakConfigScreen`](src/main/java/com/frierenflight/zoltraakcinematic/client/gui/ZoltraakConfigScreen.java) directly from gameplay (avoids colliding with Iris's default `K` toggle). |
 | **`Spacebar`** | Cutscene Skip | Skips active camera director sequences back to manual player control. |
 
-`ZoltraakCinematicClientEvents` also scales custom spell/boss `SoundInstance` volumes dynamically using `cinematicMasterAudioVolume` and attenuates/suppresses tinnitus sound playback via `enableTinnitusSound` and `tinnitusVolumeMultiplier`.
+`ZoltraakCinematicClientEvents` and `GargantuaScreenFx` also scale custom spell/boss `SoundInstance` volumes dynamically using `audio.modSoundVolume` (`getModSoundVolume()`) and gate/scale post-detonation tinnitus playback via `audio.earRinging` (`isEarRingingEnabled()`) and `audio.earRingingVolume` (`getEarRingingVolume()`).
 
 ### 8.2 Dual-Loader Packet Bridge
 
 - **NeoForge 1.21.1 (`ModCinematicNetworking`)**: Registers `DefenseCastPayload` (`playToServer`) and `FlightTogglePayload` (`playToServer`) via `RegisterPayloadHandlersEvent`.
-- **Forge 1.20.1 (`ForgeNetworkHandler`)**: Registers `ForgeDefenseCastPacket` and `ForgeFlightTogglePacket` over `SimpleChannel` (`zoltraak_cinematic:main`, protocol `"1"`).
+- **Forge 1.20.1 (`ForgeNetworkHandler`)**: Registers `ForgeDefenseCastPacket` and `ForgeFlightTogglePacket` (delegating server handling to Forge `DefenseCastPayload.handleServer` and `FlightTogglePayload.handleServer`) over `SimpleChannel` (`zoltraak_cinematic:main`, protocol `"1"`).
 
 ---
 
@@ -431,18 +437,18 @@ All core spell, circle, barrier, impact, and preview shaders support `ColorModul
 
 ### 9.1 Dual-Tier TOML Model
 
-- **Server / Common (`zoltraak_cinematic-common.toml` — `ZoltraakCinematicConfig`)**: 7 sections (`gargantua`, `flight_system`, `spells_and_beams`, `barrage_matrix`, `defense_barrier`, `qual_boss`, `artifacts_and_relics`). See [`ZoltraakCinematicConfig.java`](src/main/java/com/frierenflight/zoltraakcinematic/config/ZoltraakCinematicConfig.java) for the full gameplay configuration schema.
-- **Client (`zoltraak_cinematic-client.toml` — `ZoltraakCinematicClientConfig`)**: 4 sections cleanly separated for per-user visual comfort, bloom tuning, and GPU budgeting:
-  - **`accessibility_visual`**: `enableScreenFlash`, `screenFlashIntensity`, `enableCameraShake`, `cameraShakeMultiplier`, `enableFlightCameraRoll`, `enableCinematicCamera`, `firstPersonBarrierMode` (`SIGHT_WINDOW`, `MINIMAL`, `PERIMETER`, `FULL`), `firstPersonBarrierOpacity` (`[0.0, 1.0]`).
-  - **`shader_performance`**: `blackHoleRaymarchSteps` (`LOW`=32, `MEDIUM`=72, `HIGH`=96, `ULTRA`=128), `accretionDiskOuterRadius` (`8.0`–`40.0`, default `22.0`), `enableAnamorphicLensFlares`, `enableGravitationalLensing`, `enableChromaticAberration`, `worldIlluminationMode` (`IRIS_ONLY`, `ALWAYS`, `OFF`).
-  - **`accessibility_audio`**: `enableTinnitusSound`, `tinnitusVolumeMultiplier` (`0.0`–`2.0`), `cinematicMasterAudioVolume` (`0.0`–`2.0`).
-  - **`spell_bloom`**: `zoltraakBeamBloomIntensity`, `greatZoltraakBloomIntensity`, `barrageBloomIntensity`, `defenseBarrierBloomIntensity`, `gargantuaBloomIntensity`, `qualBossBloomIntensity` (`0.0`–`2.0` / `0%`–`200%`, default `1.0`).
+- **Server / Common (`zoltraak_cinematic-common.toml` — `ZoltraakCinematicConfig`)**: 7 sections (`gargantua`, `flight`, `beams`, `barrage`, `barrier`, `qual_boss`, `items`). See [`ZoltraakCinematicConfig.java`](src/main/java/com/frierenflight/zoltraakcinematic/config/ZoltraakCinematicConfig.java) for all keys, ranges, and defaults.
+- **Client (`zoltraak_cinematic-client.toml` — `ZoltraakCinematicClientConfig`)**: 4 sections cleanly separated for per-user visual comfort, shader performance, audio, and spell glow tuning:
+  - **`visuals`**: `screenFlash`, `flashStrength` (`0.0`–`1.0`), `cameraShake`, `shakeStrength` (`0.0`–`3.0`), `flightTilt`, `cutsceneCamera`, `barrierView` (`CENTER_FADE`, `MINIMAL`, `EDGE_ONLY`, `FULL`), `barrierOpacity` (`0.0`–`1.0`, default `0.35`), `circleView` (`CENTER_FADE`, `MINIMAL`, `EDGE_ONLY`, `FULL`), `circleOpacity` (`0.0`–`1.0`, default `0.45`).
+  - **`shaders`**: `blackHoleQuality` (`LOW`=32, `MEDIUM`=72, `HIGH`=96, `ULTRA`=128 steps), `diskSize` (`8.0`–`40.0`, default `22.0`), `lensFlares`, `lightBending`, `colorFringe`, `worldGlow` (`SHADERS_ONLY`, `ALWAYS`, `OFF`).
+  - **`audio`**: `earRinging`, `earRingingVolume` (`0.0`–`1.0`, default `0.8`), `modSoundVolume` (`0.0`–`2.0`, default `1.0`).
+  - **`glow`**: `zoltraak`, `greatZoltraak`, `barrage`, `barrier`, `gargantua`, `qual` (`0.0`–`2.0` / `0%`–`200%`, default `1.0`).
 
 ### 9.2 Real-Time In-Game Studio UI ([`ZoltraakConfigScreen`](src/main/java/com/frierenflight/zoltraakcinematic/client/gui/ZoltraakConfigScreen.java))
 
 - Works across both NeoForge (`IConfigScreenFactory`) and Forge (`ConfigScreenFactory`), and renders directly on top of the active Minecraft frame so graphic/shader adjustments take effect immediately as sliders move:
-  - **5 Categories**: `Barrier`, `Camera`, `Shaders`, `Bloom`, `Audio`.
-  - **Live Spec Mutation**: Edits active `ModConfigSpec.ConfigValue` instances immediately (e.g., tweaking `accretionDiskOuterRadius`, `blackHoleRaymarchSteps`, per-spell bloom percentages `0%–200%`, or `firstPersonBarrierOpacity` while inspecting a live black hole or dome) and commits `ZoltraakCinematicClientConfig.SPEC.save()` on exit (`Done` or `ESC`). Supports one-click `Reset Defaults`.
+  - **5 Categories**: `Barrier`, `Camera`, `Shaders`, `Glow` (`tab.bloom`), `Audio`.
+  - **Live Spec Mutation**: Edits active `ModConfigSpec.ConfigValue` instances immediately (e.g., tweaking `diskSize`, `blackHoleQuality`, per-spell glow percentages `0%–200%`, or `barrierOpacity`/`circleOpacity` while inspecting a live black hole or dome) and commits `ZoltraakCinematicClientConfig.SPEC.save()` on exit (`Done` or `ESC`). Supports one-click `Reset` (`resetDefaults()`).
 
 ### 9.3 Official Sodium 0.8+ Config API Integration ([`ZoltraakSodiumConfig`](src/main/java/com/frierenflight/zoltraakcinematic/compat/sodium/ZoltraakSodiumConfig.java))
 
@@ -451,10 +457,10 @@ All core spell, circle, barrier, impact, and preview shaders support `ColorModul
   [modproperties.zoltraak_cinematic]
       "sodium:config_api_user" = "com.frierenflight.zoltraakcinematic.compat.sodium.ZoltraakSodiumConfig"
   ```
-  *(Note: Avoids annotation-based `@ConfigEntryPointForge` alongside TOML registration to prevent Sodium 0.8.13+ duplicate `modId` `IllegalStateException` collisions.)*
+  *(Note: Avoids annotation-based `@ConfigEntryPointForge` alongside TOML registration to prevent Sodium 0.8.13+ duplicate `modId` `IllegalStateException` collisions, and scales integer slider ranges cleanly within Java `IntegerCache` `-128..127` bounds.)*
 - **Branding & Pages**: Uses Cyan theme (`0x33C0FF`) and `textures/gui/logo.png`, exposing:
-  1. `Cinematic Studio UI` (`ExternalPage` button launching `ZoltraakConfigScreen`).
-  2. Native Sodium tabs: **Barrier & Camera**, **Shaders & FX**, **Spell Bloom**, and **Audio & Sound**.
+  1. `Zoltraak Visuals` (`ExternalPage` button launching `ZoltraakConfigScreen`).
+  2. Native Sodium tabs: **Barrier & Camera**, **Shaders & FX**, **Spell Glow**, and **Audio**.
 - **Forge 1.20.1 Exclusion**: `ZoltraakSodiumConfig.java` is excluded from Forge staging in `build_multiloader.py` because Sodium/Embeddium 1.20.1 does not bundle Sodium's 0.6+/0.8+ Config API.
 
 ---
@@ -463,9 +469,12 @@ All core spell, circle, barrier, impact, and preview shaders support `ColorModul
 
 [`build_multiloader.py`](build_multiloader.py) automates full cross-loader compilation without a Gradle daemon:
 
-1. **NeoForge 1.21.1 Build**: Compiles `src/main/java` (91 files) against `libs/` using `-source 21 -target 21`, merges resources/mixins, bundles root `LICENSE` and `NOTICE.txt` into both root and `META-INF/`, packages `zoltraak_cinematic-neoforge-1.21.1-2.0.0.jar`, and optionally deploys via `--deploy` (`--deploy-dir` or `ZOLTRAAK_NEOFORGE_DEPLOY_DIRS`).
-2. **Forge 1.20.1 Build**: Stages `src/main/java` (minus the 3 excluded NeoForge-only files), overlays `forge/src/main/java` (16 files, 96 files compiled total), compiles with `-source 17 -target 17` against local Forge/mod dependencies (`libs_forge/`), bundles root `LICENSE` and `NOTICE.txt`, remaps bytecode to SRG using local third-party remapper tools and mapping tables (`tools/remapper/`, excluded from the repository via `.gitignore`), packages `zoltraak_cinematic-forge-1.20.1-2.0.0.jar`, and optionally deploys via `--deploy` (`--deploy-dir` or `ZOLTRAAK_FORGE_DEPLOY_DIRS`).
-3. **Automated `--test` Suite**: Running `python build_multiloader.py --test` validates both packaged JARs (**371** entries in NeoForge `2.0.0`, **384** in Forge `2.0.0`) across bytecode major versions (`<= 65` for Java 21, `<= 61` for Java 17), mod manifests (`license="All Rights Reserved"`), bundled `LICENSE` and `NOTICE.txt`, ServiceLoader SPI bindings, Mixin configs/classes, all **18** GLSL 150 shader pipelines (**54** shader files), localization/sounds/recipes/icons, Curios slot tags, Sodium Config API registration (ensuring no duplicate `@ConfigEntryPointForge`), and Forge SRG (`m_`) bytecode remapping.
+1. **NeoForge 1.21.1 Build (`--target neoforge`)**: Compiles `src/main/java` (91 files) against `libs/` using `-source 21 -target 21`, merges resources/mixins, bundles root `LICENSE` and `NOTICE.txt` into both root and `META-INF/`, packages `zoltraak_cinematic-neoforge-1.21.1-2.0.0.jar`, and optionally deploys via `--deploy` (`--deploy-dir` or `ZOLTRAAK_NEOFORGE_DEPLOY_DIRS`).
+2. **Forge 1.20.1 Build (`--target forge`)**: Excludes the 3 NeoForge-only files, adapts 80 shared trunk files (`adapt_common_source_for_forge`) alongside 16 Forge files (`forge/src/main/java`, 96 compiled classes total), compiles with `-source 17 -target 17` against `libs_forge/`, converts MC 1.21+ data layouts (`data/zoltraak_cinematic/recipe/*.json` `result.id` -> `recipes/*.json` `result.item` and `tags/item` -> `tags/items`), injects `MixinConfigs: zoltraak_cinematic.forge.mixins.json` into `META-INF/MANIFEST.MF` via `--manifest`, bundles `LICENSE` and `NOTICE.txt`, remaps bytecode to SRG using `tools/remapper/` (`tiny-remapper`, excluded via `.gitignore`), packages `zoltraak_cinematic-forge-1.20.1-2.0.0.jar`, and optionally deploys via `--deploy`.
+3. **Clean & Automated Verification Suite (`--clean`, `--verify`, `--test`)**:
+   - `--clean` removes temporary staging/class directories under `build/`.
+   - `--verify` builds the requested target(s) and automatically verifies them; `--test` checks existing JARs standalone (or builds first when paired with `--target`).
+   - Validates both packaged JARs (**382** entries in NeoForge `2.0.0`, **385** in Forge `2.0.0`) across: bytecode major versions (`<= 65` Java 21 / `<= 61` Java 17), manifests & `LICENSE`/`NOTICE.txt` in root + `META-INF/`, Forge `MANIFEST.MF` MixinConfigs, ServiceLoader SPI, Mixin configs/classes & `zoltraak_cinematic.forge.refmap.json` Searge coverage, valid JSON/MCMETA parsing across every entry, `en_us.json`/`th_th.json` localization parity (**203** keys, zero blanks), all **21** GLSL 150 shaders (**63** files, `#version 150`, `.vsh`/`.json` attribute parity, sampler checks, sync with `ZoltraakCinematicShaders.java`), `sounds.json` -> `.ogg` & model/blockstate references, loader-appropriate Curios tags & crafting recipes, Sodium Config API registration (no `@ConfigEntryPointForge`), Forge `m_` SRG remapping, and zero NeoForge bytecode leaks in Forge.
 
 ---
 
@@ -476,8 +485,8 @@ All core spell, circle, barrier, impact, and preview shaders support `ColorModul
 | **Bootstrap & Platform SPI** | `ZoltraakCinematicMod`, `ZoltraakCinematicForgeMod`, `Services`, `IPlatformHelper` | Cross-loader initialization, registries, UI factory registration, and packet/entity abstractions |
 | **Schools, Spells & Relics** | `ModCinematicSchools`, `ModCinematicSpells` (7), `ModCinematicItems` (11), `ModCinematicAttributes` (4) | Ordinary & Black Hole magic progression, staves, grimoires, Curios, `ChronosDilatationWatchItem` |
 | **Combat, Barriers & Boss** | `ZoltraakCinematicBeamEntity`, `ZoltraakBarrageProjectileEntity`, `DefenseBarrierEntity`, `GeodesicDomeData`, `QualBossEntity` + 4 AI goals, `QualSealingStoneBlock` | Beam piercing, 24-circle homing barrages, Frequency-7 dome (`492` cells / `1,470` edges), 4-phase Qual boss & unsealing ritual |
-| **Kerr Singularity Engine** | `GargantuaEntity`, `GargantuaDamage`, `GargantuaCommands` | Relativistic pull, tidal shear, debris lifting (`maxTornDebris`), optional surface restoration, cave clamping, supernova blast |
-| **Core GLSL 150 & Iris Bridge** | `ZoltraakCinematicShaders` (**18** shaders), `ZoltraakRenderPass`, `ZoltraakRenderTypes`, `ShaderCompatibility`, `GargantuaPostProcessor`, `GargantuaPreviewRenderer`, `CosmicTextures` | Vanilla zero-overhead rendering, Iris Dual-Pass Emissive Bridge (`AFTER_WEATHER` + `AFTER_ENTITIES`), FBO Kerr geodesic raymarching, crosshair preview |
+| **Kerr Singularity Engine** | `GargantuaEntity`, `GargantuaDamage`, `GargantuaCommands` | Relativistic pull, tidal shear, debris lifting (`maxDebrisBlocks`), optional `reconstructBlocks`, `applyGroundClearance`, supernova blast |
+| **Core GLSL 150 & Iris Bridge** | `ZoltraakCinematicShaders` (**21** shaders), `ZoltraakRenderPass`, `ZoltraakRenderTypes`, `ShaderCompatibility`, `GargantuaPostProcessor`, `GargantuaPreviewRenderer`, `CosmicTextures` | Vanilla zero-overhead rendering, Iris Dual-Pass Emissive Bridge (`AFTER_WEATHER` + `AFTER_ENTITIES`), 4-pass `GL_RGBA16F` Gargantua pipeline, crosshair preview |
 | **Cinematic Camera & Mixins** | `CinematicRigController`, `CameraTrack`, `CameraTransform`, `CameraRigFrame`, `CameraObstacleSolver`, `ZoltraakCutscenes`, `GargantuaCutscenes`, `GargantuaScreenFx`, `GargantuaShake`, `CameraMixin`, `GameRendererMixin`, `PlayerModelPoseMixin` | Multi-phase keyframe camera choreography, harmonic trauma shake, blinding blast flashes, hand suppression & levitation poses |
 | **Config, Studio UI & Sodium** | `ZoltraakCinematicConfig`, `ZoltraakCinematicClientConfig`, `ZoltraakConfigScreen`, `ZoltraakSodiumConfig` | Dual-tier TOML configuration, live in-game Studio UI (`\` key), official Sodium 0.8+ Video Options integration |
-| **Multi-Loader Automation** | `build_multiloader.py` | Standalone NeoForge/Forge compilation, SRG remapping, legal bundling, optional `--deploy`, and `--test` verification |
+| **Multi-Loader Automation** | `build_multiloader.py` | Standalone NeoForge/Forge compilation, 1.20.1 recipe/tag/SRG adaptation, `--clean`, `--deploy`, and `--test` / `--verify` verification |

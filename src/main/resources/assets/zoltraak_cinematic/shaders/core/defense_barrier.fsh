@@ -38,13 +38,17 @@ void main() {
 
     float facing = clamp(abs(dot(viewNormal, viewDir)), 0.0, 1.0);
 
-    // 2. Highlight reflection on hex plate facets
+    // 2. Highlight reflection on hex plate facets (guarded against anti-parallel half-vectors)
     vec3 keyLight = normalize(vec3(-0.35, 0.75, 0.55));
-    vec3 half1 = normalize(keyLight + viewDir);
+    vec3 half1Raw = keyLight + viewDir;
+    float half1Len = length(half1Raw);
+    vec3 half1 = half1Len > 0.0001 ? half1Raw / half1Len : viewNormal;
     float spec1 = pow(max(0.0, dot(viewNormal, half1)), 36.0);
 
     vec3 fillLight = normalize(vec3(0.55, -0.25, 0.75));
-    vec3 half2 = normalize(fillLight + viewDir);
+    vec3 half2Raw = fillLight + viewDir;
+    float half2Len = length(half2Raw);
+    vec3 half2 = half2Len > 0.0001 ? half2Raw / half2Len : viewNormal;
     float spec2 = pow(max(0.0, dot(viewNormal, half2)), 20.0);
 
     // 3. Edge glow with slight color fringe

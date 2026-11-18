@@ -165,6 +165,17 @@ public class ZoltraakCinematicBeamEntity extends Entity implements IZoltraakVisu
 
     private void setSyncedBeamTransform(Vec3 origin, Vec3 dir) {
         Vec3 norm = dir.lengthSqr() > 1.0E-6 ? dir.normalize() : new Vec3(0.0, 0.0, 1.0);
+        if (hasSyncedVec()) {
+            double ox = origin.x - this.entityData.get(DATA_ORIGIN_X);
+            double oy = origin.y - this.entityData.get(DATA_ORIGIN_Y);
+            double oz = origin.z - this.entityData.get(DATA_ORIGIN_Z);
+            double dx = norm.x - this.entityData.get(DATA_DIR_X);
+            double dy = norm.y - this.entityData.get(DATA_DIR_Y);
+            double dz = norm.z - this.entityData.get(DATA_DIR_Z);
+            if ((ox * ox + oy * oy + oz * oz) < 1.0E-6 && (dx * dx + dy * dy + dz * dz) < 1.0E-6) {
+                return;
+            }
+        }
         this.entityData.set(DATA_ORIGIN_X, (float) origin.x);
         this.entityData.set(DATA_ORIGIN_Y, (float) origin.y);
         this.entityData.set(DATA_ORIGIN_Z, (float) origin.z);
@@ -267,6 +278,7 @@ public class ZoltraakCinematicBeamEntity extends Entity implements IZoltraakVisu
 
     private Vec3 lockedOrigin = null;
     private Vec3 lockedDirection = null;
+    private boolean syncedLockedTransform = false;
 
     @Override
     public Vec3 visualOrigin(float partial) {
@@ -476,8 +488,9 @@ public class ZoltraakCinematicBeamEntity extends Entity implements IZoltraakVisu
                     lockedOrigin = getPosition(1.0f);
                 }
             }
-            if (!level().isClientSide && lockedOrigin != null && lockedDirection != null) {
+            if (!level().isClientSide && !syncedLockedTransform && lockedOrigin != null && lockedDirection != null) {
                 setSyncedBeamTransform(lockedOrigin, lockedDirection);
+                syncedLockedTransform = true;
             }
         }
 

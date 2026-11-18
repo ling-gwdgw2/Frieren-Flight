@@ -1,0 +1,21 @@
+{
+  "vertex": "zoltraak_cinematic:gargantua_bloom_down",
+  "fragment": "zoltraak_cinematic:gargantua_bloom_down",
+  "samplers": [
+    {
+      "name": "SourceSampler"
+    }
+  ],
+  "attributes": [
+    "Position",
+    "UV0"
+  ],
+  "uniforms": [
+    {
+      "name": "BloomTexel",
+      "type": "float",
+      "count": 4,
+      "values": [0.001, 0.001, 0.0, 1.0]
+    }
+  ]
+}

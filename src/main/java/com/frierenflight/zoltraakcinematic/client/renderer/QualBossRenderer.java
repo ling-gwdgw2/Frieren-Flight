@@ -281,7 +281,8 @@ public class QualBossRenderer extends GeoEntityRenderer<QualBossEntity> {
         poseStack.mulPose(camera.rotation());
 
         VertexConsumer coronaBuilder = bufferSource.getBuffer(ZoltraakRenderTypes.CORONA);
-        renderQuad(poseStack, coronaBuilder, corePulse, 255, 80, 255, 255);
+        int coronaAge = Mth.clamp(Math.round(gameTime % 255.0f), 0, 255);
+        renderQuad(poseStack, coronaBuilder, corePulse, coronaAge, 80, 255, 255);
         flush(bufferSource, ZoltraakRenderTypes.CORONA);
 
         if (com.frierenflight.zoltraakcinematic.config.ZoltraakCinematicClientConfig.isLensFlaresEnabled()) {

@@ -748,7 +748,24 @@ public final class ZoltraakRenderPass {
       float haloR, float haloG, float haloB, float haloA
    ) {
       emitFeatheredBeamSegment(
-         vc, mat, a, b, sideUnit,
+         vc, mat, a.x, a.y, a.z, b.x, b.y, b.z, sideUnit.x, sideUnit.y, sideUnit.z,
+         coreHalfWidth, haloHalfWidth, coreHalfWidth, haloHalfWidth,
+         coreR, coreG, coreB, coreA, haloR, haloG, haloB, haloA,
+         coreR, coreG, coreB, coreA, haloR, haloG, haloB, haloA
+      );
+   }
+
+   public static void emitFeatheredBeamSegment(
+      VertexConsumer vc, Matrix4f mat,
+      double ax, double ay, double az,
+      double bx, double by, double bz,
+      double sx, double sy, double sz,
+      double coreHalfWidth, double haloHalfWidth,
+      float coreR, float coreG, float coreB, float coreA,
+      float haloR, float haloG, float haloB, float haloA
+   ) {
+      emitFeatheredBeamSegment(
+         vc, mat, ax, ay, az, bx, by, bz, sx, sy, sz,
          coreHalfWidth, haloHalfWidth, coreHalfWidth, haloHalfWidth,
          coreR, coreG, coreB, coreA, haloR, haloG, haloB, haloA,
          coreR, coreG, coreB, coreA, haloR, haloG, haloB, haloA
@@ -763,37 +780,56 @@ public final class ZoltraakRenderPass {
       float coreRB, float coreGB, float coreBB, float coreAB,
       float haloRB, float haloGB, float haloBB, float haloAB
    ) {
-      Vec3 haloSideA = sideUnit.scale(haloHalfWidthA);
-      Vec3 haloSideB = sideUnit.scale(haloHalfWidthB);
+      emitFeatheredBeamSegment(
+         vc, mat, a.x, a.y, a.z, b.x, b.y, b.z, sideUnit.x, sideUnit.y, sideUnit.z,
+         coreHalfWidthA, haloHalfWidthA, coreHalfWidthB, haloHalfWidthB,
+         coreRA, coreGA, coreBA, coreAA, haloRA, haloGA, haloBA, haloAA,
+         coreRB, coreGB, coreBB, coreAB, haloRB, haloGB, haloBB, haloAB
+      );
+   }
+
+   private static void emitFeatheredBeamSegment(
+      VertexConsumer vc, Matrix4f mat,
+      double ax, double ay, double az,
+      double bx, double by, double bz,
+      double sx, double sy, double sz,
+      double coreHalfWidthA, double haloHalfWidthA, double coreHalfWidthB, double haloHalfWidthB,
+      float coreRA, float coreGA, float coreBA, float coreAA,
+      float haloRA, float haloGA, float haloBA, float haloAA,
+      float coreRB, float coreGB, float coreBB, float coreAB,
+      float haloRB, float haloGB, float haloBB, float haloAB
+   ) {
+      double hsaX = sx * haloHalfWidthA, hsaY = sy * haloHalfWidthA, hsaZ = sz * haloHalfWidthA;
+      double hsbX = sx * haloHalfWidthB, hsbY = sy * haloHalfWidthB, hsbZ = sz * haloHalfWidthB;
       if (Math.max(coreHalfWidthA, coreHalfWidthB) > 1.0E-5 && Math.min(haloHalfWidthA - coreHalfWidthA, haloHalfWidthB - coreHalfWidthB) > 1.0E-5) {
-         Vec3 coreSideA = sideUnit.scale(coreHalfWidthA);
-         Vec3 coreSideB = sideUnit.scale(coreHalfWidthB);
+         double csaX = sx * coreHalfWidthA, csaY = sy * coreHalfWidthA, csaZ = sz * coreHalfWidthA;
+         double csbX = sx * coreHalfWidthB, csbY = sy * coreHalfWidthB, csbZ = sz * coreHalfWidthB;
          // Left outer feather (-halo -> -core)
-         addColorVertex(vc, mat, a.subtract(haloSideA), 0.0F, 0.0F, 0.0F, 0.0F);
-         addColorVertex(vc, mat, a.subtract(coreSideA), haloRA, haloGA, haloBA, haloAA);
-         addColorVertex(vc, mat, b.subtract(coreSideB), haloRB, haloGB, haloBB, haloAB);
-         addColorVertex(vc, mat, b.subtract(haloSideB), 0.0F, 0.0F, 0.0F, 0.0F);
+         addColorVertex(vc, mat, ax - hsaX, ay - hsaY, az - hsaZ, 0.0F, 0.0F, 0.0F, 0.0F);
+         addColorVertex(vc, mat, ax - csaX, ay - csaY, az - csaZ, haloRA, haloGA, haloBA, haloAA);
+         addColorVertex(vc, mat, bx - csbX, by - csbY, bz - csbZ, haloRB, haloGB, haloBB, haloAB);
+         addColorVertex(vc, mat, bx - hsbX, by - hsbY, bz - hsbZ, 0.0F, 0.0F, 0.0F, 0.0F);
          // Core ribbon (-core -> +core)
-         addColorVertex(vc, mat, a.subtract(coreSideA), coreRA, coreGA, coreBA, coreAA);
-         addColorVertex(vc, mat, a.add(coreSideA), coreRA, coreGA, coreBA, coreAA);
-         addColorVertex(vc, mat, b.add(coreSideB), coreRB, coreGB, coreBB, coreAB);
-         addColorVertex(vc, mat, b.subtract(coreSideB), coreRB, coreGB, coreBB, coreAB);
+         addColorVertex(vc, mat, ax - csaX, ay - csaY, az - csaZ, coreRA, coreGA, coreBA, coreAA);
+         addColorVertex(vc, mat, ax + csaX, ay + csaY, az + csaZ, coreRA, coreGA, coreBA, coreAA);
+         addColorVertex(vc, mat, bx + csbX, by + csbY, bz + csbZ, coreRB, coreGB, coreBB, coreAB);
+         addColorVertex(vc, mat, bx - csbX, by - csbY, bz - csbZ, coreRB, coreGB, coreBB, coreAB);
          // Right outer feather (+core -> +halo)
-         addColorVertex(vc, mat, a.add(coreSideA), haloRA, haloGA, haloBA, haloAA);
-         addColorVertex(vc, mat, a.add(haloSideA), 0.0F, 0.0F, 0.0F, 0.0F);
-         addColorVertex(vc, mat, b.add(haloSideB), 0.0F, 0.0F, 0.0F, 0.0F);
-         addColorVertex(vc, mat, b.add(coreSideB), haloRB, haloGB, haloBB, haloAB);
+         addColorVertex(vc, mat, ax + csaX, ay + csaY, az + csaZ, haloRA, haloGA, haloBA, haloAA);
+         addColorVertex(vc, mat, ax + hsaX, ay + hsaY, az + hsaZ, 0.0F, 0.0F, 0.0F, 0.0F);
+         addColorVertex(vc, mat, bx + hsbX, by + hsbY, bz + hsbZ, 0.0F, 0.0F, 0.0F, 0.0F);
+         addColorVertex(vc, mat, bx + csbX, by + csbY, bz + csbZ, haloRB, haloGB, haloBB, haloAB);
       } else {
          // 2-strip tent fade (-halo -> spine -> +halo) for crisp hairlines/seams
-         addColorVertex(vc, mat, a.subtract(haloSideA), 0.0F, 0.0F, 0.0F, 0.0F);
-         addColorVertex(vc, mat, a, coreRA, coreGA, coreBA, coreAA);
-         addColorVertex(vc, mat, b, coreRB, coreGB, coreBB, coreAB);
-         addColorVertex(vc, mat, b.subtract(haloSideB), 0.0F, 0.0F, 0.0F, 0.0F);
+         addColorVertex(vc, mat, ax - hsaX, ay - hsaY, az - hsaZ, 0.0F, 0.0F, 0.0F, 0.0F);
+         addColorVertex(vc, mat, ax, ay, az, coreRA, coreGA, coreBA, coreAA);
+         addColorVertex(vc, mat, bx, by, bz, coreRB, coreGB, coreBB, coreAB);
+         addColorVertex(vc, mat, bx - hsbX, by - hsbY, bz - hsbZ, 0.0F, 0.0F, 0.0F, 0.0F);
 
-         addColorVertex(vc, mat, a, coreRA, coreGA, coreBA, coreAA);
-         addColorVertex(vc, mat, a.add(haloSideA), 0.0F, 0.0F, 0.0F, 0.0F);
-         addColorVertex(vc, mat, b.add(haloSideB), 0.0F, 0.0F, 0.0F, 0.0F);
-         addColorVertex(vc, mat, b, coreRB, coreGB, coreBB, coreAB);
+         addColorVertex(vc, mat, ax, ay, az, coreRA, coreGA, coreBA, coreAA);
+         addColorVertex(vc, mat, ax + hsaX, ay + hsaY, az + hsaZ, 0.0F, 0.0F, 0.0F, 0.0F);
+         addColorVertex(vc, mat, bx + hsbX, by + hsbY, bz + hsbZ, 0.0F, 0.0F, 0.0F, 0.0F);
+         addColorVertex(vc, mat, bx, by, bz, coreRB, coreGB, coreBB, coreAB);
       }
    }
 
@@ -1083,8 +1119,12 @@ public final class ZoltraakRenderPass {
    }
 
    public static void addColorVertex(VertexConsumer vc, Matrix4f mat, Vec3 p, float r, float g, float b, float a) {
+      addColorVertex(vc, mat, p.x, p.y, p.z, r, g, b, a);
+   }
+
+   public static void addColorVertex(VertexConsumer vc, Matrix4f mat, double x, double y, double z, float r, float g, float b, float a) {
       float scaledA = Mth.clamp(a * activeIrisBloomScale, 0.0F, 1.0F);
-      vc.addVertex(mat, (float) p.x, (float) p.y, (float) p.z).setColor(r, g, b, scaledA).setUv(0.5F, 0.5F).setOverlay(OverlayTexture.NO_OVERLAY).setLight(LightTexture.FULL_BRIGHT).setNormal(0.0F, 1.0F, 0.0F);
+      vc.addVertex(mat, (float) x, (float) y, (float) z).setColor(Mth.clamp(r, 0.0F, 1.0F), Mth.clamp(g, 0.0F, 1.0F), Mth.clamp(b, 0.0F, 1.0F), scaledA).setUv(0.5F, 0.5F).setOverlay(OverlayTexture.NO_OVERLAY).setLight(LightTexture.FULL_BRIGHT).setNormal(0.0F, 1.0F, 0.0F);
    }
 
    public static void addProxyVertex(VertexConsumer vc, Matrix4f mat, Vec3 p, float u, float v, float r, float g, float b, float a) {

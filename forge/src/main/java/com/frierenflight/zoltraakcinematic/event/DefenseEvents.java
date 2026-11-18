@@ -37,6 +37,7 @@ public final class DefenseEvents {
 
                 if (from != null) {
                     Vec3 eyeTo = event.getEntity().getEyePosition();
+                    Vec3 centerTo = event.getEntity().getBoundingBox().getCenter();
                     Vec3 origin = from;
                     List<DefenseBarrierEntity> barriers = event.getEntity().level()
                             .getEntitiesOfClass(DefenseBarrierEntity.class, new AABB(from, eyeTo).inflate(4.0));
@@ -46,16 +47,24 @@ public final class DefenseEvents {
                     for (DefenseBarrierEntity barrier : barriers) {
                         if (!barrier.friendly(attacker != null ? attacker : direct)) {
                             Optional<Vec3> contact = barrier.intersection(from, eyeTo);
+                            if (contact.isEmpty()) {
+                                contact = barrier.intersection(from, centerTo);
+                            }
+
                             if (contact.isPresent()) {
-                                amount = barrier.absorb(amount, contact.get());
-                                if (amount <= 0.0F) {
-                                    event.setCanceled(true);
-                                    return;
-                                }
+                                amount -= barrier.absorb(amount, contact.get());
+                            }
+
+                            if (amount <= 0.0F) {
+                                break;
                             }
                         }
                     }
-                    event.setAmount(amount);
+
+                    event.setAmount(Math.max(0.0F, amount));
+                    if (amount <= 0.0F) {
+                        event.setCanceled(true);
+                    }
                 }
             }
         }

@@ -28,12 +28,15 @@ public final class ZoltraakCinematicShaders {
    public static ShaderInstance barrageFx;
    public static ShaderInstance rapidBullet;
    public static ShaderInstance gargantua;
+   public static ShaderInstance gargantuaBloomDown;
+   public static ShaderInstance gargantuaBloomUp;
+   public static ShaderInstance gargantuaComposite;
    public static ShaderInstance gargantuaDiskPreview;
    public static ShaderInstance gargantuaSpherePreview;
 
    @SubscribeEvent
    /**
-    * Registers all 18 custom Core GLSL 150 shaders for the Zoltraak Cinematic rendering pipeline.
+    * Registers all 21 custom Core GLSL 150 shaders for the Zoltraak Cinematic rendering pipeline.
     */
    public static void onRegisterShaders(RegisterShadersEvent e) {
       registerSafe(e, "cinematic_singularity_corona", s -> corona = s);
@@ -52,6 +55,9 @@ public final class ZoltraakCinematicShaders {
       registerSafe(e, "barrage_fx", s -> barrageFx = s);
       registerSafe(e, "rapid_zoltraak_bullet", s -> rapidBullet = s);
       registerSafe(e, "gargantua", DefaultVertexFormat.POSITION_TEX, s -> gargantua = s);
+      registerSafe(e, "gargantua_bloom_down", DefaultVertexFormat.POSITION_TEX, s -> gargantuaBloomDown = s);
+      registerSafe(e, "gargantua_bloom_up", DefaultVertexFormat.POSITION_TEX, s -> gargantuaBloomUp = s);
+      registerSafe(e, "gargantua_composite", DefaultVertexFormat.POSITION_TEX, s -> gargantuaComposite = s);
       registerSafe(e, "gargantua_disk_preview", s -> gargantuaDiskPreview = s);
       registerSafe(e, "gargantua_sphere_preview", DefaultVertexFormat.POSITION_TEX_COLOR_NORMAL, s -> gargantuaSpherePreview = s);
    }

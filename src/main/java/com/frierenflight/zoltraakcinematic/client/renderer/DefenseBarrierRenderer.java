@@ -27,6 +27,25 @@ public final class DefenseBarrierRenderer extends EntityRenderer<DefenseBarrierE
     private static final ResourceLocation TEX_GROUND_CIRCLE =
             ResourceLocation.fromNamespaceAndPath(ZoltraakCinematicMod.MODID, "textures/spell/defense_ground_circle.png");
 
+    private static final int DOME_SHELL_SLICES = 32;
+    private static final double[] DOME_SHELL_COS = new double[DOME_SHELL_SLICES + 1];
+    private static final double[] DOME_SHELL_SIN = new double[DOME_SHELL_SLICES + 1];
+    private static final double[] HEX_COS = new double[7];
+    private static final double[] HEX_SIN = new double[7];
+
+    static {
+        for (int i = 0; i <= DOME_SHELL_SLICES; i++) {
+            double theta = (i * Math.PI * 2.0) / DOME_SHELL_SLICES;
+            DOME_SHELL_COS[i] = Math.cos(theta);
+            DOME_SHELL_SIN[i] = Math.sin(theta);
+        }
+        for (int k = 0; k <= 6; k++) {
+            double a = (Math.PI / 6.0) + k * Math.PI / 3.0;
+            HEX_COS[k] = Math.cos(a);
+            HEX_SIN[k] = Math.sin(a);
+        }
+    }
+
     private static final List<DeferredBarrierDraw> DEFERRED_DRAWS = new ArrayList<>();
 
     public record DeferredBarrierDraw(
@@ -125,13 +144,16 @@ public final class DefenseBarrierRenderer extends EntityRenderer<DefenseBarrierE
     ) {
         static final FirstPersonView INACTIVE = new FirstPersonView(false, false, "FULL", 1.0F, Vec3.ZERO, Vec3.ZERO);
 
-        float alignment(Vec3 localPoint) {
-            Vec3 toPoint = centerFromCam.add(localPoint);
-            double lenSqr = toPoint.lengthSqr();
+        float alignment(double lx, double ly, double lz) {
+            double dx = centerFromCam.x + lx;
+            double dy = centerFromCam.y + ly;
+            double dz = centerFromCam.z + lz;
+            double lenSqr = dx * dx + dy * dy + dz * dz;
             if (lenSqr < 1.0E-6) {
                 return 0.0F;
             }
-            return (float) (toPoint.dot(camForward) / Math.sqrt(lenSqr));
+            double dot = dx * camForward.x + dy * camForward.y + dz * camForward.z;
+            return (float) (dot / Math.sqrt(lenSqr));
         }
 
         float irisWidthScale() {
@@ -160,10 +182,14 @@ public final class DefenseBarrierRenderer extends EntityRenderer<DefenseBarrierE
         }
 
         float factor(Vec3 localPoint, float hitBoost, boolean isSurface) {
+            return factor(localPoint.x, localPoint.y, localPoint.z, hitBoost, isSurface);
+        }
+
+        float factor(double lx, double ly, double lz, float hitBoost, boolean isSurface) {
             if (!active) {
                 return 1.0F;
             }
-            float align = alignment(localPoint);
+            float align = alignment(lx, ly, lz);
             float base;
             switch (mode) {
                 case "MINIMAL" -> base = isSurface ? opacity * 0.14F : opacity * 0.85F;
@@ -268,15 +294,24 @@ public final class DefenseBarrierRenderer extends EntityRenderer<DefenseBarrierE
 
                 float widthScale = fpView.irisWidthScale();
                 for (GeodesicDomeData.Edge edge : GeodesicDomeData.EDGES) {
-                    Vec3 p1 = edge.p1().scale(R);
-                    Vec3 p2 = edge.p2().scale(R);
-                    float edgeAttn = fpView.factor(p1.add(p2).scale(0.5), hitBoost, false);
+                    Vec3 ep1 = edge.p1();
+                    Vec3 ep2 = edge.p2();
+                    double p1x = ep1.x * R, p1y = ep1.y * R, p1z = ep1.z * R;
+                    double p2x = ep2.x * R, p2y = ep2.y * R, p2z = ep2.z * R;
+                    float edgeAttn = fpView.factor((p1x + p2x) * 0.5, (p1y + p2y) * 0.5, (p1z + p2z) * 0.5, hitBoost, false);
                     if (edgeAttn <= 0.015F) continue;
-                    Vec3 side = p2.subtract(p1).cross(edge.normal());
-                    if (side.lengthSqr() < 1.0E-8) continue;
+                    Vec3 en = edge.normal();
+                    double dx = p2x - p1x, dy = p2y - p1y, dz = p2z - p1z;
+                    double sx = dy * en.z - dz * en.y;
+                    double sy = dz * en.x - dx * en.z;
+                    double sz = dx * en.y - dy * en.x;
+                    double sLenSqr = sx * sx + sy * sy + sz * sz;
+                    if (sLenSqr < 1.0E-8) continue;
+                    double invSLen = 1.0 / Math.sqrt(sLenSqr);
                     float rgbAttn = fpView.active() ? Mth.sqrt(edgeAttn) : 1.0F;
                     ZoltraakRenderPass.emitFeatheredBeamSegment(
-                            vc, m, p1, p2, side.normalize(),
+                            vc, m, p1x, p1y, p1z, p2x, p2y, p2z,
+                            sx * invSLen, sy * invSLen, sz * invSLen,
                             0.014 * widthScale, 0.095 * widthScale,
                             coreR * rgbAttn, coreG * rgbAttn, coreB * rgbAttn, coreA * edgeAttn,
                             haloR * rgbAttn, haloG * rgbAttn, haloB * rgbAttn, haloA * edgeAttn
@@ -286,26 +321,34 @@ public final class DefenseBarrierRenderer extends EntityRenderer<DefenseBarrierE
                 // Subtle localized sweeping electric S-arc matching Phase 2 renderElectricArc cleanly
                 double arcAngleBase = age * 0.04;
                 int arcSteps = 32;
+                double arcRad = R + 0.02;
                 for (int i = 0; i < arcSteps; i++) {
                     double frac1 = (double) i / arcSteps;
                     double frac2 = (double) (i + 1) / arcSteps;
+                    float arcWeight = (float) Math.pow(Math.sin(((frac1 + frac2) * 0.5) * Math.PI), 1.5);
+                    if (arcWeight <= 0.03F) continue;
                     double phi1 = Math.toRadians(-40.0 + 80.0 * Math.sin(frac1 * Math.PI));
                     double phi2 = Math.toRadians(-40.0 + 80.0 * Math.sin(frac2 * Math.PI));
                     double th1 = arcAngleBase + frac1 * Math.PI * 0.75;
                     double th2 = arcAngleBase + frac2 * Math.PI * 0.75;
-                    Vec3 ap1 = new Vec3(Math.cos(th1) * Math.cos(phi1), Math.sin(phi1), Math.sin(th1) * Math.cos(phi1)).scale(R + 0.02);
-                    Vec3 ap2 = new Vec3(Math.cos(th2) * Math.cos(phi2), Math.sin(phi2), Math.sin(th2) * Math.cos(phi2)).scale(R + 0.02);
-                    Vec3 tangent = ap2.subtract(ap1).cross(ap1);
-                    if (tangent.lengthSqr() < 1.0E-8) continue;
-                    float arcWeight = (float) Math.pow(Math.sin(((frac1 + frac2) * 0.5) * Math.PI), 1.5);
-                    if (arcWeight <= 0.03F) continue;
-                    float arcAttn = fpView.factor(ap1.add(ap2).scale(0.5), hitBoost, false);
+                    double cPhi1 = Math.cos(phi1) * arcRad, cPhi2 = Math.cos(phi2) * arcRad;
+                    double x1 = Math.cos(th1) * cPhi1, y1 = Math.sin(phi1) * arcRad, z1 = Math.sin(th1) * cPhi1;
+                    double x2 = Math.cos(th2) * cPhi2, y2 = Math.sin(phi2) * arcRad, z2 = Math.sin(th2) * cPhi2;
+                    float arcAttn = fpView.factor((x1 + x2) * 0.5, (y1 + y2) * 0.5, (z1 + z2) * 0.5, hitBoost, false);
                     if (arcAttn <= 0.015F) continue;
+                    double dx = x2 - x1, dy = y2 - y1, dz = z2 - z1;
+                    double tx = dy * z1 - dz * y1;
+                    double ty = dz * x1 - dx * z1;
+                    double tz = dx * y1 - dy * x1;
+                    double tLenSqr = tx * tx + ty * ty + tz * tz;
+                    if (tLenSqr < 1.0E-8) continue;
+                    double invTLen = 1.0 / Math.sqrt(tLenSqr);
                     float segA = Mth.clamp(arcWeight * baseVis * 0.50F * arcAttn, 0.0F, 0.58F);
                     float segG = ZoltraakRenderPass.irisFadeGuard(segA) * (fpView.active() ? Mth.sqrt(arcAttn) : 1.0F);
                     double arcWidth = arcWeight * fpView.irisWidthScale();
                     ZoltraakRenderPass.emitFeatheredBeamSegment(
-                            vc, m, ap1, ap2, tangent.normalize(),
+                            vc, m, x1, y1, z1, x2, y2, z2,
+                            tx * invTLen, ty * invTLen, tz * invTLen,
                             0.014 * arcWidth, 0.085 * arcWidth,
                             0.55F * segG, 0.96F * segG, 1.00F * segG, segA,
                             0.18F * segG, 0.78F * segG, 1.00F * segG, segA * 0.55F
@@ -358,17 +401,27 @@ public final class DefenseBarrierRenderer extends EntityRenderer<DefenseBarrierE
                 float widthScale = fpView.irisWidthScale();
                 for (Vec3 cell : DefenseBarrierEntity.cells()) {
                     if (!fpView.shouldRenderDirectionalCell(cell, hitBoost)) continue;
-                    Vec3 center = u.scale(cell.x * grow).add(v.scale(cell.y * grow));
-                    float cellAttn = fpView.factor(center, hitBoost, false);
+                    double cx = u.x * cell.x * grow + v.x * cell.y * grow;
+                    double cy = u.y * cell.x * grow + v.y * cell.y * grow;
+                    double cz = u.z * cell.x * grow + v.z * cell.y * grow;
+                    float cellAttn = fpView.factor(cx, cy, cz, hitBoost, false);
                     if (cellAttn <= 0.015F) continue;
                     float rgbAttn = fpView.active() ? Mth.sqrt(cellAttn) : 1.0F;
                     for (int k = 0; k < 6; k++) {
-                        Vec3 p1 = center.add(radial(u, v, k, size));
-                        Vec3 p2 = center.add(radial(u, v, k + 1, size));
-                        Vec3 side = p2.subtract(p1).cross(normal);
-                        if (side.lengthSqr() < 1.0E-8) continue;
+                        double c0 = HEX_COS[k] * size, s0 = HEX_SIN[k] * size;
+                        double c1 = HEX_COS[k + 1] * size, s1 = HEX_SIN[k + 1] * size;
+                        double p1x = cx + u.x * c0 + v.x * s0, p1y = cy + u.y * c0 + v.y * s0, p1z = cz + u.z * c0 + v.z * s0;
+                        double p2x = cx + u.x * c1 + v.x * s1, p2y = cy + u.y * c1 + v.y * s1, p2z = cz + u.z * c1 + v.z * s1;
+                        double dx = p2x - p1x, dy = p2y - p1y, dz = p2z - p1z;
+                        double sx = dy * normal.z - dz * normal.y;
+                        double sy = dz * normal.x - dx * normal.z;
+                        double sz = dx * normal.y - dy * normal.x;
+                        double sLenSqr = sx * sx + sy * sy + sz * sz;
+                        if (sLenSqr < 1.0E-8) continue;
+                        double invSLen = 1.0 / Math.sqrt(sLenSqr);
                         ZoltraakRenderPass.emitFeatheredBeamSegment(
-                                vc, m, p1, p2, side.normalize(),
+                                vc, m, p1x, p1y, p1z, p2x, p2y, p2z,
+                                sx * invSLen, sy * invSLen, sz * invSLen,
                                 0.024 * widthScale, 0.155 * widthScale,
                                 coreR * rgbAttn, coreG * rgbAttn, coreB * rgbAttn, coreA * cellAttn,
                                 haloR * rgbAttn, haloG * rgbAttn, haloB * rgbAttn, haloA * cellAttn
@@ -501,8 +554,8 @@ public final class DefenseBarrierRenderer extends EntityRenderer<DefenseBarrierE
                                        float age, float fade, float life, float partial,
                                        Vec3 hit, float hitAge, FirstPersonView fpView) {
         VertexConsumer surface = buffers.getBuffer(ZoltraakRenderTypes.DEFENSE_SURFACE);
-        int slices = 32;
         int stacks = 14;
+        float shellHit = hitAge >= 0.0F && hitAge < 14.0F ? (float) Math.exp(-hitAge * 0.25) * 0.45F : 0.0F;
 
         for (int j = -stacks; j < stacks; j++) {
             double phi1 = (j * Math.PI * 0.5) / stacks;
@@ -527,20 +580,25 @@ public final class DefenseBarrierRenderer extends EntityRenderer<DefenseBarrierE
             float blue2 = 0.22F + 0.15F * t2;
             float alpha2 = (0.05F + 0.08F * (1.0F - t2)) * fade;
 
-            for (int i = 0; i < slices; i++) {
-                double theta1 = (i * Math.PI * 2.0) / slices;
-                double theta2 = ((i + 1) * Math.PI * 2.0) / slices;
+            for (int i = 0; i < DOME_SHELL_SLICES; i++) {
+                double c1 = DOME_SHELL_COS[i], s1 = DOME_SHELL_SIN[i];
+                double c2 = DOME_SHELL_COS[i + 1], s2 = DOME_SHELL_SIN[i + 1];
 
-                Vec3 p1 = new Vec3(Math.cos(theta1) * r1, y1, Math.sin(theta1) * r1);
-                Vec3 p2 = new Vec3(Math.cos(theta2) * r1, y1, Math.sin(theta2) * r1);
-                Vec3 p3 = new Vec3(Math.cos(theta2) * r2, y2, Math.sin(theta2) * r2);
-                Vec3 p4 = new Vec3(Math.cos(theta1) * r2, y2, Math.sin(theta1) * r2);
+                double p1x = c1 * r1, p1z = s1 * r1;
+                double p2x = c2 * r1, p2z = s2 * r1;
+                double p3x = c2 * r2, p3z = s2 * r2;
+                double p4x = c1 * r2, p4z = s1 * r2;
 
-                float shellHit = hitAge >= 0.0F && hitAge < 14.0F ? (float) Math.exp(-hitAge * 0.25) * 0.45F : 0.0F;
-                float shellAttn = fpView.factor(p1.add(p2).add(p3).add(p4).scale(0.25), shellHit, true);
+                float shellAttn = fpView.factor(
+                        (p1x + p2x + p3x + p4x) * 0.25,
+                        (y1 + y2) * 0.5,
+                        (p1z + p2z + p3z + p4z) * 0.25,
+                        shellHit,
+                        true
+                );
                 if (shellAttn > 0.015F) {
-                    tri(surface, m, p1, p2, p3, red1, green1, blue1, alpha1 * shellAttn);
-                    tri(surface, m, p1, p3, p4, red2, green2, blue2, alpha2 * shellAttn);
+                    tri(surface, m, p1x, y1, p1z, p2x, y1, p2z, p3x, y2, p3z, red1, green1, blue1, alpha1 * shellAttn);
+                    tri(surface, m, p1x, y1, p1z, p3x, y2, p3z, p4x, y2, p4z, red2, green2, blue2, alpha2 * shellAttn);
                 }
             }
         }
@@ -554,25 +612,40 @@ public final class DefenseBarrierRenderer extends EntityRenderer<DefenseBarrierE
         int index = 0;
         float deploy = Mth.clamp(age / 8.0F, 0.0F, 1.0F);
         float grow = 0.2F + 0.8F * (float) Math.sin(deploy * Math.PI * 0.5);
+        double scaledRadius = radius * grow;
+        double hitAgeExpSurface = Math.exp(-hitAge * 0.32);
+
+        double[] curX = new double[8];
+        double[] curY = new double[8];
+        double[] curZ = new double[8];
+        double[] inX = new double[8];
+        double[] inY = new double[8];
+        double[] inZ = new double[8];
 
         // --- Pass 1: Honeycomb Plate Faces & Beveled Facets (DEFENSE_SURFACE) ---
         VertexConsumer surface = buffers.getBuffer(ZoltraakRenderTypes.DEFENSE_SURFACE);
         for (GeodesicDomeData.Cell cell : GeodesicDomeData.CELLS) {
-            Vec3 norm = cell.center().normalize();
-            Vec3 center = norm.scale(radius * grow);
+            Vec3 norm = cell.center();
             Vec3[] verts = cell.vertices();
             int vCount = verts.length;
 
-            // Shatter animation when broken (life == 0)
+            double shX = 0.0, shY = 0.0, shZ = 0.0;
             if (life == 0.0F) {
                 float shatter = 1.0F - fade;
-                center = center.add(norm.scale(shatter * (3.0 + Math.sin(index * 2.3) * 2.2)))
-                        .add(new Vec3(0, shatter * 2.5, 0));
+                double shScale = shatter * (3.0 + Math.sin(index * 2.3) * 2.2);
+                shX = norm.x * shScale;
+                shY = norm.y * shScale + shatter * 2.5;
+                shZ = norm.z * shScale;
             }
 
+            double cx = norm.x * scaledRadius + shX;
+            double cy = norm.y * scaledRadius + shY;
+            double cz = norm.z * scaledRadius + shZ;
+
             // Impact glow feedback
-            double distToHit = center.distanceToSqr(hit);
-            double hitGlow = Math.exp(-hitAge * 0.32) * Math.exp(-distToHit * 0.40);
+            double hdx = cx - hit.x, hdy = cy - hit.y, hdz = cz - hit.z;
+            double distToHit = hdx * hdx + hdy * hdy + hdz * hdz;
+            double hitGlow = hitAgeExpSurface * Math.exp(-distToHit * 0.40);
 
             // Active random cell pulsing (like energetic power tiles)
             boolean isPulseCell = (index + (int) (age * 0.20)) % 6 == 0;
@@ -582,40 +655,39 @@ public final class DefenseBarrierRenderer extends EntityRenderer<DefenseBarrierE
             float g = (float) Mth.clamp(0.12F + 0.65F * hitGlow + 0.25F * pulse, 0.0F, 1.0F);
             float b = (float) Mth.clamp(0.50F + 0.50F * hitGlow, 0.0F, 1.0F);
             float faceAlpha = (float) Mth.clamp((0.36F + 0.45F * hitGlow + 0.20F * pulse) * fade * grow, 0.0F, 1.0F);
-            faceAlpha *= fpView.factor(center, (float) hitGlow, true);
+            faceAlpha *= fpView.factor(cx, cy, cz, (float) hitGlow, true);
             if (faceAlpha <= 0.004F) {
                 index++;
                 continue;
             }
 
-            // Compute scaled / shattered vertices
-            Vec3[] curVerts = new Vec3[vCount];
-            Vec3[] insetVerts = new Vec3[vCount];
-
             for (int k = 0; k < vCount; k++) {
-                Vec3 p = verts[k].normalize().scale(radius * grow);
-                if (life == 0.0F) {
-                    float shatter = 1.0F - fade;
-                    p = p.add(norm.scale(shatter * (3.0 + Math.sin(index * 2.3) * 2.2)))
-                            .add(new Vec3(0, shatter * 2.5, 0));
-                }
-                curVerts[k] = p;
-                // Inset vertex for chamfered 3D plate bevel effect
-                insetVerts[k] = p.scale(0.88).add(center.scale(0.12));
+                Vec3 vp = verts[k];
+                double px = vp.x * scaledRadius + shX;
+                double py = vp.y * scaledRadius + shY;
+                double pz = vp.z * scaledRadius + shZ;
+                curX[k] = px;
+                curY[k] = py;
+                curZ[k] = pz;
+                inX[k] = px * 0.88 + cx * 0.12;
+                inY[k] = py * 0.88 + cy * 0.12;
+                inZ[k] = pz * 0.88 + cz * 0.12;
             }
 
             // 1. Draw Inset Hexagonal Plate Face
             for (int k = 0; k < vCount; k++) {
                 int next = (k + 1) % vCount;
-                tri(surface, m, center, insetVerts[k], insetVerts[next], r, g, b, faceAlpha);
+                tri(surface, m, cx, cy, cz, inX[k], inY[k], inZ[k], inX[next], inY[next], inZ[next], r, g, b, faceAlpha);
             }
 
             // 2. Draw Beveled Edge Facets (slight shade variation creating 3D depth)
             float bevelAlpha = faceAlpha * 0.85F;
+            float br = r * 0.8F;
+            float bg = g * 0.85F;
             for (int k = 0; k < vCount; k++) {
                 int next = (k + 1) % vCount;
-                tri(surface, m, curVerts[k], curVerts[next], insetVerts[next], r * 0.8F, g * 0.85F, b, bevelAlpha);
-                tri(surface, m, curVerts[k], insetVerts[next], insetVerts[k], r * 0.8F, g * 0.85F, b, bevelAlpha);
+                tri(surface, m, curX[k], curY[k], curZ[k], curX[next], curY[next], curZ[next], inX[next], inY[next], inZ[next], br, bg, b, bevelAlpha);
+                tri(surface, m, curX[k], curY[k], curZ[k], inX[next], inY[next], inZ[next], inX[k], inY[k], inZ[k], br, bg, b, bevelAlpha);
             }
 
             index++;
@@ -625,41 +697,54 @@ public final class DefenseBarrierRenderer extends EntityRenderer<DefenseBarrierE
         // --- Pass 2: Glowing Neon Cyan Seams & Stress Cracks (LIGHT) ---
         VertexConsumer lines = buffers.getBuffer(ZoltraakRenderTypes.LIGHT);
         if (life > 0.0F) {
+            double edgeR = scaledRadius * 1.0008;
+            double hitAgeExpEdge = Math.exp(-hitAge * 0.28);
+            double lineWidthScale = fpView.phase2WidthScale();
             for (GeodesicDomeData.Edge edge : GeodesicDomeData.EDGES) {
-                Vec3 p1 = edge.p1().scale(radius * grow * 1.0008);
-                Vec3 p2 = edge.p2().scale(radius * grow * 1.0008);
+                Vec3 ep1 = edge.p1();
+                Vec3 ep2 = edge.p2();
                 Vec3 norm = edge.normal();
+                double p1x = ep1.x * edgeR, p1y = ep1.y * edgeR, p1z = ep1.z * edgeR;
+                double p2x = ep2.x * edgeR, p2y = ep2.y * edgeR, p2z = ep2.z * edgeR;
 
-                double distToHit = p1.distanceToSqr(hit);
-                float flash = (float) (Math.exp(-hitAge * 0.28) * Math.exp(-distToHit * 0.35));
-                float linePower = fade * grow * (0.85F + 0.55F * flash) * fpView.factor(p1.add(p2).scale(0.5), flash, false);
+                double hdx = p1x - hit.x, hdy = p1y - hit.y, hdz = p1z - hit.z;
+                double distToHit = hdx * hdx + hdy * hdy + hdz * hdz;
+                float flash = (float) (hitAgeExpEdge * Math.exp(-distToHit * 0.35));
+                float linePower = fade * grow * (0.85F + 0.55F * flash)
+                        * fpView.factor((p1x + p2x) * 0.5, (p1y + p2y) * 0.5, (p1z + p2z) * 0.5, flash, false);
                 if (linePower <= 0.01F) continue;
-                double lineWidthScale = fpView.phase2WidthScale();
 
                 // Outer cyan glow line (width 0.012)
-                line(lines, m, p1, p2, norm, 0.012 * lineWidthScale, linePower * 0.28F, 0.0F, 0.82F, 1.0F);
+                line(lines, m, p1x, p1y, p1z, p2x, p2y, p2z, norm.x, norm.y, norm.z, 0.012 * lineWidthScale, linePower * 0.28F, 0.0F, 0.82F, 1.0F);
                 // Core neon line (width 0.005)
-                line(lines, m, p1, p2, norm, 0.005 * lineWidthScale, linePower * 0.90F, 0.20F, 0.95F, 1.0F);
+                line(lines, m, p1x, p1y, p1z, p2x, p2y, p2z, norm.x, norm.y, norm.z, 0.005 * lineWidthScale, linePower * 0.90F, 0.20F, 0.95F, 1.0F);
                 // Center crisp highlight (width 0.002)
-                line(lines, m, p1, p2, norm, 0.002 * lineWidthScale, linePower * 1.0F, 0.85F, 0.98F, 1.0F);
+                line(lines, m, p1x, p1y, p1z, p2x, p2y, p2z, norm.x, norm.y, norm.z, 0.002 * lineWidthScale, linePower * 1.0F, 0.85F, 0.98F, 1.0F);
             }
 
             // Stress Cracks if capacity < 40%
             if (life < 0.4F) {
                 int cIdx = 0;
+                double crackR = scaledRadius * 1.001;
                 for (GeodesicDomeData.Cell cell : GeodesicDomeData.CELLS) {
                     if (cIdx % 4 == 0) {
-                        Vec3 norm = cell.center().normalize();
-                        Vec3 center = norm.scale(radius * grow * 1.001);
+                        Vec3 norm = cell.center();
+                        double cx = norm.x * crackR, cy = norm.y * crackR, cz = norm.z * crackR;
                         Vec3[] verts = cell.vertices();
                         if (verts.length >= 4) {
-                            Vec3 p1 = verts[0].normalize().scale(radius * grow * 1.001).scale(0.8).add(center.scale(0.2));
-                            Vec3 p2 = center.add(new Vec3(0.04, -0.02, 0.03));
-                            Vec3 p3 = verts[3].normalize().scale(radius * grow * 1.001).scale(0.7).add(center.scale(0.3));
-                            float power = fade * grow * 0.9F * fpView.factor(center, 0.35F, false);
+                            float power = fade * grow * 0.9F * fpView.factor(cx, cy, cz, 0.35F, false);
                             if (power > 0.01F) {
-                                line(lines, m, p1, p2, norm, 0.004 * fpView.phase2WidthScale(), power, 0.95F, 0.98F, 1.0F);
-                                line(lines, m, p2, p3, norm, 0.003 * fpView.phase2WidthScale(), power, 0.95F, 0.98F, 1.0F);
+                                Vec3 v0 = verts[0];
+                                Vec3 v3 = verts[3];
+                                double p1x = (v0.x * 0.8 + norm.x * 0.2) * crackR;
+                                double p1y = (v0.y * 0.8 + norm.y * 0.2) * crackR;
+                                double p1z = (v0.z * 0.8 + norm.z * 0.2) * crackR;
+                                double p2x = cx + 0.04, p2y = cy - 0.02, p2z = cz + 0.03;
+                                double p3x = (v3.x * 0.7 + norm.x * 0.3) * crackR;
+                                double p3y = (v3.y * 0.7 + norm.y * 0.3) * crackR;
+                                double p3z = (v3.z * 0.7 + norm.z * 0.3) * crackR;
+                                line(lines, m, p1x, p1y, p1z, p2x, p2y, p2z, norm.x, norm.y, norm.z, 0.004 * lineWidthScale, power, 0.95F, 0.98F, 1.0F);
+                                line(lines, m, p2x, p2y, p2z, p3x, p3y, p3z, norm.x, norm.y, norm.z, 0.003 * lineWidthScale, power, 0.95F, 0.98F, 1.0F);
                             }
                         }
                     }
@@ -669,32 +754,37 @@ public final class DefenseBarrierRenderer extends EntityRenderer<DefenseBarrierE
         } else {
             // Shattered: render borders with flying fragments
             int sIdx = 0;
+            double lineWidthScale = fpView.phase2WidthScale();
             for (GeodesicDomeData.Cell cell : GeodesicDomeData.CELLS) {
-                Vec3 norm = cell.center().normalize();
-                Vec3 center = norm.scale(radius * grow);
+                Vec3 norm = cell.center();
                 Vec3[] verts = cell.vertices();
                 int vCount = verts.length;
 
                 float shatter = 1.0F - fade;
-                center = center.add(norm.scale(shatter * (3.0 + Math.sin(sIdx * 2.3) * 2.2)))
-                        .add(new Vec3(0, shatter * 2.5, 0));
+                double shScale = shatter * (3.0 + Math.sin(sIdx * 2.3) * 2.2);
+                double shX = norm.x * shScale;
+                double shY = norm.y * shScale + shatter * 2.5;
+                double shZ = norm.z * shScale;
+                double cx = norm.x * scaledRadius + shX;
+                double cy = norm.y * scaledRadius + shY;
+                double cz = norm.z * scaledRadius + shZ;
 
-                float linePower = fade * grow * 0.85F * fpView.factor(center, 0.35F, false);
+                float linePower = fade * grow * 0.85F * fpView.factor(cx, cy, cz, 0.35F, false);
                 if (linePower <= 0.01F) {
                     sIdx++;
                     continue;
                 }
-                Vec3[] curVerts = new Vec3[vCount];
                 for (int k = 0; k < vCount; k++) {
-                    curVerts[k] = verts[k].normalize().scale(radius * grow)
-                            .add(norm.scale(shatter * (3.0 + Math.sin(sIdx * 2.3) * 2.2)))
-                            .add(new Vec3(0, shatter * 2.5, 0));
+                    Vec3 vp = verts[k];
+                    curX[k] = vp.x * scaledRadius + shX;
+                    curY[k] = vp.y * scaledRadius + shY;
+                    curZ[k] = vp.z * scaledRadius + shZ;
                 }
 
-                double lineWidthScale = fpView.phase2WidthScale();
                 for (int k = 0; k < vCount; k++) {
                     int next = (k + 1) % vCount;
-                    line(lines, m, curVerts[k], curVerts[next], norm, 0.006 * lineWidthScale, linePower * 0.85F, 0.20F, 0.95F, 1.0F);
+                    line(lines, m, curX[k], curY[k], curZ[k], curX[next], curY[next], curZ[next],
+                            norm.x, norm.y, norm.z, 0.006 * lineWidthScale, linePower * 0.85F, 0.20F, 0.95F, 1.0F);
                 }
                 sIdx++;
             }
@@ -708,9 +798,12 @@ public final class DefenseBarrierRenderer extends EntityRenderer<DefenseBarrierE
         // Sweeping Electric Arc Ribbon (smooth surface-tangent orientation + tapered tips)
         double arcAngleBase = age * 0.04;
         int arcSteps = 48;
+        double arcRad = radius + 0.025;
         for (int i = 0; i < arcSteps; i++) {
             double frac1 = (double) i / arcSteps;
             double frac2 = (double) (i + 1) / arcSteps;
+            float arcWeight = (float) Math.pow(Math.sin(((frac1 + frac2) * 0.5) * Math.PI), 1.5);
+            if (arcWeight <= 0.01F) continue;
 
             double phi1 = Math.toRadians(-40.0 + 80.0 * Math.sin(frac1 * Math.PI));
             double phi2 = Math.toRadians(-40.0 + 80.0 * Math.sin(frac2 * Math.PI));
@@ -718,22 +811,38 @@ public final class DefenseBarrierRenderer extends EntityRenderer<DefenseBarrierE
             double th1 = arcAngleBase + frac1 * Math.PI * 0.75;
             double th2 = arcAngleBase + frac2 * Math.PI * 0.75;
 
-            double arcR1 = Math.cos(phi1) * (radius + 0.025);
-            double arcY1 = Math.sin(phi1) * (radius + 0.025);
-            double arcR2 = Math.cos(phi2) * (radius + 0.025);
-            double arcY2 = Math.sin(phi2) * (radius + 0.025);
+            double arcR1 = Math.cos(phi1) * arcRad;
+            double arcY1 = Math.sin(phi1) * arcRad;
+            double arcR2 = Math.cos(phi2) * arcRad;
+            double arcY2 = Math.sin(phi2) * arcRad;
 
-            Vec3 ap1 = new Vec3(Math.cos(th1) * arcR1, arcY1, Math.sin(th1) * arcR1);
-            Vec3 ap2 = new Vec3(Math.cos(th2) * arcR2, arcY2, Math.sin(th2) * arcR2);
-            Vec3 tangent = ap2.subtract(ap1).cross(ap1);
-            Vec3 ribbonAxis = tangent.lengthSqr() > 1.0E-8 ? tangent.normalize() : ap1.normalize();
+            double x1 = Math.cos(th1) * arcR1, z1 = Math.sin(th1) * arcR1;
+            double x2 = Math.cos(th2) * arcR2, z2 = Math.sin(th2) * arcR2;
 
-            float arcWeight = (float) Math.pow(Math.sin(((frac1 + frac2) * 0.5) * Math.PI), 1.5);
-            float arcAlpha = arcWeight * fade * 0.62F * fpView.factor(ap1.add(ap2).scale(0.5), 0.10F, false);
+            float arcAlpha = arcWeight * fade * 0.62F * fpView.factor((x1 + x2) * 0.5, (arcY1 + arcY2) * 0.5, (z1 + z2) * 0.5, 0.10F, false);
             if (arcAlpha <= 0.01F) continue;
+
+            double dx = x2 - x1, dy = arcY2 - arcY1, dz = z2 - z1;
+            double tx = dy * z1 - dz * arcY1;
+            double ty = dz * x1 - dx * z1;
+            double tz = dx * arcY1 - dy * x1;
+            double tLenSqr = tx * tx + ty * ty + tz * tz;
+            double rx, ry, rz;
+            if (tLenSqr > 1.0E-8) {
+                double invT = 1.0 / Math.sqrt(tLenSqr);
+                rx = tx * invT;
+                ry = ty * invT;
+                rz = tz * invT;
+            } else {
+                double invR = 1.0 / Math.max(arcRad, 1.0E-4);
+                rx = x1 * invR;
+                ry = arcY1 * invR;
+                rz = z1 * invR;
+            }
+
             double arcWidthScale = arcWeight * fpView.phase2WidthScale();
-            line(lines, m, ap1, ap2, ribbonAxis, 0.024 * arcWidthScale, arcAlpha * 0.28F, 0.0F, 0.85F, 1.0F);
-            line(lines, m, ap1, ap2, ribbonAxis, 0.008 * arcWidthScale, arcAlpha, 0.7F, 0.98F, 1.0F);
+            line(lines, m, x1, arcY1, z1, x2, arcY2, z2, rx, ry, rz, 0.024 * arcWidthScale, arcAlpha * 0.28F, 0.0F, 0.85F, 1.0F);
+            line(lines, m, x1, arcY1, z1, x2, arcY2, z2, rx, ry, rz, 0.008 * arcWidthScale, arcAlpha, 0.7F, 0.98F, 1.0F);
         }
 
         flush(buffers, ZoltraakRenderTypes.LIGHT);
@@ -750,23 +859,33 @@ public final class DefenseBarrierRenderer extends EntityRenderer<DefenseBarrierE
                                    Vec3 camRight, Vec3 camUp, FirstPersonView fpView) {
         float deploy = Mth.clamp(age / 6.0F, 0.0F, 1.0F);
         float grow = 0.2F + 0.8F * (float) Math.sin(deploy * Math.PI * 0.5);
+        double size = DefenseBarrierEntity.CELL_RADIUS * grow;
+        double insetSize = size * 0.88;
+        float hitAgeVal = entity.hitAge(partial);
+        double hitExpSurface = Math.exp(-hitAgeVal * 0.35);
+        double hitExpEdge = Math.exp(-hitAgeVal * 0.28);
 
         // --- Pass 1: Inset Hexagonal Plate Faces & Bevel Facets (DEFENSE_SURFACE) ---
         VertexConsumer surface = buffers.getBuffer(ZoltraakRenderTypes.DEFENSE_SURFACE);
         int index = 0;
         for (Vec3 cell : DefenseBarrierEntity.cells()) {
-            double size = DefenseBarrierEntity.CELL_RADIUS * grow;
-            Vec3 center = u.scale(cell.x * grow).add(v.scale(cell.y * grow));
+            double cx = u.x * cell.x * grow + v.x * cell.y * grow;
+            double cy = u.y * cell.x * grow + v.y * cell.y * grow;
+            double cz = u.z * cell.x * grow + v.z * cell.y * grow;
 
             if (life == 0.0F) {
                 float shatterTime = 1.0F - fade;
-                center = center.add(u.scale(cell.x * shatterTime * 2.5))
-                        .add(v.scale(cell.y * shatterTime * 2.5))
-                        .add(normal.scale(Math.sin(index * 2.4) * shatterTime * 3.0));
+                double shU = cell.x * shatterTime * 2.5;
+                double shV = cell.y * shatterTime * 2.5;
+                double shN = Math.sin(index * 2.4) * shatterTime * 3.0;
+                cx += u.x * shU + v.x * shV + normal.x * shN;
+                cy += u.y * shU + v.y * shV + normal.y * shN;
+                cz += u.z * shU + v.z * shV + normal.z * shN;
             }
 
-            double distToHit = center.distanceToSqr(hit);
-            double hitGlow = Math.exp(-entity.hitAge(partial) * 0.35) * Math.exp(-distToHit * 0.55);
+            double hdx = cx - hit.x, hdy = cy - hit.y, hdz = cz - hit.z;
+            double distToHit = hdx * hdx + hdy * hdy + hdz * hdz;
+            double hitGlow = hitExpSurface * Math.exp(-distToHit * 0.55);
 
             boolean isPulse = (index + (int) (age * 0.25)) % 5 == 0;
             float pulse = isPulse ? 0.35F : 0.0F;
@@ -775,23 +894,29 @@ public final class DefenseBarrierRenderer extends EntityRenderer<DefenseBarrierE
             float g = (float) Mth.clamp(0.18F + 0.55F * hitGlow + 0.3F * pulse, 0.0F, 1.0F);
             float b = 1.0F;
             float cellAttn = fpView.shouldRenderDirectionalCell(cell, (float) hitGlow)
-                    ? fpView.factor(center, (float) hitGlow, true)
+                    ? fpView.factor(cx, cy, cz, (float) hitGlow, true)
                     : 0.0F;
             float alpha = (float) Mth.clamp((0.38F + 0.45F * hitGlow + 0.25F * pulse) * fade * grow * cellAttn, 0.0F, 1.0F);
             if (alpha > 0.004F) {
-                // Inset plate face
-                double insetSize = size * 0.88;
+                float bevelAlpha = alpha * 0.85F;
+                float br = r * 0.8F;
+                float bg = g * 0.85F;
                 for (int k = 0; k < 6; k++) {
-                    tri(surface, m, center, center.add(radial(u, v, k, insetSize)), center.add(radial(u, v, k + 1, insetSize)), r, g, b, alpha);
-                }
-                // Bevel facet
-                for (int k = 0; k < 6; k++) {
-                    Vec3 p1 = center.add(radial(u, v, k, size));
-                    Vec3 p2 = center.add(radial(u, v, k + 1, size));
-                    Vec3 ip1 = center.add(radial(u, v, k, insetSize));
-                    Vec3 ip2 = center.add(radial(u, v, k + 1, insetSize));
-                    tri(surface, m, p1, p2, ip2, r * 0.8F, g * 0.85F, b, alpha * 0.85F);
-                    tri(surface, m, p1, ip2, ip1, r * 0.8F, g * 0.85F, b, alpha * 0.85F);
+                    double c0 = HEX_COS[k], s0 = HEX_SIN[k];
+                    double c1 = HEX_COS[k + 1], s1 = HEX_SIN[k + 1];
+                    double r0x = u.x * c0 + v.x * s0, r0y = u.y * c0 + v.y * s0, r0z = u.z * c0 + v.z * s0;
+                    double r1x = u.x * c1 + v.x * s1, r1y = u.y * c1 + v.y * s1, r1z = u.z * c1 + v.z * s1;
+
+                    double ip1x = cx + r0x * insetSize, ip1y = cy + r0y * insetSize, ip1z = cz + r0z * insetSize;
+                    double ip2x = cx + r1x * insetSize, ip2y = cy + r1y * insetSize, ip2z = cz + r1z * insetSize;
+                    double p1x = cx + r0x * size, p1y = cy + r0y * size, p1z = cz + r0z * size;
+                    double p2x = cx + r1x * size, p2y = cy + r1y * size, p2z = cz + r1z * size;
+
+                    // Inset plate face
+                    tri(surface, m, cx, cy, cz, ip1x, ip1y, ip1z, ip2x, ip2y, ip2z, r, g, b, alpha);
+                    // Bevel facet
+                    tri(surface, m, p1x, p1y, p1z, p2x, p2y, p2z, ip2x, ip2y, ip2z, br, bg, b, bevelAlpha);
+                    tri(surface, m, p1x, p1y, p1z, ip2x, ip2y, ip2z, ip1x, ip1y, ip1z, br, bg, b, bevelAlpha);
                 }
             }
 
@@ -802,39 +927,48 @@ public final class DefenseBarrierRenderer extends EntityRenderer<DefenseBarrierE
         // --- Pass 2: Neon Borders & Stress Cracks (LIGHT) ---
         VertexConsumer lines = buffers.getBuffer(ZoltraakRenderTypes.LIGHT);
         index = 0;
+        double lineWidthScale = fpView.phase2WidthScale();
         for (Vec3 cell : DefenseBarrierEntity.cells()) {
-            double size = DefenseBarrierEntity.CELL_RADIUS * grow;
-            Vec3 center = u.scale(cell.x * grow).add(v.scale(cell.y * grow));
+            double cx = u.x * cell.x * grow + v.x * cell.y * grow;
+            double cy = u.y * cell.x * grow + v.y * cell.y * grow;
+            double cz = u.z * cell.x * grow + v.z * cell.y * grow;
 
             if (life == 0.0F) {
                 float shatterTime = 1.0F - fade;
-                center = center.add(u.scale(cell.x * shatterTime * 2.5))
-                        .add(v.scale(cell.y * shatterTime * 2.5))
-                        .add(normal.scale(Math.sin(index * 2.4) * shatterTime * 3.0));
+                double shU = cell.x * shatterTime * 2.5;
+                double shV = cell.y * shatterTime * 2.5;
+                double shN = Math.sin(index * 2.4) * shatterTime * 3.0;
+                cx += u.x * shU + v.x * shV + normal.x * shN;
+                cy += u.y * shU + v.y * shV + normal.y * shN;
+                cz += u.z * shU + v.z * shV + normal.z * shN;
             }
 
-            double distToHit = center.distanceToSqr(hit);
-            float flash = (float) (Math.exp(-entity.hitAge(partial) * 0.28) * Math.exp(-distToHit * 0.40));
+            double hdx = cx - hit.x, hdy = cy - hit.y, hdz = cz - hit.z;
+            double distToHit = hdx * hdx + hdy * hdy + hdz * hdz;
+            float flash = (float) (hitExpEdge * Math.exp(-distToHit * 0.40));
             float cellAttn = fpView.shouldRenderDirectionalCell(cell, flash)
-                    ? fpView.factor(center, flash, false)
+                    ? fpView.factor(cx, cy, cz, flash, false)
                     : 0.0F;
             float power = fade * grow * (0.85F + 0.5F * flash) * cellAttn;
             if (power > 0.01F) {
-                double lineWidthScale = fpView.phase2WidthScale();
                 for (int k = 0; k < 6; k++) {
-                    Vec3 p1 = center.add(radial(u, v, k, size));
-                    Vec3 p2 = center.add(radial(u, v, k + 1, size));
-                    line(lines, m, p1, p2, normal, 0.014 * lineWidthScale, power * 0.28F, 0.0F, 0.85F, 1.0F);
-                    line(lines, m, p1, p2, normal, 0.006 * lineWidthScale, power * 0.90F, 0.22F, 0.95F, 1.0F);
-                    line(lines, m, p1, p2, normal, 0.0025 * lineWidthScale, power * 1.0F, 0.85F, 0.98F, 1.0F);
+                    double c0 = HEX_COS[k] * size, s0 = HEX_SIN[k] * size;
+                    double c1 = HEX_COS[k + 1] * size, s1 = HEX_SIN[k + 1] * size;
+                    double p1x = cx + u.x * c0 + v.x * s0, p1y = cy + u.y * c0 + v.y * s0, p1z = cz + u.z * c0 + v.z * s0;
+                    double p2x = cx + u.x * c1 + v.x * s1, p2y = cy + u.y * c1 + v.y * s1, p2z = cz + u.z * c1 + v.z * s1;
+                    line(lines, m, p1x, p1y, p1z, p2x, p2y, p2z, normal.x, normal.y, normal.z, 0.014 * lineWidthScale, power * 0.28F, 0.0F, 0.85F, 1.0F);
+                    line(lines, m, p1x, p1y, p1z, p2x, p2y, p2z, normal.x, normal.y, normal.z, 0.006 * lineWidthScale, power * 0.90F, 0.22F, 0.95F, 1.0F);
+                    line(lines, m, p1x, p1y, p1z, p2x, p2y, p2z, normal.x, normal.y, normal.z, 0.0025 * lineWidthScale, power * 1.0F, 0.85F, 0.98F, 1.0F);
                 }
 
                 if (life < 0.4F && index % 3 == 0) {
-                    Vec3 p1 = center.add(u.scale(-size * 0.5));
-                    Vec3 p2 = center.add(v.scale(size * 0.17));
-                    Vec3 p3 = center.add(u.scale(size * 0.3)).add(v.scale(-size * 0.55));
-                    line(lines, m, p1, p2, normal, 0.005 * lineWidthScale, power * 0.85F, 0.95F, 0.98F, 1.0F);
-                    line(lines, m, p2, p3, normal, 0.004 * lineWidthScale, power * 0.85F, 0.95F, 0.98F, 1.0F);
+                    double p1x = cx - u.x * (size * 0.5), p1y = cy - u.y * (size * 0.5), p1z = cz - u.z * (size * 0.5);
+                    double p2x = cx + v.x * (size * 0.17), p2y = cy + v.y * (size * 0.17), p2z = cz + v.z * (size * 0.17);
+                    double p3x = cx + u.x * (size * 0.3) - v.x * (size * 0.55);
+                    double p3y = cy + u.y * (size * 0.3) - v.y * (size * 0.55);
+                    double p3z = cz + u.z * (size * 0.3) - v.z * (size * 0.55);
+                    line(lines, m, p1x, p1y, p1z, p2x, p2y, p2z, normal.x, normal.y, normal.z, 0.005 * lineWidthScale, power * 0.85F, 0.95F, 0.98F, 1.0F);
+                    line(lines, m, p2x, p2y, p2z, p3x, p3y, p3z, normal.x, normal.y, normal.z, 0.004 * lineWidthScale, power * 0.85F, 0.95F, 0.98F, 1.0F);
                 }
             }
 
@@ -883,20 +1017,52 @@ public final class DefenseBarrierRenderer extends EntityRenderer<DefenseBarrierE
     // =========================================================================
 
     private static Vec3 radial(Vec3 u, Vec3 v, int k, double size) {
-        double a = (Math.PI / 6.0) + k * Math.PI / 3.0;
-        return u.scale(Math.cos(a) * size).add(v.scale(Math.sin(a) * size));
+        double c = HEX_COS[k] * size;
+        double s = HEX_SIN[k] * size;
+        return new Vec3(u.x * c + v.x * s, u.y * c + v.y * s, u.z * c + v.z * s);
     }
 
     private static void line(VertexConsumer b, Matrix4f m, Vec3 a, Vec3 c, Vec3 normal, double width, float alpha, float r, float g, float blue) {
-        Vec3 side = c.subtract(a).cross(normal).normalize().scale(width);
-        tri(b, m, a.subtract(side), a.add(side), c.add(side), r, g, blue, alpha);
-        tri(b, m, a.subtract(side), c.add(side), c.subtract(side), r, g, blue, alpha);
+        line(b, m, a.x, a.y, a.z, c.x, c.y, c.z, normal.x, normal.y, normal.z, width, alpha, r, g, blue);
+    }
+
+    private static void line(VertexConsumer b, Matrix4f m,
+                             double ax, double ay, double az,
+                             double cx, double cy, double cz,
+                             double nx, double ny, double nz,
+                             double width, float alpha, float r, float g, float blue) {
+        double dx = cx - ax, dy = cy - ay, dz = cz - az;
+        double sx = dy * nz - dz * ny;
+        double sy = dz * nx - dx * nz;
+        double sz = dx * ny - dy * nx;
+        double lenSqr = sx * sx + sy * sy + sz * sz;
+        if (lenSqr < 1.0E-12) {
+            return;
+        }
+        double scale = width / Math.sqrt(lenSqr);
+        sx *= scale;
+        sy *= scale;
+        sz *= scale;
+        tri(b, m, ax - sx, ay - sy, az - sz, ax + sx, ay + sy, az + sz, cx + sx, cy + sy, cz + sz, r, g, blue, alpha);
+        tri(b, m, ax - sx, ay - sy, az - sz, cx + sx, cy + sy, cz + sz, cx - sx, cy - sy, cz - sz, r, g, blue, alpha);
     }
 
     private static void tri(VertexConsumer b, Matrix4f m, Vec3 a, Vec3 c, Vec3 d, float r, float g, float blue, float alpha) {
-        for (Vec3 p : new Vec3[]{a, c, d}) {
-            b.addVertex(m, (float) p.x, (float) p.y, (float) p.z).setColor(r, g, blue, alpha);
-        }
+        tri(b, m, a.x, a.y, a.z, c.x, c.y, c.z, d.x, d.y, d.z, r, g, blue, alpha);
+    }
+
+    private static void tri(VertexConsumer b, Matrix4f m,
+                            double ax, double ay, double az,
+                            double cx, double cy, double cz,
+                            double dx, double dy, double dz,
+                            float r, float g, float blue, float alpha) {
+        float rc = Mth.clamp(r, 0.0F, 1.0F);
+        float gc = Mth.clamp(g, 0.0F, 1.0F);
+        float bc = Mth.clamp(blue, 0.0F, 1.0F);
+        float ac = Mth.clamp(alpha, 0.0F, 1.0F);
+        b.addVertex(m, (float) ax, (float) ay, (float) az).setColor(rc, gc, bc, ac);
+        b.addVertex(m, (float) cx, (float) cy, (float) cz).setColor(rc, gc, bc, ac);
+        b.addVertex(m, (float) dx, (float) dy, (float) dz).setColor(rc, gc, bc, ac);
     }
 
     private static void quadImpact(VertexConsumer b, Matrix4f m, Vec3 c, Vec3 u, Vec3 v,

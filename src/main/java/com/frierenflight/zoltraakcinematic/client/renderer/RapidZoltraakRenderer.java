@@ -307,7 +307,9 @@ public final class RapidZoltraakRenderer<T extends Entity & IZoltraakVisualEntit
    }
 
    private static void vertex(VertexConsumer b, Matrix4f m, Vec3 p, float u, float v, float r, float g, float blue, float a) {
-      b.addVertex(m, (float)p.x, (float)p.y, (float)p.z).setUv(u, v).setColor(r, g, blue, a);
+      b.addVertex(m, (float)p.x, (float)p.y, (float)p.z)
+         .setUv(u, v)
+         .setColor(Mth.clamp(r, 0.0F, 1.0F), Mth.clamp(g, 0.0F, 1.0F), Mth.clamp(blue, 0.0F, 1.0F), Mth.clamp(a, 0.0F, 1.0F));
    }
 
    private static void flush(MultiBufferSource b, RenderType t) {

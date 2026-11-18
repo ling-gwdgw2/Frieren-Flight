@@ -7,7 +7,9 @@ import com.frierenflight.zoltraakcinematic.registry.ModCinematicMobEffects;
 import com.frierenflight.zoltraakcinematic.registry.ModCinematicSpells;
 import com.frierenflight.zoltraakcinematic.spell.FlightMagicSpell;
 import io.redspace.ironsspellbooks.api.magic.MagicData;
+import io.redspace.ironsspellbooks.api.magic.MagicHelper;
 import io.redspace.ironsspellbooks.api.magic.SpellSelectionManager;
+import io.redspace.ironsspellbooks.api.spells.CastSource;
 import io.redspace.ironsspellbooks.api.spells.ISpellContainer;
 import io.redspace.ironsspellbooks.api.spells.SpellSlot;
 import net.minecraft.ChatFormatting;
@@ -43,6 +45,10 @@ public record FlightTogglePayload() {
                     true
             );
         } else {
+            if (magicData.getPlayerCooldowns().isOnCooldown(spell)) {
+                return;
+            }
+
             int manaCost = spell.getManaCost(spellLevel);
             if (!player.isCreative() && magicData.getMana() < manaCost) {
                 player.displayClientMessage(
@@ -56,6 +62,8 @@ public record FlightTogglePayload() {
                 magicData.setMana(Math.max(0.0F, magicData.getMana() - manaCost));
                 Services.PLATFORM.syncPlayerMana(player, magicData);
             }
+
+            MagicHelper.MAGIC_MANAGER.addCooldown(player, spell, CastSource.SPELLBOOK);
 
             player.addEffect(new MobEffectInstance(ModCinematicMobEffects.FLIGHT.get(), MobEffectInstance.INFINITE_DURATION, spellLevel - 1, false, false, true));
             FlightEvents.enableFlight(player);

@@ -26,9 +26,9 @@
 
 In v2.0.0, all rendering, camera choreography, shaders, and audio run completely standalone without external particle-engine dependencies:
 - **Procedural Vector Geometry (Blaze3D & JOML)**: Real-time dynamic ribbons, tapered cylinders, 24-circle barrage arrays, and Class-I Frequency-7 geodesic shields (`492` cells / `1,470` edges).
-- **18 Original GLSL 150 Core Shaders (54 files)**: Dedicated vertex/fragment pipelines including Schwarzschild/Kerr black hole raymarching (`gargantua`), lensing previews, photonic/abyssal beams, hexagonal barriers, shockwaves, and unsealing rituals.
+- **21 Original GLSL 150 Core Shaders (63 files)**: Dedicated vertex/fragment pipelines including a 4-pass `GL_RGBA16F` relativistic black hole pipeline (`gargantua`, `gargantua_bloom_down`, `gargantua_bloom_up`, `gargantua_composite`), lensing previews, photonic/abyssal beams, hexagonal barriers, shockwaves, and unsealing rituals.
 - **Iris / Oculus & Sodium Compatibility**: Automatic shader-pack detection with deferred emissive passes (`ShaderCompatibility`, `ZoltraakRenderPass`) plus native Sodium Video Settings integration on NeoForge 1.21.1 (`ZoltraakSodiumConfig`).
-- **Keyframe Camera Rig & 15 Synthesized DSP Sounds**: Smooth cutscene camera control (`CinematicRigController`) and custom-synthesized `.ogg` audio effects.
+- **Keyframe Camera Rig & 15 Synthesized DSP Sounds**: Smooth cutscene camera control (`CinematicRigController`) and custom-synthesized `.ogg` audio effects, with full **English (`en_us`) & Thai (`th_th`)** localization (`203` keys).
 
 ---
 
@@ -110,15 +110,22 @@ This repository uses a unified Python multi-loader build script ([`build_multilo
 
 ### Build & Verify
 ```bash
-# Build both NeoForge 1.21.1 and Forge 1.20.1 JARs
-python build_multiloader.py --target all
+# Clean staging directory, build both NeoForge 1.21.1 and Forge 1.20.1 JARs, and run verification
+python build_multiloader.py --clean --target all --verify
 
-# Run the built-in JAR verification suite
+# Build a single loader and verify it
+python build_multiloader.py --target neoforge --verify
+python build_multiloader.py --target forge --verify
+
+# Run the built-in JAR verification suite standalone on existing JARs
 python build_multiloader.py --test
 ```
 
-Optional deployment to local test instance folders:
+Optional cleanup or deployment to local test instance folders:
 ```bash
+# Remove temporary build/ staging and intermediate outputs
+python build_multiloader.py --clean
+
 python build_multiloader.py --target neoforge --deploy --deploy-dir "path/to/instance/mods"
 # Or configure ZOLTRAAK_NEOFORGE_DEPLOY_DIRS / ZOLTRAAK_FORGE_DEPLOY_DIRS environment variables
 ```

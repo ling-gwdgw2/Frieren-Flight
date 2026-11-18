@@ -4,6 +4,7 @@
 // Swirling dark violet corona shader for Qual
 
 uniform vec4 ColorModulator;
+uniform float GameTime;
 
 in vec2 uv;
 in vec4 vertexColor;
@@ -35,8 +36,9 @@ void main() {
 
     float theta = atan(p.y, p.x);
 
-    // 1. Inward swirling spiral
-    float time = age * 0.06;
+    // 1. Inward swirling spiral (driven by continuous GameTime and cyclic vertex age phase)
+    float agePhase = sin(age * 0.02463994) * 0.25;
+    float time = (GameTime > 0.00001) ? (GameTime * 1440.0 + agePhase) : (age * 0.06);
     float spiral = theta * 6.0 + log(max(r, 0.001)) * 4.5 - time * 2.5;
     float vortexWave = sin(spiral) * 0.5 + 0.5;
 
@@ -53,13 +55,13 @@ void main() {
     // 5. Fine ring flicker
     float microArcs = noise2D(vec2(theta * 10.0, r * 16.0 - time * 3.0)) * ring;
 
-    // 6. Violet color palette
+    // 6. Violet color palette (Color.r carries encoded age; preserve full red channel in tint)
     vec3 deepViolet  = vec3(0.55, 0.10, 0.95);
     vec3 magentaGlow = vec3(0.85, 0.22, 0.88);
     vec3 lavenderHot = vec3(0.96, 0.92, 1.00);
 
     vec3 baseColor = mix(deepViolet, magentaGlow, vortexWave);
-    baseColor *= vertexColor.rgb * 1.15;
+    baseColor *= vec3(1.0, vertexColor.g, vertexColor.b) * 1.15;
     vec3 color = mix(baseColor, lavenderHot, clamp(innerRim * 1.25 + ring * 0.35, 0.0, 1.0));
 
     // 7. Final alpha

@@ -94,6 +94,7 @@ public class GargantuaEntity extends Entity implements TraceableEntity, OwnableE
 
     private boolean clientCutsceneTriggered = false;
     private int tornBlockCount = 0;
+    private int liveDebrisCount = 0;
     private final Map<BlockPos, BlockState> tornBlocksHistory = new LinkedHashMap<>();
 
     public GargantuaEntity(EntityType<?> entityType, Level level) {
@@ -144,7 +145,7 @@ public class GargantuaEntity extends Entity implements TraceableEntity, OwnableE
         this.entityData.set(DATA_START_GAME_TICK, this.level().getGameTime());
         this.entityData.set(DATA_SEED, seed);
         this.entityData.set(DATA_SPELL_POWER, Math.max(1.0f, spellPower));
-        Vec3 normAxis = (spinAxis != null && spinAxis.lengthSqr() > 0.001) ? spinAxis.normalize() : new Vec3(0.22d, 0.96d, 0.15d).normalize();
+        Vec3 normAxis = (spinAxis != null && spinAxis.lengthSqr() > 0.001) ? spinAxis.normalize() : new Vec3(0.055d, 0.997d, 0.055d).normalize();
         this.entityData.set(DATA_AXIS_X, (float) normAxis.x);
         this.entityData.set(DATA_AXIS_Y, (float) normAxis.y);
         this.entityData.set(DATA_AXIS_Z, (float) normAxis.z);
@@ -617,16 +618,20 @@ public class GargantuaEntity extends Entity implements TraceableEntity, OwnableE
             return;
         }
 
-        // Limit maximum torn blocks to avoid server TPS drop during the 1-minute lifetime
-        if (this.tornBlockCount >= ZoltraakCinematicConfig.getMaxDebrisBlocks()) return;
-        if (this.tickCount % 4 != 0) return;
+        // Limit both total torn blocks and simultaneously orbiting debris to protect server TPS and client chunk rebuilds
+        int maxTotal = ZoltraakCinematicConfig.getMaxDebrisBlocks();
+        int maxLive = Math.min(40, maxTotal);
+        if (this.tornBlockCount >= maxTotal || this.liveDebrisCount >= maxLive) return;
+        if (this.tickCount % 5 != 0) return;
 
         Vec3 center = centre(1.0f);
         double minRadius = 2.5d;
         double maxRadius = 18.0d;
+        Vec3 axis = spinAxis();
 
-        int attempts = 3;
+        int attempts = 2;
         for (int i = 0; i < attempts; i++) {
+            if (this.tornBlockCount >= maxTotal || this.liveDebrisCount >= maxLive) break;
             double angle = this.random.nextDouble() * Math.PI * 2.0;
             double r = minRadius + Math.sqrt(this.random.nextDouble()) * (maxRadius - minRadius);
 
@@ -648,6 +653,7 @@ public class GargantuaEntity extends Entity implements TraceableEntity, OwnableE
 
             BlockState state = level.getBlockState(targetPos);
             this.tornBlockCount++;
+            this.liveDebrisCount++;
             if (ZoltraakCinematicConfig.isReconstructBlocksEnabled()) {
                 tornBlocksHistory.putIfAbsent(targetPos.immutable(), state);
             }
@@ -661,7 +667,7 @@ public class GargantuaEntity extends Entity implements TraceableEntity, OwnableE
 
             Vec3 delta = center.subtract(targetPos.getX() + 0.5, targetPos.getY() + 0.5, targetPos.getZ() + 0.5);
             Vec3 inward = delta.normalize();
-            Vec3 tangent = spinAxis().cross(inward).normalize();
+            Vec3 tangent = axis.cross(inward).normalize();
 
             Vec3 initVel = new Vec3(
                     tangent.x * 0.35 + inward.x * 0.15,
@@ -687,7 +693,9 @@ public class GargantuaEntity extends Entity implements TraceableEntity, OwnableE
         double eventHorizonDist = (double) (HORIZON_RADIUS * GRAVITATIONAL_RADIUS); // 7.2 blocks
         double diskRadius = 32.0d; // Continuous damage zone across the entire accretion vortex
         double pullDist = ZoltraakCinematicConfig.getPullRadius(); // 100.0 blocks
+        double pullDistSq = pullDist * pullDist;
         LivingEntity caster = resolveCaster(level);
+        Vec3 axis = spinAxis();
 
         AABB box = new AABB(center.x - pullDist, center.y - pullDist, center.z - pullDist,
                 center.x + pullDist, center.y + pullDist, center.z + pullDist);
@@ -695,36 +703,42 @@ public class GargantuaEntity extends Entity implements TraceableEntity, OwnableE
         List<Entity> list = level.getEntities(this, box, e -> e.isAlive() && !isEntityImmuneToVortex(e, caster));
         float tidalPct = (float) ZoltraakCinematicConfig.getTidalDamage();
         double baseAccel = ZoltraakCinematicConfig.getPullStrength();
-        Set<UUID> damagedThisTick = new HashSet<>();
+        boolean doDamageTick = (this.tickCount % 8 == 0);
+        Set<UUID> damagedThisTick = doDamageTick ? new HashSet<>() : null;
+        int seenDebris = 0;
 
         for (Entity e : list) {
+            if (e instanceof FallingBlockEntity falling) {
+                if (falling.tickCount > 240) {
+                    falling.discard();
+                    continue;
+                }
+                seenDebris++;
+            }
+
             // Distance measured to closest point on bounding box surface (crucial for giant bosses)
-            double boxDist = Math.sqrt(e.getBoundingBox().distanceToSqr(center));
-            if (boxDist > pullDist) continue;
+            double boxDistSq = e.getBoundingBox().distanceToSqr(center);
+            if (boxDistSq > pullDistSq) continue;
+            double boxDist = Math.sqrt(boxDistSq);
 
             Vec3 delta = center.subtract(e.position().add(0, e.getBbHeight() * 0.5, 0));
             double d = delta.length();
             if (d < 0.001) d = 0.001;
 
-            // Resolve target living entity (supports multi-part entities like Ender Dragon and Cataclysm bosses)
-            LivingEntity targetLiving = null;
-            if (e instanceof LivingEntity living) {
-                targetLiving = living;
-            } else {
-                Entity parent = Services.PLATFORM.getPartParent(e);
-                if (parent instanceof LivingEntity parentLiving) {
-                    targetLiving = parentLiving;
-                }
-            }
-
             // --- DAMAGE LOGIC (Accretion Disk & Event Horizon) ---
-            // Continuous damage applies every 8 ticks (0.4s) to ANY mob or boss within 32 blocks
-            if (targetLiving != null && targetLiving.isAlive() && !isEntityImmuneToVortex(targetLiving, caster) && this.tickCount % 8 == 0) {
-                if (boxDist <= diskRadius && damagedThisTick.add(targetLiving.getUUID())) {
-                    // For monsters and bosses: damageCauser is ALWAYS 'this' (GargantuaEntity).
-                    // GargantuaEntity is physically located right next to the boss (boxDist <= 32),
-                    // which completely bypasses boss anti-cheese / anti-snipe distance checks at ANY player range!
-                    // Calling targetLiving.setLastHurtByPlayer(player) guarantees full player kill credit, loot, and XP.
+            if (doDamageTick && boxDist <= diskRadius) {
+                LivingEntity targetLiving = null;
+                if (e instanceof LivingEntity living) {
+                    targetLiving = living;
+                } else {
+                    Entity parent = Services.PLATFORM.getPartParent(e);
+                    if (parent instanceof LivingEntity parentLiving) {
+                        targetLiving = parentLiving;
+                    }
+                }
+
+                if (targetLiving != null && targetLiving.isAlive() && !isEntityImmuneToVortex(targetLiving, caster)
+                        && damagedThisTick.add(targetLiving.getUUID())) {
                     Entity damageCauser = (targetLiving instanceof Player && caster != null) ? caster : this;
                     DamageSource damageSource = GargantuaDamage.source(level, this, damageCauser);
                     if (caster instanceof Player player) {
@@ -734,10 +748,8 @@ public class GargantuaEntity extends Entity implements TraceableEntity, OwnableE
                     float spellPowerMult = Math.max(0.1f, getSpellPower() / 500.0f);
                     float dmg;
                     if (boxDist <= eventHorizonDist) {
-                        // Event horizon core: maximum gravitational crush
                         dmg = Math.max(35.0f * spellPowerMult, targetLiving.getMaxHealth() * (tidalPct * spellPowerMult));
                     } else {
-                        // Accretion disk: relativistic plasma shear (scales smoothly from 30% to 100% of tidal damage)
                         double proximity = (diskRadius - boxDist) / (diskRadius - eventHorizonDist);
                         float plasmaFactor = (float) (0.30 + 0.70 * proximity);
                         dmg = Math.max(20.0f * spellPowerMult, targetLiving.getMaxHealth() * (tidalPct * plasmaFactor * spellPowerMult));
@@ -748,14 +760,21 @@ public class GargantuaEntity extends Entity implements TraceableEntity, OwnableE
                 }
             }
 
+            // Stagger server->client motion packet syncing for debris and items to prevent network floods
+            boolean syncMotionPacket = (e instanceof Player)
+                    || (e instanceof LivingEntity)
+                    || (((this.tickCount + e.getId()) % 3) == 0);
+
             // --- PHYSICAL MOVEMENT & ACCELERATION LOGIC ---
             if (d <= eventHorizonDist) {
-                // Inside Event Horizon: Complete Gravitational Annihilation
                 if (e instanceof FallingBlockEntity falling) {
                     noteSwallowed();
-                    level.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, falling.getBlockState()),
-                            falling.getX(), falling.getY(), falling.getZ(),
-                            10, 0.4, 0.4, 0.4, 0.15);
+                    seenDebris = Math.max(0, seenDebris - 1);
+                    if ((this.tickCount & 1) == 0) {
+                        level.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, falling.getBlockState()),
+                                falling.getX(), falling.getY(), falling.getZ(),
+                                6, 0.35, 0.35, 0.35, 0.12);
+                    }
                     falling.discard();
                     continue;
                 }
@@ -765,24 +784,23 @@ public class GargantuaEntity extends Entity implements TraceableEntity, OwnableE
                     continue;
                 }
                 if (e instanceof ItemEntity item) {
-                    // ITEMS ARE NEVER DELETED OR SWALLOWED!
-                    // Safely dampen velocity so items swirl gently without being destroyed
                     item.setDeltaMovement(item.getDeltaMovement().scale(0.85));
                     continue;
                 }
-                // Living entities inside horizon: pull gently toward singularity center
                 Vec3 inward = delta.normalize().scale(0.15);
                 e.setDeltaMovement(e.getDeltaMovement().scale(0.50).add(inward));
                 e.hurtMarked = true;
             } else {
-                // Outside Event Horizon: Inward Relativistic Acceleration + Frame Dragging Swirl
                 if (e instanceof FallingBlockEntity falling) {
                     falling.time = 1;
                     falling.setNoGravity(true);
 
-                    Vec3 inward = delta.normalize();
-                    Vec3 axis = spinAxis();
-                    Vec3 tangent = axis.cross(inward).normalize();
+                    Vec3 inward = delta.scale(1.0 / d);
+                    Vec3 tangent = axis.cross(inward);
+                    double tanLen = tangent.length();
+                    if (tanLen > 1.0e-4) {
+                        tangent = tangent.scale(1.0 / tanLen);
+                    }
 
                     double proximity = Mth.clamp((pullDist - d) / (pullDist - eventHorizonDist), 0.0, 1.0);
                     double inwardSpeed = 0.25 + proximity * 0.55;
@@ -798,27 +816,30 @@ public class GargantuaEntity extends Entity implements TraceableEntity, OwnableE
                     );
 
                     falling.setDeltaMovement(falling.getDeltaMovement().scale(0.60).add(targetVel.scale(0.40)));
-                    falling.hurtMarked = true;
+                    if (syncMotionPacket) {
+                        falling.hurtMarked = true;
+                    }
                     continue;
                 }
 
-                // Inward gravity pull: increases as entity gets closer, but maintains strong pull across 100 blocks
                 double proximity = (pullDist - d) / pullDist;
                 double strength = baseAccel * (1.0 + proximity * 3.5);
-                Vec3 accel = delta.normalize().scale(strength);
+                Vec3 accel = delta.scale(strength / d);
 
                 if (e instanceof Projectile) {
                     e.setDeltaMovement(e.getDeltaMovement().scale(0.85).add(accel.scale(2.5)));
                 } else if (e instanceof ItemEntity item) {
-                    // Items are pulled towards the vortex but remain intact and safe to pick up
                     item.setDeltaMovement(item.getDeltaMovement().scale(0.92).add(accel));
-                    item.hurtMarked = true;
+                    if (syncMotionPacket) {
+                        item.hurtMarked = true;
+                    }
                 } else {
                     e.setDeltaMovement(e.getDeltaMovement().scale(0.92).add(accel));
                     e.hurtMarked = true;
                 }
             }
         }
+        this.liveDebrisCount = seenDebris;
     }
 
     private void resolveBlast(ServerLevel level) {
@@ -908,6 +929,29 @@ public class GargantuaEntity extends Entity implements TraceableEntity, OwnableE
         if (tag.contains("MaxLifetime")) {
             setMaxLifetimeTicks(tag.getInt("MaxLifetime"));
         }
+        if (tag.contains("ElapsedTicks")) {
+            int elapsed = Math.max(0, tag.getInt("ElapsedTicks"));
+            this.tickCount = elapsed;
+            if (this.level() != null) {
+                this.entityData.set(DATA_START_GAME_TICK, Math.max(1L, this.level().getGameTime() - elapsed));
+            }
+        }
+        if (tag.contains("Seed")) {
+            this.entityData.set(DATA_SEED, tag.getInt("Seed"));
+        }
+        if (tag.contains("AxisX") && tag.contains("AxisY") && tag.contains("AxisZ")) {
+            Vec3 axis = new Vec3(tag.getFloat("AxisX"), tag.getFloat("AxisY"), tag.getFloat("AxisZ"));
+            Vec3 normAxis = axis.lengthSqr() > 0.001 ? axis.normalize() : new Vec3(0.0, 1.0, 0.0);
+            this.entityData.set(DATA_AXIS_X, (float) normAxis.x);
+            this.entityData.set(DATA_AXIS_Y, (float) normAxis.y);
+            this.entityData.set(DATA_AXIS_Z, (float) normAxis.z);
+        }
+        if (tag.contains("Display")) {
+            this.entityData.set(DATA_DISPLAY, tag.getBoolean("Display"));
+        }
+        if (tag.contains("BlastResolved")) {
+            this.blastResolved = tag.getBoolean("BlastResolved");
+        }
     }
 
     @Override
@@ -918,5 +962,12 @@ public class GargantuaEntity extends Entity implements TraceableEntity, OwnableE
         tag.putInt("Swallowed", getSwallowedCount());
         tag.putFloat("SpellPower", getSpellPower());
         tag.putInt("MaxLifetime", getMaxLifetimeTicks());
+        tag.putInt("ElapsedTicks", this.tickCount);
+        tag.putInt("Seed", this.entityData.get(DATA_SEED));
+        tag.putFloat("AxisX", this.entityData.get(DATA_AXIS_X));
+        tag.putFloat("AxisY", this.entityData.get(DATA_AXIS_Y));
+        tag.putFloat("AxisZ", this.entityData.get(DATA_AXIS_Z));
+        tag.putBoolean("Display", this.entityData.get(DATA_DISPLAY));
+        tag.putBoolean("BlastResolved", this.blastResolved);
     }
 }

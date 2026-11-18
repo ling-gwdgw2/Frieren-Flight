@@ -3,16 +3,10 @@
   "fragment": "zoltraak_cinematic:gargantua",
   "samplers": [
     {
-      "name": "SceneSampler"
-    },
-    {
       "name": "DepthSampler"
     },
     {
       "name": "NoiseSampler"
-    },
-    {
-      "name": "CosmicSampler"
     }
   ],
   "attributes": [
@@ -52,12 +46,6 @@
     },
     {
       "name": "InverseProjectionMat",
-      "type": "matrix4x4",
-      "count": 16,
-      "values": [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]
-    },
-    {
-      "name": "InvViewRotMat",
       "type": "matrix4x4",
       "count": 16,
       "values": [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]

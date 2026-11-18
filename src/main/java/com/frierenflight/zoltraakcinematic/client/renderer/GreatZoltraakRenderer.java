@@ -245,6 +245,10 @@ public final class GreatZoltraakRenderer<T extends Entity & IZoltraakVisualEntit
          }
       }
 
+      float ageNorm = Mth.clamp(t / 255.0F, 0.0F, 1.0F);
+      float spanNorm = Mth.clamp((float)length / 512.0F, 0.0F, 1.0F);
+      float widthNorm = Mth.clamp((float)width / 32.0F, 0.0F, 1.0F);
+
       for (int j = 0; j < rings.length - 1; j++) {
          for (int k = 0; k < sides; k++) {
             Vec3 a = rings[j][k];
@@ -261,10 +265,10 @@ public final class GreatZoltraakRenderer<T extends Entity & IZoltraakVisualEntit
             if (!(normal.dot(camera.subtract(center)) <= 0.0)) {
                float y = 2.0F + (float)k / sides;
                float q = 2.0F + (float)(k + 1) / sides;
-               vertex(b, m, a, xs[j], y, t / 255.0F, (float)length / 128.0F, (float)width / 16.0F, alpha);
-               vertex(b, m, c, xs[j + 1], y, t / 255.0F, (float)length / 128.0F, (float)width / 16.0F, alpha);
-               vertex(b, m, d, xs[j + 1], q, t / 255.0F, (float)length / 128.0F, (float)width / 16.0F, alpha);
-               vertex(b, m, e, xs[j], q, t / 255.0F, (float)length / 128.0F, (float)width / 16.0F, alpha);
+               vertex(b, m, a, xs[j], y, ageNorm, spanNorm, widthNorm, alpha);
+               vertex(b, m, c, xs[j + 1], y, ageNorm, spanNorm, widthNorm, alpha);
+               vertex(b, m, d, xs[j + 1], q, ageNorm, spanNorm, widthNorm, alpha);
+               vertex(b, m, e, xs[j], q, ageNorm, spanNorm, widthNorm, alpha);
             }
          }
       }
@@ -274,10 +278,10 @@ public final class GreatZoltraakRenderer<T extends Entity & IZoltraakVisualEntit
 
          for (int k = 0; k < sides; k++) {
             float y = 2.0F + (k + 0.5F) / sides;
-            vertex(b, m, center, 0.0F, y, t / 255.0F, (float)length / 128.0F, (float)width / 16.0F, alpha);
-            vertex(b, m, rings[0][k], 0.0F, 2.0F + (float)k / sides, t / 255.0F, (float)length / 128.0F, (float)width / 16.0F, alpha);
-            vertex(b, m, rings[0][k + 1], 0.0F, 2.0F + (float)(k + 1) / sides, t / 255.0F, (float)length / 128.0F, (float)width / 16.0F, alpha);
-            vertex(b, m, center, 0.0F, y, t / 255.0F, (float)length / 128.0F, (float)width / 16.0F, alpha);
+            vertex(b, m, center, 0.0F, y, ageNorm, spanNorm, widthNorm, alpha);
+            vertex(b, m, rings[0][k], 0.0F, 2.0F + (float)k / sides, ageNorm, spanNorm, widthNorm, alpha);
+            vertex(b, m, rings[0][k + 1], 0.0F, 2.0F + (float)(k + 1) / sides, ageNorm, spanNorm, widthNorm, alpha);
+            vertex(b, m, center, 0.0F, y, ageNorm, spanNorm, widthNorm, alpha);
          }
       }
    }
@@ -286,12 +290,15 @@ public final class GreatZoltraakRenderer<T extends Entity & IZoltraakVisualEntit
       Vec3 axis = c.subtract(a).normalize();
       float length = (float)a.distanceTo(c);
       float extent = (float)(width / Math.max(0.025, length));
+      float ageNorm = Mth.clamp(t / 255.0F, 0.0F, 1.0F);
+      float spanNorm = Mth.clamp(length / 512.0F, 0.0F, 1.0F);
+      float widthNorm = Mth.clamp((float)width / 32.0F, 0.0F, 1.0F);
       Vec3 w = side.scale(width);
       Vec3 end = c.add(axis.scale(width));
-      vertex(b, m, a.subtract(w), 0.0F, 0.0F, t / 255.0F, length / 128.0F, (float)width / 16.0F, alpha);
-      vertex(b, m, end.subtract(w), 1.0F + extent, 0.0F, t / 255.0F, length / 128.0F, (float)width / 16.0F, alpha);
-      vertex(b, m, end.add(w), 1.0F + extent, 1.0F, t / 255.0F, length / 128.0F, (float)width / 16.0F, alpha);
-      vertex(b, m, a.add(w), 0.0F, 1.0F, t / 255.0F, length / 128.0F, (float)width / 16.0F, alpha);
+      vertex(b, m, a.subtract(w), 0.0F, 0.0F, ageNorm, spanNorm, widthNorm, alpha);
+      vertex(b, m, end.subtract(w), 1.0F + extent, 0.0F, ageNorm, spanNorm, widthNorm, alpha);
+      vertex(b, m, end.add(w), 1.0F + extent, 1.0F, ageNorm, spanNorm, widthNorm, alpha);
+      vertex(b, m, a.add(w), 0.0F, 1.0F, ageNorm, spanNorm, widthNorm, alpha);
    }
 
    private static void seal(MultiBufferSource buffers, Matrix4f m, Vec3 dir, Vec3 u, Vec3 v, double radius, float alpha) {
@@ -315,9 +322,13 @@ public final class GreatZoltraakRenderer<T extends Entity & IZoltraakVisualEntit
    }
 
    private static void tri(VertexConsumer b, Matrix4f m, Vec3 a, Vec3 c, Vec3 d, float r, float g, float blue, float alpha) {
-      for (Vec3 p : new Vec3[]{a, c, d}) {
-         b.addVertex(m, (float)p.x, (float)p.y, (float)p.z).setColor(r, g, blue, alpha);
-      }
+      float rc = Mth.clamp(r, 0.0F, 1.0F);
+      float gc = Mth.clamp(g, 0.0F, 1.0F);
+      float bc = Mth.clamp(blue, 0.0F, 1.0F);
+      float ac = Mth.clamp(alpha, 0.0F, 1.0F);
+      b.addVertex(m, (float)a.x, (float)a.y, (float)a.z).setColor(rc, gc, bc, ac);
+      b.addVertex(m, (float)c.x, (float)c.y, (float)c.z).setColor(rc, gc, bc, ac);
+      b.addVertex(m, (float)d.x, (float)d.y, (float)d.z).setColor(rc, gc, bc, ac);
    }
 
    private static void quad(VertexConsumer b, Matrix4f m, Vec3 c, Vec3 u, Vec3 v, float r, float g, float blue, float a) {
@@ -328,7 +339,9 @@ public final class GreatZoltraakRenderer<T extends Entity & IZoltraakVisualEntit
    }
 
    private static void vertex(VertexConsumer b, Matrix4f m, Vec3 p, float u, float v, float r, float g, float blue, float a) {
-      b.addVertex(m, (float)p.x, (float)p.y, (float)p.z).setUv(u, v).setColor(r, g, blue, a);
+      b.addVertex(m, (float)p.x, (float)p.y, (float)p.z)
+         .setUv(u, v)
+         .setColor(Mth.clamp(r, 0.0F, 1.0F), Mth.clamp(g, 0.0F, 1.0F), Mth.clamp(blue, 0.0F, 1.0F), Mth.clamp(a, 0.0F, 1.0F));
    }
 
    private static void flush(MultiBufferSource b, RenderType t) {

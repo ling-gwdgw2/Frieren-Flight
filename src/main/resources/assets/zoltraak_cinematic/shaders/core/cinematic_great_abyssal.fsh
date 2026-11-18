@@ -37,9 +37,13 @@ void main() {
 
     if (x < 0.0) discard;
 
-    // 1. Surface normal and view angle for 3D beam cylinder
-    vec3 normal = normalize(cross(dFdx(viewPosition), dFdy(viewPosition)));
-    float facing = abs(dot(normal, normalize(-viewPosition)));
+    // 1. Surface normal and view angle for 3D beam cylinder (guarded against zero-length vectors)
+    vec3 crossP = cross(dFdx(viewPosition), dFdy(viewPosition));
+    float crossLen = length(crossP);
+    vec3 normal = crossLen > 0.0001 ? crossP / crossLen : vec3(0.0, 0.0, 1.0);
+    float viewLen = length(viewPosition);
+    vec3 viewDir = viewLen > 0.0001 ? -viewPosition / viewLen : vec3(0.0, 0.0, 1.0);
+    float facing = clamp(abs(dot(normal, viewDir)), 0.0, 1.0);
 
     // 2. Flowing void waves
     float flow = noise2D(vec2(x * 24.0 - age * 0.9, y * 7.5));

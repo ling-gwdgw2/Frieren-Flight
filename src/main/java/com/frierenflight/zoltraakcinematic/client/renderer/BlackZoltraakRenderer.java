@@ -270,9 +270,13 @@ public final class BlackZoltraakRenderer<T extends Entity & IZoltraakVisualEntit
    }
 
    private static void tri(VertexConsumer b, Matrix4f m, Vec3 a, Vec3 c, Vec3 d, float r, float g, float blue, float alpha) {
-      for (Vec3 p : new Vec3[]{a, c, d}) {
-         b.addVertex(m, (float)p.x, (float)p.y, (float)p.z).setColor(r, g, blue, alpha);
-      }
+      float rc = Mth.clamp(r, 0.0F, 1.0F);
+      float gc = Mth.clamp(g, 0.0F, 1.0F);
+      float bc = Mth.clamp(blue, 0.0F, 1.0F);
+      float ac = Mth.clamp(alpha, 0.0F, 1.0F);
+      b.addVertex(m, (float)a.x, (float)a.y, (float)a.z).setColor(rc, gc, bc, ac);
+      b.addVertex(m, (float)c.x, (float)c.y, (float)c.z).setColor(rc, gc, bc, ac);
+      b.addVertex(m, (float)d.x, (float)d.y, (float)d.z).setColor(rc, gc, bc, ac);
    }
 
    private static void dome(
@@ -316,14 +320,19 @@ public final class BlackZoltraakRenderer<T extends Entity & IZoltraakVisualEntit
 
    private static void beamQuad(VertexConsumer b, Matrix4f m, Vec3 a, Vec3 c, Vec3 w, float age, float alpha, float length, float halfWidth) {
       float extent = halfWidth / Math.max(length, 0.001F);
-      tex(b, m, a.subtract(w), -extent, 0.0F, age, length / 128.0F, halfWidth / 16.0F, alpha);
-      tex(b, m, c.subtract(w), 1.0F + extent, 0.0F, age, length / 128.0F, halfWidth / 16.0F, alpha);
-      tex(b, m, c.add(w), 1.0F + extent, 1.0F, age, length / 128.0F, halfWidth / 16.0F, alpha);
-      tex(b, m, a.add(w), -extent, 1.0F, age, length / 128.0F, halfWidth / 16.0F, alpha);
+      float ageNorm = Mth.clamp(age, 0.0F, 1.0F);
+      float spanNorm = Mth.clamp(length / 256.0F, 0.0F, 1.0F);
+      float widthNorm = Mth.clamp(halfWidth / 16.0F, 0.0F, 1.0F);
+      tex(b, m, a.subtract(w), -extent, 0.0F, ageNorm, spanNorm, widthNorm, alpha);
+      tex(b, m, c.subtract(w), 1.0F + extent, 0.0F, ageNorm, spanNorm, widthNorm, alpha);
+      tex(b, m, c.add(w), 1.0F + extent, 1.0F, ageNorm, spanNorm, widthNorm, alpha);
+      tex(b, m, a.add(w), -extent, 1.0F, ageNorm, spanNorm, widthNorm, alpha);
    }
 
    private static void tex(VertexConsumer b, Matrix4f m, Vec3 p, float u, float v, float r, float g, float blue, float a) {
-      b.addVertex(m, (float)p.x, (float)p.y, (float)p.z).setUv(u, v).setColor(r, g, blue, a);
+      b.addVertex(m, (float)p.x, (float)p.y, (float)p.z)
+         .setUv(u, v)
+         .setColor(Mth.clamp(r, 0.0F, 1.0F), Mth.clamp(g, 0.0F, 1.0F), Mth.clamp(blue, 0.0F, 1.0F), Mth.clamp(a, 0.0F, 1.0F));
    }
 
    private static void flush(MultiBufferSource b, RenderType t) {

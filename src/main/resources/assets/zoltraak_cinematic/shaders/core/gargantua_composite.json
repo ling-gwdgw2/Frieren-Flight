@@ -1,0 +1,69 @@
+{
+  "vertex": "zoltraak_cinematic:gargantua_composite",
+  "fragment": "zoltraak_cinematic:gargantua_composite",
+  "samplers": [
+    {
+      "name": "SceneSampler"
+    },
+    {
+      "name": "DepthSampler"
+    },
+    {
+      "name": "CosmicSampler"
+    },
+    {
+      "name": "HdrSampler"
+    },
+    {
+      "name": "BloomSampler"
+    }
+  ],
+  "attributes": [
+    "Position",
+    "UV0"
+  ],
+  "uniforms": [
+    {
+      "name": "HoleCentre",
+      "type": "float",
+      "count": 4,
+      "values": [0, 0, 0, 0]
+    },
+    {
+      "name": "SpinAxis",
+      "type": "float",
+      "count": 4,
+      "values": [0, 1, 0, 0.6]
+    },
+    {
+      "name": "HoleState",
+      "type": "float",
+      "count": 4,
+      "values": [0, 0, 0, 0]
+    },
+    {
+      "name": "DiskShape",
+      "type": "float",
+      "count": 4,
+      "values": [3.83, 22.0, 1.0, 1.0]
+    },
+    {
+      "name": "DiskU",
+      "type": "float",
+      "count": 4,
+      "values": [1, 0, 0, 0]
+    },
+    {
+      "name": "InverseProjectionMat",
+      "type": "matrix4x4",
+      "count": 16,
+      "values": [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]
+    },
+    {
+      "name": "InvViewRotMat",
+      "type": "matrix4x4",
+      "count": 16,
+      "values": [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]
+    }
+  ]
+}

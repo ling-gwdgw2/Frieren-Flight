@@ -12,9 +12,8 @@ in vec3 viewPosition;
 out vec4 fragColor;
 
 void main() {
-    // Normalizes sub-atlas UV [0.50, 0.75] or direct UV [0, 1] into centered [-1, 1]
-    vec2 subUV = fract(uv * 4.0);
-    vec2 p = subUV * 2.0 - 1.0;
+    // Map disc UV [0, 1] into centered [-1, 1] coordinates (aligned with Sampler0)
+    vec2 p = uv * 2.0 - 1.0;
     float r = length(p);
     float t = GameTime * 2.5;
 

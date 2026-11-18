@@ -1,0 +1,24 @@
+{
+  "vertex": "zoltraak_cinematic:gargantua_bloom_up",
+  "fragment": "zoltraak_cinematic:gargantua_bloom_up",
+  "samplers": [
+    {
+      "name": "HighMipSampler"
+    },
+    {
+      "name": "LowMipSampler"
+    }
+  ],
+  "attributes": [
+    "Position",
+    "UV0"
+  ],
+  "uniforms": [
+    {
+      "name": "UpsampleParams",
+      "type": "float",
+      "count": 4,
+      "values": [0.002, 0.002, 1.0, 1.0]
+    }
+  ]
+}

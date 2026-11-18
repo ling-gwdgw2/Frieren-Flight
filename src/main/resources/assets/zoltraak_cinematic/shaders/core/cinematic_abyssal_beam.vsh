@@ -20,6 +20,6 @@ void main() {
     uv = UV0;
     age = Color.r * 64.0;
     energy = Color.a;
-    span = max(Color.g * 128.0, 0.01);
-    halfWidth = Color.b * 16.0;
+    span = max(Color.g * 256.0, 0.01);
+    halfWidth = max(Color.b * 16.0, 0.01);
 }

@@ -61,6 +61,7 @@ public class ZoltraakCinematicClientEvents {
     );
 
     public static void register(IEventBus modEventBus) {
+        com.frierenflight.zoltraakcinematic.client.renderer.CosmicTextures.preloadAsync();
         modEventBus.addListener(ZoltraakCinematicClientEvents::onRegisterEntityRenderers);
         modEventBus.addListener(com.frierenflight.zoltraakcinematic.client.renderer.ZoltraakCinematicShaders::onRegisterShaders);
         modEventBus.addListener(ZoltraakCinematicClientEvents::onRegisterKeyMappings);
@@ -466,10 +467,12 @@ public class ZoltraakCinematicClientEvents {
 
             for (Entity entity : mc.level.entitiesForRendering()) {
                 if (entity instanceof ZoltraakCinematicBeamEntity beam && !beam.isRemoved()) {
-                    if (beam.tickCount >= ZoltraakCinematicBeamEntity.FIRE_TICK
-                            && beam.tickCount <= ZoltraakCinematicBeamEntity.FIRE_TICK + 2
+                    int fireTick = beam.mode().charge;
+                    int fireWindowEnd = fireTick + Math.min(8, Math.max(2, beam.mode().pulse));
+                    if (beam.fired()
+                            && beam.tickCount <= fireWindowEnd
                             && beam.markClientFireShockTriggered()) {
-                        triggerFireShock(beam, beam.position());
+                        triggerFireShock(beam, beam.visualOrigin(1.0f));
                     }
                 } else if (entity instanceof com.frierenflight.zoltraakcinematic.entity.ZoltraakBarrageProjectileEntity proj && !proj.isRemoved()) {
                     if (proj.markClientEffectsTriggered()) {
