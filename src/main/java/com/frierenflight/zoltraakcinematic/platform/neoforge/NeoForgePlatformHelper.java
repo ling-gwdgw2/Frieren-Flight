@@ -62,9 +62,25 @@ public class NeoForgePlatformHelper implements IPlatformHelper {
         PacketDistributor.sendToPlayer(player, new SyncManaPacket(magicData));
     }
 
+    private static volatile ItemAttributeModifiers cachedStaffModifiers;
+    private static volatile double cachedCastSpeed = Double.NaN;
+    private static volatile double cachedManaRegen = Double.NaN;
+
     @Override
     public Item.Properties applyStaffAttributes(Item.Properties properties) {
-        ItemAttributeModifiers modifiers = ItemAttributeModifiers.builder()
+        // Leave DataComponents.ATTRIBUTE_MODIFIERS empty on default properties so
+        // FrierenStaffItem#getDefaultAttributeModifiers(ItemStack) dynamically reflects live TOML config values.
+        return properties;
+    }
+
+    public static ItemAttributeModifiers getStaffAttributeModifiers() {
+        double castSpeed = com.frierenflight.zoltraakcinematic.config.ZoltraakCinematicConfig.getStaffCastSpeedBonus();
+        double manaRegen = com.frierenflight.zoltraakcinematic.config.ZoltraakCinematicConfig.getStaffManaRegenBonus();
+        ItemAttributeModifiers current = cachedStaffModifiers;
+        if (current != null && Double.compare(castSpeed, cachedCastSpeed) == 0 && Double.compare(manaRegen, cachedManaRegen) == 0) {
+            return current;
+        }
+        ItemAttributeModifiers built = ItemAttributeModifiers.builder()
                 .add(Attributes.ATTACK_DAMAGE,
                         new AttributeModifier(StaffItem.BASE_ATTACK_DAMAGE_ID, 6.0, AttributeModifier.Operation.ADD_VALUE),
                         EquipmentSlotGroup.MAINHAND)
@@ -73,30 +89,33 @@ public class NeoForgePlatformHelper implements IPlatformHelper {
                         EquipmentSlotGroup.MAINHAND)
                 .add(AttributeRegistry.SPELL_POWER,
                         new AttributeModifier(ResourceLocation.fromNamespaceAndPath(ZoltraakCinematicMod.MODID, "staff_spell_power"),
-                                0.45, AttributeModifier.Operation.ADD_MULTIPLIED_BASE),
+                                0.20, AttributeModifier.Operation.ADD_MULTIPLIED_BASE),
                         EquipmentSlotGroup.MAINHAND)
                 .add(com.frierenflight.zoltraakcinematic.registry.ModCinematicAttributes.ZOLTRAAK_SPELL_POWER,
                         new AttributeModifier(ResourceLocation.fromNamespaceAndPath(ZoltraakCinematicMod.MODID, "staff_zoltraak_power"),
-                                0.35, AttributeModifier.Operation.ADD_MULTIPLIED_BASE),
+                                0.20, AttributeModifier.Operation.ADD_MULTIPLIED_BASE),
                         EquipmentSlotGroup.MAINHAND)
                 .add(AttributeRegistry.MAX_MANA,
                         new AttributeModifier(ResourceLocation.fromNamespaceAndPath(ZoltraakCinematicMod.MODID, "staff_max_mana"),
-                                500.0, AttributeModifier.Operation.ADD_VALUE),
+                                250.0, AttributeModifier.Operation.ADD_VALUE),
                         EquipmentSlotGroup.MAINHAND)
                 .add(AttributeRegistry.COOLDOWN_REDUCTION,
                         new AttributeModifier(ResourceLocation.fromNamespaceAndPath(ZoltraakCinematicMod.MODID, "staff_cooldown_reduction"),
-                                0.20, AttributeModifier.Operation.ADD_MULTIPLIED_BASE),
+                                0.10, AttributeModifier.Operation.ADD_MULTIPLIED_BASE),
                         EquipmentSlotGroup.MAINHAND)
                 .add(AttributeRegistry.CAST_TIME_REDUCTION,
                         new AttributeModifier(ResourceLocation.fromNamespaceAndPath(ZoltraakCinematicMod.MODID, "staff_cast_time_reduction"),
-                                com.frierenflight.zoltraakcinematic.config.ZoltraakCinematicConfig.getStaffCastSpeedBonus(), AttributeModifier.Operation.ADD_MULTIPLIED_BASE),
+                                castSpeed, AttributeModifier.Operation.ADD_MULTIPLIED_BASE),
                         EquipmentSlotGroup.MAINHAND)
                 .add(AttributeRegistry.MANA_REGEN,
                         new AttributeModifier(ResourceLocation.fromNamespaceAndPath(ZoltraakCinematicMod.MODID, "staff_mana_regen"),
-                                com.frierenflight.zoltraakcinematic.config.ZoltraakCinematicConfig.getStaffManaRegenBonus(), AttributeModifier.Operation.ADD_MULTIPLIED_BASE),
+                                manaRegen, AttributeModifier.Operation.ADD_MULTIPLIED_BASE),
                         EquipmentSlotGroup.MAINHAND)
                 .build();
-        return properties.attributes(modifiers);
+        cachedCastSpeed = castSpeed;
+        cachedManaRegen = manaRegen;
+        cachedStaffModifiers = built;
+        return built;
     }
 }
 

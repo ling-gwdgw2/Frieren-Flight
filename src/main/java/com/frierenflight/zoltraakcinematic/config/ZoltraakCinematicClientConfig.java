@@ -53,6 +53,7 @@ public class ZoltraakCinematicClientConfig {
     public static final ModConfigSpec.DoubleValue EXPLOSION_SKY_FLARE_STRENGTH;
     public static final ModConfigSpec.DoubleValue EXPLOSION_PARTICLE_SCALE;
     public static final ModConfigSpec.DoubleValue EXPLOSION_SKY_HEIGHT;
+    public static final ModConfigSpec.DoubleValue EXPLOSION_SKY_RING_SCALE;
     public static final ModConfigSpec.DoubleValue EXPLOSION_DOME_SCALE;
 
     static {
@@ -224,6 +225,10 @@ public class ZoltraakCinematicClientConfig {
         EXPLOSION_SKY_HEIGHT = builder
                 .comment("Vertical altitude multiplier for the 8 stacked sky magic rings and downward beam (1.0 = ~69 blocks high at default radius).")
                 .defineInRange("skyRingHeight", 1.0d, 0.5d, 2.5d);
+
+        EXPLOSION_SKY_RING_SCALE = builder
+                .comment("Horizontal radius multiplier for the 8 stacked sky magic rings above the target (1.0 = default size).")
+                .defineInRange("skyRingScale", 1.0d, 0.4d, 2.5d);
 
         EXPLOSION_DOME_SCALE = builder
                 .comment("Visual size multiplier for the fireball dome, shockwaves, and dust plumes (does not alter block crater or damage).")
@@ -432,6 +437,10 @@ public class ZoltraakCinematicClientConfig {
 
     public static float getExplosionSkyHeight() {
         return SPEC.isLoaded() ? Math.max(0.5f, Math.min(2.5f, EXPLOSION_SKY_HEIGHT.get().floatValue())) : 1.0f;
+    }
+
+    public static float getExplosionSkyRingScale() {
+        return SPEC.isLoaded() ? Math.max(0.4f, Math.min(2.5f, EXPLOSION_SKY_RING_SCALE.get().floatValue())) : 1.0f;
     }
 
     public static float getExplosionDomeScale() {

@@ -29,6 +29,8 @@ CORE_SHADER_NAMES = [
     'defense_barrier',
     'explosion_dome',
     'explosion_dust_wave',
+    'explosion_post',
+    'explosion_pyroclast',
     'explosion_vortex_ring',
     'gargantua',
     'gargantua_bloom_down',

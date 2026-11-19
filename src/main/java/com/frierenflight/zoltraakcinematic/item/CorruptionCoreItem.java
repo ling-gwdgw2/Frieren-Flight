@@ -20,9 +20,9 @@ import java.util.List;
  * 📜 Qual's Core of Corruption (แก่นแท้แห่งการเน่าเปื่อย).
  * A pulsating dark core harvested from Qual's chest cavity.
  * Curios Necklace:
- * - +35% Zoltraak Spell Power
- * - +350 Max Mana
- * - +2.5 Mana Regen
+ * - +20% Zoltraak Spell Power
+ * - +200 Max Mana
+ * - +25% Mana Regen
  */
 public class CorruptionCoreItem extends CurioBaseItem {
 
@@ -32,9 +32,9 @@ public class CorruptionCoreItem extends CurioBaseItem {
                 .rarity(Rarity.EPIC)
                 .fireResistant());
         withAttributes(Curios.NECKLACE_SLOT,
-                new AttributeContainer(ModCinematicAttributes.ZOLTRAAK_SPELL_POWER, 0.35, AttributeModifier.Operation.ADD_MULTIPLIED_BASE),
-                new AttributeContainer(AttributeRegistry.MAX_MANA, 350.0, AttributeModifier.Operation.ADD_VALUE),
-                new AttributeContainer(AttributeRegistry.MANA_REGEN, 2.5, AttributeModifier.Operation.ADD_VALUE)
+                new AttributeContainer(ModCinematicAttributes.ZOLTRAAK_SPELL_POWER, 0.20, AttributeModifier.Operation.ADD_MULTIPLIED_BASE),
+                new AttributeContainer(AttributeRegistry.MAX_MANA, 200.0, AttributeModifier.Operation.ADD_VALUE),
+                new AttributeContainer(AttributeRegistry.MANA_REGEN, 0.25, AttributeModifier.Operation.ADD_MULTIPLIED_BASE)
         );
     }
 

@@ -101,7 +101,7 @@ public class ZoltraakConfigScreen extends Screen {
     }
 
     private int getFooterY() {
-        return Math.max(198, this.height - 28);
+        return Math.max(202, this.height - 26);
     }
 
     // Tab 0: Barrier
@@ -285,45 +285,53 @@ public class ZoltraakConfigScreen extends Screen {
 
     // Tab 4: Explosion Charge Particles & Flares
     private void buildExplosionTab(int c1, int c2, int y, int w, int h) {
-        addIntSlider(c1, y, w, h, "explosion_gold_sparks",
+        int rowY = y - 2;
+        int rowStep = 22;
+        int rowH = Math.min(h, 19);
+
+        addIntSlider(c1, rowY, w, rowH, "explosion_gold_sparks",
                 ZoltraakCinematicClientConfig.EXPLOSION_GOLD_SPARKS, 20, 320, 10,
                 ZoltraakCinematicClientConfig.getExplosionGoldSparks(),
                 v -> Component.translatable("config.zoltraak_cinematic.option.explosion_gold_sparks.value", v));
-        addIntSlider(c2, y, w, h, "explosion_stars",
+        addIntSlider(c2, rowY, w, rowH, "explosion_stars",
                 ZoltraakCinematicClientConfig.EXPLOSION_FOUR_POINT_STARS, 8, 160, 4,
                 ZoltraakCinematicClientConfig.getExplosionFourPointStars(),
                 v -> Component.translatable("config.zoltraak_cinematic.option.explosion_stars.value", v));
 
-        addIntSlider(c1, y + 26, w, h, "explosion_parabola",
+        addIntSlider(c1, rowY + rowStep, w, rowH, "explosion_parabola",
                 ZoltraakCinematicClientConfig.EXPLOSION_PARABOLA_STREAMS, 8, 160, 4,
                 ZoltraakCinematicClientConfig.getExplosionParabolaStreams(),
                 v -> Component.translatable("config.zoltraak_cinematic.option.explosion_parabola.value", v));
-        addIntSlider(c2, y + 26, w, h, "explosion_cross_rays",
+        addIntSlider(c2, rowY + rowStep, w, rowH, "explosion_cross_rays",
                 ZoltraakCinematicClientConfig.EXPLOSION_CROSS_RAYS, 0, 12, 1,
                 ZoltraakCinematicClientConfig.getExplosionCrossRays(),
                 v -> v <= 0
                         ? Component.translatable("config.zoltraak_cinematic.option.explosion_cross_rays.off")
                         : Component.translatable("config.zoltraak_cinematic.option.explosion_cross_rays.value", v * 2));
 
-        addIntSlider(c1, y + 52, w, h, "explosion_suction",
+        addIntSlider(c1, rowY + rowStep * 2, w, rowH, "explosion_suction",
                 ZoltraakCinematicClientConfig.EXPLOSION_SUCTION_LINES, 0, 60, 2,
                 ZoltraakCinematicClientConfig.getExplosionSuctionLines(),
                 v -> Component.translatable("config.zoltraak_cinematic.option.explosion_suction.value", v));
-        addPercentSlider(c2, y + 52, w, h, "explosion_sky_flare",
+        addPercentSlider(c2, rowY + rowStep * 2, w, rowH, "explosion_sky_flare",
                 ZoltraakCinematicClientConfig.EXPLOSION_SKY_FLARE_STRENGTH, 0.0, 2.5,
                 ZoltraakCinematicClientConfig.getExplosionSkyFlareStrength());
 
-        addPercentSlider(c1, y + 78, w, h, "explosion_particle_scale",
+        addPercentSlider(c1, rowY + rowStep * 3, w, rowH, "explosion_particle_scale",
                 ZoltraakCinematicClientConfig.EXPLOSION_PARTICLE_SCALE, 0.5, 2.0,
                 ZoltraakCinematicClientConfig.getExplosionParticleScale());
-        addGlowSlider(c2, y + 78, w, h, "bloom_explosion",
+        addGlowSlider(c2, rowY + rowStep * 3, w, rowH, "bloom_explosion",
                 ZoltraakCinematicClientConfig.EXPLOSION_GLOW,
                 ZoltraakCinematicClientConfig.getExplosionGlow());
 
-        addPercentSlider(c1, y + 104, w, h, "explosion_sky_height",
+        addPercentSlider(c1, rowY + rowStep * 4, w, rowH, "explosion_sky_height",
                 ZoltraakCinematicClientConfig.EXPLOSION_SKY_HEIGHT, 0.5, 2.5,
                 ZoltraakCinematicClientConfig.getExplosionSkyHeight());
-        addPercentSlider(c2, y + 104, w, h, "explosion_dome_scale",
+        addPercentSlider(c2, rowY + rowStep * 4, w, rowH, "explosion_sky_ring_scale",
+                ZoltraakCinematicClientConfig.EXPLOSION_SKY_RING_SCALE, 0.4, 2.5,
+                ZoltraakCinematicClientConfig.getExplosionSkyRingScale());
+
+        addPercentSlider(c1, rowY + rowStep * 5, w, rowH, "explosion_dome_scale",
                 ZoltraakCinematicClientConfig.EXPLOSION_DOME_SCALE, 0.6, 2.0,
                 ZoltraakCinematicClientConfig.getExplosionDomeScale());
     }
@@ -419,6 +427,7 @@ public class ZoltraakConfigScreen extends Screen {
         ZoltraakCinematicClientConfig.EXPLOSION_SKY_FLARE_STRENGTH.set(1.35d);
         ZoltraakCinematicClientConfig.EXPLOSION_PARTICLE_SCALE.set(1.15d);
         ZoltraakCinematicClientConfig.EXPLOSION_SKY_HEIGHT.set(1.0d);
+        ZoltraakCinematicClientConfig.EXPLOSION_SKY_RING_SCALE.set(1.0d);
         ZoltraakCinematicClientConfig.EXPLOSION_DOME_SCALE.set(1.0d);
         saveConfig();
     }

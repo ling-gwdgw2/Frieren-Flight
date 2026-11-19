@@ -18,7 +18,7 @@ import java.util.List;
 /**
  * ⏳ Chronos Dilatation Watch (นาฬิกาพกยืดเวลาสัมพัทธภาพ).
  * An ancient pocket watch whose ticks dilate near intense gravitational fields.
- * Curios Charm slot item: +15% Cooldown Reduction, +35% Black Hole Spell Power.
+ * Curios Charm slot item: +10% Cooldown Reduction, +25% Black Hole Spell Power.
  */
 public class ChronosDilatationWatchItem extends CurioBaseItem {
     public static final String CHARM_SLOT = "charm";
@@ -29,8 +29,8 @@ public class ChronosDilatationWatchItem extends CurioBaseItem {
                 .rarity(Rarity.EPIC)
                 .fireResistant());
         withAttributes(CHARM_SLOT,
-                new AttributeContainer(AttributeRegistry.COOLDOWN_REDUCTION, 0.15, AttributeModifier.Operation.ADD_MULTIPLIED_BASE),
-                new AttributeContainer(ModCinematicAttributes.BLACK_HOLE_SPELL_POWER, 0.35, AttributeModifier.Operation.ADD_MULTIPLIED_BASE)
+                new AttributeContainer(AttributeRegistry.COOLDOWN_REDUCTION, 0.10, AttributeModifier.Operation.ADD_MULTIPLIED_BASE),
+                new AttributeContainer(ModCinematicAttributes.BLACK_HOLE_SPELL_POWER, 0.25, AttributeModifier.Operation.ADD_MULTIPLIED_BASE)
         );
     }
 
@@ -59,17 +59,24 @@ public class ChronosDilatationWatchItem extends CurioBaseItem {
                     caster.getX(), caster.getY() + 1.0, caster.getZ(), 60, radius * 0.4, 0.8, radius * 0.4, 0.2);
 
             net.minecraft.world.phys.AABB box = caster.getBoundingBox().inflate(radius);
+            double radiusSq = radius * radius;
             boolean respectFF = com.frierenflight.zoltraakcinematic.config.ZoltraakCinematicConfig.isProtectAllies();
             List<net.minecraft.world.entity.LivingEntity> targets = level.getEntitiesOfClass(
                     net.minecraft.world.entity.LivingEntity.class, box,
-                    e -> e != caster && e.isAlive() && (!respectFF || !io.redspace.ironsspellbooks.damage.DamageSources.isFriendlyFireBetween(caster, e))
+                    e -> e != caster && e.isAlive()
+                            && e.distanceToSqr(caster) <= radiusSq
+                            && (!respectFF || !io.redspace.ironsspellbooks.damage.DamageSources.isFriendlyFireBetween(caster, e))
             );
 
             for (net.minecraft.world.entity.LivingEntity target : targets) {
+                boolean isBoss = target instanceof com.frierenflight.zoltraakcinematic.entity.boss.QualBossEntity
+                        || target.getMaxHealth() >= 150.0f;
+                int effDuration = isBoss ? Math.max(40, duration / 2) : duration;
+                int effAmplifier = isBoss ? 1 : 3;
                 target.addEffect(new net.minecraft.world.effect.MobEffectInstance(
-                        net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN, duration, 3, false, true, true));
+                        net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN, effDuration, effAmplifier, false, true, true));
                 target.addEffect(new net.minecraft.world.effect.MobEffectInstance(
-                        net.minecraft.world.effect.MobEffects.DIG_SLOWDOWN, duration, 3, false, true, true));
+                        net.minecraft.world.effect.MobEffects.DIG_SLOWDOWN, effDuration, effAmplifier, false, true, true));
             }
         }
     }

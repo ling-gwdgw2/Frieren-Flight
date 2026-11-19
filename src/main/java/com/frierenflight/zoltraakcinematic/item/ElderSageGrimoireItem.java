@@ -21,11 +21,11 @@ import java.util.List;
  *
  * Stats:
  * - 12 Spell Inscription Slots
- * - +50% Zoltraak Spell Power
- * - +20% Overall Spell Power
- * - +1000 Max Mana
- * - +30% Cooldown Reduction
- * - +20% Cast Time Reduction
+ * - +25% Zoltraak Spell Power
+ * - +10% Overall Spell Power
+ * - +500 Max Mana
+ * - +15% Cooldown Reduction
+ * - +15% Cast Time Reduction
  */
 public class ElderSageGrimoireItem extends SpellBook {
 
@@ -35,11 +35,11 @@ public class ElderSageGrimoireItem extends SpellBook {
                 .rarity(Rarity.EPIC)
                 .fireResistant());
         withSpellbookAttributes(
-                new AttributeContainer(ModCinematicAttributes.ZOLTRAAK_SPELL_POWER, 0.50, AttributeModifier.Operation.ADD_MULTIPLIED_BASE),
-                new AttributeContainer(AttributeRegistry.SPELL_POWER, 0.20, AttributeModifier.Operation.ADD_MULTIPLIED_BASE),
-                new AttributeContainer(AttributeRegistry.MAX_MANA, 1000.0, AttributeModifier.Operation.ADD_VALUE),
-                new AttributeContainer(AttributeRegistry.COOLDOWN_REDUCTION, 0.30, AttributeModifier.Operation.ADD_MULTIPLIED_BASE),
-                new AttributeContainer(AttributeRegistry.CAST_TIME_REDUCTION, 0.20, AttributeModifier.Operation.ADD_MULTIPLIED_BASE)
+                new AttributeContainer(ModCinematicAttributes.ZOLTRAAK_SPELL_POWER, 0.25, AttributeModifier.Operation.ADD_MULTIPLIED_BASE),
+                new AttributeContainer(AttributeRegistry.SPELL_POWER, 0.10, AttributeModifier.Operation.ADD_MULTIPLIED_BASE),
+                new AttributeContainer(AttributeRegistry.MAX_MANA, 500.0, AttributeModifier.Operation.ADD_VALUE),
+                new AttributeContainer(AttributeRegistry.COOLDOWN_REDUCTION, 0.15, AttributeModifier.Operation.ADD_MULTIPLIED_BASE),
+                new AttributeContainer(AttributeRegistry.CAST_TIME_REDUCTION, 0.15, AttributeModifier.Operation.ADD_MULTIPLIED_BASE)
         );
     }
 

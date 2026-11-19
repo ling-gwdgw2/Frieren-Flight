@@ -78,6 +78,7 @@ public class ZoltraakCinematicClientEvents {
         NeoForge.EVENT_BUS.addListener(com.frierenflight.zoltraakcinematic.client.renderer.GargantuaPreviewRenderer::onRenderLevelStage);
         NeoForge.EVENT_BUS.addListener(com.frierenflight.zoltraakcinematic.client.renderer.ZoltraakRenderPass::onRenderLevelStage);
         NeoForge.EVENT_BUS.addListener(com.frierenflight.zoltraakcinematic.client.renderer.GargantuaPostProcessor::onRenderLevelStage);
+        NeoForge.EVENT_BUS.addListener(com.frierenflight.zoltraakcinematic.client.renderer.ExplosionPostProcessor::onRenderLevelStage);
         NeoForge.EVENT_BUS.addListener(ZoltraakCinematicClientEvents::onEntityJoinLevel);
         NeoForge.EVENT_BUS.addListener(ZoltraakCinematicClientEvents::onEntityLeaveLevel);
         NeoForge.EVENT_BUS.addListener(ZoltraakCinematicClientEvents::onPlaySound);
@@ -220,6 +221,7 @@ public class ZoltraakCinematicClientEvents {
             forcedThirdPerson = false;
             cameraRestoreDelay = 0;
             com.frierenflight.zoltraakcinematic.client.renderer.GargantuaPostProcessor.release();
+            com.frierenflight.zoltraakcinematic.client.renderer.ExplosionPostProcessor.release();
             com.frierenflight.zoltraakcinematic.client.renderer.GargantuaPreviewRenderer.resetState();
             com.frierenflight.zoltraakcinematic.client.renderer.ExplosionChargeRenderer.resetState();
             com.frierenflight.zoltraakcinematic.client.renderer.ExplosionMagicRenderer.resetState();
@@ -374,8 +376,9 @@ public class ZoltraakCinematicClientEvents {
             triggerCameraShake(Math.max(12, (int) (32 * factor)), 2.65F * factor * shakeMult);
         }
 
-        float flashScale = mc.options.getCameraType().isFirstPerson() ? 0.94F : 0.62F;
-        triggerFlash(11, flashScale * factor, 0xFFE8A0);
+        // Subtle golden HUD flash accent; primary Nakamura impact frames & god rays render in ExplosionPostProcessor
+        float flashScale = mc.options.getCameraType().isFirstPerson() ? 0.34F : 0.22F;
+        triggerFlash(6, flashScale * factor, 0xFFE8A0);
 
         double earMaxDist = Math.max(40.0, exp.getRadius() * 2.2);
         if (dist < earMaxDist && com.frierenflight.zoltraakcinematic.config.ZoltraakCinematicClientConfig.isEarRingingEnabled()) {

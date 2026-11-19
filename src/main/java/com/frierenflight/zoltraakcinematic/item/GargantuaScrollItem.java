@@ -55,26 +55,41 @@ public class GargantuaScrollItem extends Scroll {
 
     @Override
     public void inventoryTick(ItemStack stack, Level level, Entity entity, int slotId, boolean isSelected) {
-        ensureBound(stack);
+        if (!level.isClientSide) {
+            ensureBound(stack);
+        }
         super.inventoryTick(stack, level, entity, slotId, isSelected);
     }
 
     @Override
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
-        ensureBound(stack);
+        if (!level.isClientSide) {
+            ensureBound(stack);
+        }
         return super.use(level, player, hand);
     }
 
     @Override
     public Component getName(ItemStack stack) {
-        ensureBound(stack);
+        if (!stack.isEmpty() && !ISpellContainer.isSpellContainer(stack)) {
+            ItemStack preview = stack.copy();
+            ensureBound(preview);
+            return super.getName(preview);
+        }
         return super.getName(stack);
     }
 
     @Override
     public void appendHoverText(ItemStack stack, Item.TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
-        ensureBound(stack);
-        super.appendHoverText(stack, context, tooltip, flag);
+        if (!stack.isEmpty() && !ISpellContainer.isSpellContainer(stack)) {
+            ItemStack preview = stack.copy();
+            ensureBound(preview);
+            super.appendHoverText(preview, context, tooltip, flag);
+        } else {
+            super.appendHoverText(stack, context, tooltip, flag);
+        }
+        tooltip.add(Component.translatable("item.zoltraak_cinematic.gargantua_scroll.desc")
+                .withStyle(net.minecraft.ChatFormatting.GOLD));
     }
 }

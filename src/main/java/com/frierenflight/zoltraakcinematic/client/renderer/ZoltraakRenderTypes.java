@@ -276,6 +276,22 @@ public final class ZoltraakRenderTypes extends RenderType {
          .createCompositeState(false)
    );
 
+   public static final RenderType EXPLOSION_PYROCLAST = create(
+      "explosion_pyroclast",
+      DefaultVertexFormat.POSITION_TEX_COLOR_NORMAL,
+      Mode.TRIANGLES,
+      32768,
+      false,
+      false,
+      CompositeState.builder()
+         .setShaderState(safeShaderTexColorNormal(() -> ZoltraakCinematicShaders.explosionPyroclast))
+         .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
+         .setCullState(NO_CULL)
+         .setDepthTestState(LEQUAL_DEPTH_TEST)
+         .setWriteMaskState(COLOR_WRITE)
+         .createCompositeState(false)
+   );
+
    public static final RenderType ZOL_BEAM = create(
       "zol_beam",
       DefaultVertexFormat.POSITION_TEX_COLOR,

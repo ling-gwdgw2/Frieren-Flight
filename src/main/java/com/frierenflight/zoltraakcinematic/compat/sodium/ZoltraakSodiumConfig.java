@@ -492,6 +492,11 @@ public class ZoltraakSodiumConfig implements ConfigEntryPoint {
                 v -> Component.literal((v * 5) + "%"),
                 v -> safeSetDouble(ZoltraakCinematicClientConfig.EXPLOSION_SKY_HEIGHT, (v * 5) / 100.0d),
                 () -> snapToRange(ZoltraakCinematicClientConfig.getExplosionSkyHeight() * 20.0f, 10, 50, 1));
+        addScaledIntOption(builder, expFlareGroup, "explosion_sky_ring_scale", "explosion_sky_ring_scale",
+                8, 50, 20,
+                v -> Component.literal((v * 5) + "%"),
+                v -> safeSetDouble(ZoltraakCinematicClientConfig.EXPLOSION_SKY_RING_SCALE, (v * 5) / 100.0d),
+                () -> snapToRange(ZoltraakCinematicClientConfig.getExplosionSkyRingScale() * 20.0f, 8, 50, 1));
         addScaledIntOption(builder, expFlareGroup, "explosion_dome_scale", "explosion_dome_scale",
                 12, 40, 20,
                 v -> Component.literal((v * 5) + "%"),

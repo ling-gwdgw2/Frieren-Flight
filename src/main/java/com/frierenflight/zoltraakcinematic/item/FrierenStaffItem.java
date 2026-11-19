@@ -2,20 +2,25 @@
 package com.frierenflight.zoltraakcinematic.item;
 
 import com.frierenflight.zoltraakcinematic.platform.Services;
+import com.frierenflight.zoltraakcinematic.platform.neoforge.NeoForgePlatformHelper;
 import io.redspace.ironsspellbooks.item.weapons.StaffItem;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Rarity;
 import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.component.ItemAttributeModifiers;
 
 import java.util.List;
 
 /**
- * Frieren's Staff - Iconic magic weapon with powerful Iron's Spells attributes:
- * - Spell Power: +45%
- * - Max Mana: +500
- * - Cooldown Reduction: -20% (+0.20 reduction)
+ * Frieren's Staff - Iconic mythic magic weapon with balanced Iron's Spells attributes:
+ * - Spell Power: +20%
+ * - Zoltraak Spell Power: +20%
+ * - Max Mana: +250
+ * - Cooldown Reduction: +10%
+ * - Cast Time Reduction: configurable (default +15%)
+ * - Mana Regen: configurable (default +25%)
  */
 public class FrierenStaffItem extends StaffItem {
 
@@ -24,6 +29,11 @@ public class FrierenStaffItem extends StaffItem {
                 .stacksTo(1)
                 .rarity(Rarity.EPIC)
                 .fireResistant()));
+    }
+
+    @Override
+    public ItemAttributeModifiers getDefaultAttributeModifiers(ItemStack stack) {
+        return NeoForgePlatformHelper.getStaffAttributeModifiers();
     }
 
     @Override

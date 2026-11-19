@@ -1,19 +1,27 @@
 {
-  "type": "minecraft:crafting_shapeless",
+  "type": "minecraft:crafting_shaped",
   "category": "equipment",
-  "ingredients": [
-    {
-      "item": "minecraft:clock"
+  "key": {
+    "R": {
+      "item": "irons_spellbooks:ender_rune"
     },
-    {
+    "E": {
       "item": "minecraft:echo_shard"
     },
-    {
-      "item": "minecraft:amethyst_shard"
+    "Q": {
+      "item": "zoltraak_cinematic:horn_of_corruption"
     },
-    {
+    "C": {
+      "item": "minecraft:clock"
+    },
+    "N": {
       "item": "minecraft:netherite_ingot"
     }
+  },
+  "pattern": [
+    "RER",
+    "QCQ",
+    "ENE"
   ],
   "result": {
     "count": 1,

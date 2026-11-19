@@ -122,6 +122,7 @@ public final class ZoltraakRenderPass {
       ExplosionMagicRenderer.clearDeferred();
       ExplosionChargeRenderer.clearDeferred();
       GargantuaPostProcessor.clearDeferredIrisPass();
+      ExplosionPostProcessor.clearDeferredIrisPass();
    }
 
    @SuppressWarnings("unchecked")
@@ -1312,6 +1313,10 @@ public final class ZoltraakRenderPass {
             }
          }
       }
+
+      // Run Explosion cinema post-processing AFTER Iris tonemapping + deferred Explosion VFX so
+      // terrain firelight, sky eclipse, shockwave refraction, god rays, and impact frames layer seamlessly.
+      ExplosionPostProcessor.renderDeferredIrisPass();
    }
 
    private ZoltraakRenderPass() {}

@@ -65,6 +65,11 @@ public class ExplosionMagicRenderer extends EntityRenderer<ExplosionMagicEntity>
                 * ZoltraakCinematicClientConfig.getExplosionSkyHeight();
     }
 
+    public static double getSkyRingRadius(double radius, int ringIndex) {
+        return radius * SKY_RING_SCALE_FACTORS[ringIndex]
+                * ZoltraakCinematicClientConfig.getExplosionSkyRingScale();
+    }
+
     public static double getSkyApexHeight(double radius) {
         return getSkyRingY(radius, SKY_RING_HEIGHT_FACTORS.length - 1);
     }
@@ -110,7 +115,7 @@ public class ExplosionMagicRenderer extends EntityRenderer<ExplosionMagicEntity>
         DEFERRED.clear();
     }
 
-    private static List<ExplosionMagicEntity> getActiveClientEntities(Minecraft mc, float partial) {
+    static List<ExplosionMagicEntity> getActiveClientEntities(Minecraft mc, float partial) {
         List<ExplosionMagicEntity> active = new ArrayList<>();
         ACTIVE_ENTITIES.removeIf(e -> e == null || e.isRemoved() || e.level() != mc.level
                 || (e.tickCount + partial) > e.getLifetimeTicks() + 4.0F);
@@ -267,9 +272,10 @@ public class ExplosionMagicRenderer extends EntityRenderer<ExplosionMagicEntity>
         float vfxBloom = shadersActive ? bloom * 0.86F : bloom;
         float shaderHaloMult = shadersActive ? 0.68F : 1.0F;
 
-        // 1. Strike Sequence: Diagonal Beam -> Sky Flare -> Pillar Descent & Compression -> Persistent Pillar (t = 0 .. 118)
-        if (t < 118.0F) {
-            emitStrikeAndPersistentLaser(buffers, mat, relTarget, relStart, relCam, camRight, camUp, radius, t, seed, seedNorm, vfxBloom);
+        // 1. Strike Sequence: Diagonal Beam -> Sky Flare -> Vertical Pillar & 8 Sky Rings fading together (t = 0 .. 50)
+        if (t < 50.0F) {
+            double worldTime = (mc.player != null ? mc.player.tickCount : entity.tickCount) + partial;
+            emitStrikeAndPersistentLaser(buffers, mat, relTarget, relStart, relCam, camRight, camUp, radius, t, worldTime, seed, seedNorm, vfxBloom);
         }
 
         // 2. Detonation & Slow-Burning Pyroclastic Aftermath Sequence (dt = -0.5 .. 192)
@@ -281,49 +287,66 @@ public class ExplosionMagicRenderer extends EntityRenderer<ExplosionMagicEntity>
             float blastScale = (float) (Math.pow(Mth.clamp(safeDt / 16.0F, 0.0F, 1.0F), 0.34) * (0.85 + 0.16 * domeP));
             double domeRadius = visualR * 0.88 * blastScale;
 
-            // 2a. Organic Pyroclastic Fireball Dome (sub-ground root skirt + churning lobes so ZERO hard half-sphere cut!)
+            // 2a. Boiling Cellular Ignition Core + 3D Volumetric Raymarched Mushroom Cloud + Supersonic Mach Shells
             Vec3 domeCenter = relTarget.add(0.0, domeRadius * 0.08, 0.0);
             float heatFlash = (float) Math.exp(-safeDt * 0.058);
-            float domeFade = 1.0F - smoothstep((domeP - 0.64F) / 0.20F);
+            float domeFade = 1.0F - smoothstep((domeP - 0.56F) / 0.22F);
             float domeAnimT = safeDt * 0.042F;
 
-            if (domeFade > 0.005F && domeRadius > 0.25 && domeP < 0.86F) {
+            // 2a-1. Early Blinding Cellular Core Shell (hands off seamlessly into the 3D raymarched mushroom cloud)
+            if (domeFade > 0.005F && domeRadius > 0.25 && domeP < 0.78F) {
                 VertexConsumer domeVc = buffers.getBuffer(ZoltraakRenderTypes.EXPLOSION_DOME);
                 emitPyroclasticExplosionDome(
-                        domeVc, mat, domeCenter, domeRadius,
-                        domeP, heatFlash, 0.0F, domeFade, domeAnimT, 0.055F + 0.065F * domeP
+                        domeVc, mat, domeCenter, domeRadius * 0.92,
+                        domeP, heatFlash, 0.0F, domeFade * 0.88F, domeAnimT, 0.055F + 0.065F * domeP
                 );
                 ZoltraakRenderPass.endBatchWithBloom(buffers, ZoltraakRenderTypes.EXPLOSION_DOME, Math.max(0.45F, bloom));
+            }
 
-                if (bloom > 0.004F) {
-                    VertexConsumer haloVc = buffers.getBuffer(ZoltraakRenderTypes.EXPLOSION_DOME_HALO);
-                    // Exterior 1.48x volumetric blast corona (seamlessly wraps terrain base & boiling plasma rim)
-                    if (domeP < 0.74F) {
-                        emitPyroclasticExplosionDome(
-                                haloVc, mat, domeCenter, domeRadius * 1.48,
-                                domeP, heatFlash, 1.0F, domeFade * (shadersActive ? 0.68F : 0.90F), domeAnimT, 0.030F
-                        );
-                    }
-                    // Primary supersonic spherical pressure shockwave dome (dt = 0..26)
-                    if (safeDt < 26.0F) {
-                        float sp = safeDt / 26.0F;
-                        double pressureR = visualR * (0.68 + 1.24 * Math.pow(sp, 0.50));
-                        emitPyroclasticExplosionDome(
-                                haloVc, mat, domeCenter, pressureR,
-                                sp, 1.0F, 0.60F, (1.0F - sp) * (shadersActive ? 0.84F : 1.0F), domeAnimT, 0.015F
-                        );
-                    }
-                    // Secondary atmospheric reverberation shell (dt = 4..42)
-                    if (safeDt >= 4.0F && safeDt < 42.0F) {
-                        float sp2 = (safeDt - 4.0F) / 38.0F;
-                        double pressureR2 = visualR * (0.82 + 1.48 * Math.pow(sp2, 0.55));
-                        emitPyroclasticExplosionDome(
-                                haloVc, mat, domeCenter, pressureR2,
-                                sp2, 0.65F, 0.60F, (1.0F - sp2) * 0.62F * (shadersActive ? 0.78F : 1.0F), domeAnimT, 0.012F
-                        );
-                    }
-                    ZoltraakRenderPass.endBatchWithBloom(buffers, ZoltraakRenderTypes.EXPLOSION_DOME_HALO, vfxBloom);
+            // 2a-2. Phase 2: True 3D Volumetric Raymarched Anime Mushroom Cloud & Pyroclastic Fireball (dt = 0..186)
+            if (safeDt < 186.0F) {
+                float pyroP = Mth.clamp(safeDt / 186.0F, 0.0F, 1.0F);
+                float pyroFade = smoothstep(pyroP / 0.025F) * (1.0F - smoothstep((pyroP - 0.78F) / 0.22F));
+                if (pyroFade > 0.006F) {
+                    double boundR = visualR * (1.18 + 0.44 * Math.pow(pyroP, 0.42));
+                    Vec3 pyroCenter = relTarget.add(0.0, boundR * 0.42, 0.0);
+                    boolean camInside = relCam.distanceTo(pyroCenter) <= boundR + 0.65;
+                    VertexConsumer pyroVc = buffers.getBuffer(ZoltraakRenderTypes.EXPLOSION_PYROCLAST);
+                    emitVolumetricMushroomSphere(
+                            pyroVc, mat, pyroCenter, boundR, 18, 28,
+                            (float) boundR, seedNorm,
+                            pyroP, heatFlash, camInside ? 1.0F : 0.0F, pyroFade
+                    );
+                    ZoltraakRenderPass.endBatchWithBloom(buffers, ZoltraakRenderTypes.EXPLOSION_PYROCLAST, Math.max(0.55F, bloom));
                 }
+            }
+
+            // 2a-3. Exterior 1.48x Volumetric Corona & Double Translucent Supersonic Mach Shockwave Shells
+            if (bloom > 0.004F && domeRadius > 0.25 && domeP < 0.86F) {
+                VertexConsumer haloVc = buffers.getBuffer(ZoltraakRenderTypes.EXPLOSION_DOME_HALO);
+                if (domeP < 0.74F && domeFade > 0.005F) {
+                    emitPyroclasticExplosionDome(
+                            haloVc, mat, domeCenter, domeRadius * 1.48,
+                            domeP, heatFlash, 1.0F, domeFade * (shadersActive ? 0.64F : 0.86F), domeAnimT, 0.030F
+                    );
+                }
+                if (safeDt < 26.0F) {
+                    float sp = safeDt / 26.0F;
+                    double pressureR = visualR * (0.68 + 1.24 * Math.pow(sp, 0.50));
+                    emitPyroclasticExplosionDome(
+                            haloVc, mat, domeCenter, pressureR,
+                            sp, 1.0F, 0.60F, (1.0F - sp) * (shadersActive ? 0.84F : 1.0F), domeAnimT, 0.015F
+                    );
+                }
+                if (safeDt >= 4.0F && safeDt < 42.0F) {
+                    float sp2 = (safeDt - 4.0F) / 38.0F;
+                    double pressureR2 = visualR * (0.82 + 1.48 * Math.pow(sp2, 0.55));
+                    emitPyroclasticExplosionDome(
+                            haloVc, mat, domeCenter, pressureR2,
+                            sp2, 0.65F, 0.60F, (1.0F - sp2) * 0.62F * (shadersActive ? 0.78F : 1.0F), domeAnimT, 0.012F
+                    );
+                }
+                ZoltraakRenderPass.endBatchWithBloom(buffers, ZoltraakRenderTypes.EXPLOSION_DOME_HALO, vfxBloom);
             }
 
             // 2b. Mode 5 Pure Radial Gaussian Blooms, Swirling Gold Flame Arcs & Ground Crater Ripples (EXPLOSION_VORTEX_RING)
@@ -351,10 +374,10 @@ public class ExplosionMagicRenderer extends EntityRenderer<ExplosionMagicEntity>
                     }
                 }
 
-                // Bright entry hotspot where vertical laser meets top crown of dome
-                if (safeDt < 46.0F && domeRadius > 0.5) {
-                    float capAlpha = (1.0F - smoothstep(14.0F, 46.0F, safeDt)) * (shadersActive ? 0.76F : 0.90F);
-                    double capR = visualR * (0.34 + 0.16 * (1.0F - safeDt / 46.0F));
+                // Bright entry hotspot where vertical laser meets top crown of dome (fades with pillar & 8 sky rings at t = 50)
+                if (safeDt < 22.0F && domeRadius > 0.5) {
+                    float capAlpha = (1.0F - smoothstep(0.0F, 22.0F, safeDt)) * (shadersActive ? 0.76F : 0.90F);
+                    double capR = visualR * (0.34 + 0.16 * (1.0F - safeDt / 22.0F));
                     emitBillboardQuad(bloomVc, mat, relTarget.add(0.0, domeRadius * 0.98, 0.0), camRight, camUp, capR, capR * 0.65, 0.96F, 0.10F, 0.98F, capAlpha);
                 }
 
@@ -372,6 +395,33 @@ public class ExplosionMagicRenderer extends EntityRenderer<ExplosionMagicEntity>
                     float hazeAlpha = (float) Math.sin(hazeP * Math.PI) * 0.46F * shaderHaloMult;
                     double hazeR = visualR * 1.02;
                     emitBillboardQuad(bloomVc, mat, relTarget.add(0.0, hazeR * 0.54, 0.0), camRight, camUp, hazeR * 1.15, hazeR * 0.56, 0.48F, 0.10F, 0.98F, hazeAlpha);
+                }
+
+                // Molten Crater Fracture & Superheated Magma Fissure Ground Decal (Mode 5, seed = 0.68, dt = 1..188)
+                if (safeDt >= 1.0F && safeDt < 188.0F) {
+                    float fP = (safeDt - 1.0F) / 187.0F;
+                    float fEnv = smoothstep(fP / 0.06F) * (1.0F - smoothstep((fP - 0.58F) / 0.42F));
+                    double crackR = visualR * (0.85 + 0.52 * smoothstep(fP / 0.24F));
+                    emitHorizDiscQuad(bloomVc, mat, relTarget.add(0.0, 0.12, 0.0), crackR, seedNorm * Math.PI * 2.0, fP, 0.68F, 0.98F, fEnv * 0.94F);
+                }
+
+                // 12 Crackling Surface Plasma Discharge Lightning Arcs crawling across the fireball (Mode 4a, dt = 0..58)
+                if (safeDt < 58.0F && domeRadius > 1.0) {
+                    float boltLife = (1.0F - smoothstep(26.0F, 58.0F, safeDt)) * (shadersActive ? 0.76F : 0.94F);
+                    int boltStep = (int) (safeDt * 0.60F);
+                    for (int i = 0; i < 12; i++) {
+                        float hb1 = hashFloat(seed + boltStep * 37 + i * 29 + 5);
+                        float hb2 = hashFloat(seed + boltStep * 53 + i * 41 + 11);
+                        float hb3 = hashFloat(seed + boltStep * 71 + i * 59 + 17);
+                        double thA = hb1 * Math.PI * 2.0;
+                        double phA = (0.08 + 0.65 * hb2) * (Math.PI * 0.5);
+                        double thB = thA + (hb3 - 0.5) * 1.45;
+                        double phB = Math.max(0.05, Math.min(1.42, phA + (hb1 - 0.5) * 0.75));
+                        double surfR = domeRadius * (0.96 + 0.14 * hb3);
+                        Vec3 bA = relTarget.add(Math.cos(phA) * Math.cos(thA) * surfR, Math.sin(phA) * surfR + domeRadius * 0.08, Math.cos(phA) * Math.sin(thA) * surfR);
+                        Vec3 bB = relTarget.add(Math.cos(phB) * Math.cos(thB) * surfR, Math.sin(phB) * surfR + domeRadius * 0.08, Math.cos(phB) * Math.sin(thB) * surfR);
+                        emitSoftBloomBeamQuad(bloomVc, mat, bA, bB, relCam, 0.42 + 0.36 * hb2, 0.18F, 0.42F + 0.26F * hb3, boltLife);
+                    }
                 }
 
                 // 3 Concentric Flat Glowing Gold Ground Crater Ripples + 22 Ember Puddles (Mode 5, g = 0.50 & g = 0.10)
@@ -450,16 +500,16 @@ public class ExplosionMagicRenderer extends EntityRenderer<ExplosionMagicEntity>
                             emitBillboardQuad(
                                     dustVc, mat, cPos, camRight, camUp,
                                     cHalfW * (0.86 + 0.28 * hw), cHalfH * (0.82 + 0.34 * hj),
-                                    wp, cSeed, 0.0F, crownFade * 0.85F
+                                    wp, cSeed, 0.0F, crownFade * 0.56F
                             );
                         }
                     }
 
-                    int waistCount = 46;
-                    double beltR = domeRadius * (0.88 + 0.42 * Math.pow(wp, 0.68));
+                    int waistCount = 38;
+                    double beltR = domeRadius * (0.94 + 0.44 * Math.pow(wp, 0.68));
                     double waistY = domeRadius * (0.35 + 0.14 * wp);
-                    double halfW = domeRadius * (0.24 + 0.11 * wp);
-                    double halfH = domeRadius * (0.105 + 0.048 * wp);
+                    double halfW = domeRadius * (0.22 + 0.10 * wp);
+                    double halfH = domeRadius * (0.095 + 0.044 * wp);
                     for (int i = 0; i < waistCount; i++) {
                         float hj = hashFloat(seed + i * 23 + 211);
                         float hw = hashFloat(seed + i * 37 + 223);
@@ -475,7 +525,7 @@ public class ExplosionMagicRenderer extends EntityRenderer<ExplosionMagicEntity>
                         emitBillboardQuad(
                                 dustVc, mat, puffCenter, camRight, camUp,
                                 halfW * (0.85 + 0.32 * hw), halfH * (0.80 + 0.36 * hj),
-                                wp, puffSeed, 0.0F, wFade * 0.88F
+                                wp, puffSeed, 0.0F, wFade * 0.58F
                         );
                     }
                 }
@@ -544,7 +594,7 @@ public class ExplosionMagicRenderer extends EntityRenderer<ExplosionMagicEntity>
     private static void emitStrikeAndPersistentLaser(
             MultiBufferSource buffers, Matrix4f mat,
             Vec3 relTarget, Vec3 relStart, Vec3 relCam, Vec3 camRight, Vec3 camUp,
-            double radius, float t, int seed, float seedNorm, float bloom
+            double radius, float t, double worldTime, int seed, float seedNorm, float bloom
     ) {
         double apexHeight = getSkyApexHeight(radius);
         Vec3 skyApex = relTarget.add(0.0, apexHeight, 0.0);
@@ -553,10 +603,11 @@ public class ExplosionMagicRenderer extends EntityRenderer<ExplosionMagicEntity>
         VertexConsumer vortexVc = buffers.getBuffer(ZoltraakRenderTypes.EXPLOSION_VORTEX_RING);
 
         // 1. Inverted-cone sky rings holding, surging on convergence, then lingering majestically (t = 0 .. 50)
+        // Continuous worldTime * 0.055 matches ExplosionChargeRenderer for 100% uniform spin with zero speed jump
         if (t < 50.0F && bloom > 0.004F) {
             float collapseP = Mth.clamp((t - 7.0F) / 22.0F, 0.0F, 1.0F);
             float skyFade = 1.0F - smoothstep((t - 26.0F) / 24.0F);
-            emitSkyVortexColumn(vortexVc, mat, relTarget, radius, 1.0F, 1.0F - 0.28F * collapseP, skyFade, seedNorm, t * (0.095 + 0.035 * collapseP));
+            emitSkyVortexColumn(vortexVc, mat, relTarget, radius, 1.0F, 1.0F - 0.28F * collapseP, skyFade, seedNorm, worldTime * 0.055);
         }
 
         // 2. Stage 1 (t = 0 .. 26): Soft-Blooming Diagonal Golden Beam + Tilted Launch Magic Ring & Ignition Flash
@@ -586,10 +637,10 @@ public class ExplosionMagicRenderer extends EntityRenderer<ExplosionMagicEntity>
                 float ringFade = 1.0F - smoothstep((t - 9.0F) / 17.0F);
                 double launchR = 1.50 + 1.45 * smoothstep(t / 9.5F);
                 Vec3 launchPos = relStart.lerp(skyApex, Math.min(0.16, 0.05 + t * 0.0045));
-                double rotAngle = t * 0.085;
+                double rotAngle = t * 0.055;
                 Vec3 ru = beamU.scale(Math.cos(rotAngle)).add(beamV.scale(Math.sin(rotAngle)));
                 Vec3 rv = beamU.scale(-Math.sin(rotAngle)).add(beamV.scale(Math.cos(rotAngle)));
-                emitBillboardQuad(vortexVc, mat, launchPos, ru, rv, launchR, launchR, t / 26.0F, 0.35F, 0.50F, ringFade * 0.94F);
+                emitBillboardQuad(vortexVc, mat, launchPos, ru, rv, launchR, launchR, 1.0F, 0.35F, 0.50F, ringFade * 0.94F);
                 emitBillboardQuad(vortexVc, mat, launchPos, ru, rv, launchR * 1.28, launchR * 1.28, 0.66F, 0.10F, 0.98F, ringFade * 0.34F);
             }
         }
@@ -609,19 +660,19 @@ public class ExplosionMagicRenderer extends EntityRenderer<ExplosionMagicEntity>
             emitBillboardQuad(vortexVc, mat, skyApex, camRight, camUp, radius * 0.62, radius * 0.62, 0.96F, 0.10F, 0.98F, flareAlpha * 0.94F);
         }
 
-        // 4. Stage 3 (t = 15.0 .. 118.0): Heavens Pillar Descent -> Ground Compression Singularity -> Persistent Plasma Column
-        if (t >= 15.0F && t < 118.0F) {
+        // 4. Stage 3 (t = 15.0 .. 50.0): Heavens Pillar Descent -> Ground Compression -> Gradual Fade Together with 8 Sky Rings
+        if (t >= 15.0F && t < 50.0F) {
             float vAge = t - 15.0F;
             float strikeReach = Mth.clamp(vAge / 4.2F, 0.06F, 1.0F);
             Vec3 headPos = skyApex.lerp(groundTip, strikeReach);
 
             float preDetPulse = (t < 29.0F) ? smoothstep((t - 18.5F) / 9.5F) : 1.0F;
-            float postDetAge = Math.max(0.0F, t - 28.0F);
-            float widePhase = (1.0F - smoothstep(14.0F, 36.0F, postDetAge)) * (0.62F + 0.38F * preDetPulse);
-            float needleFade = 1.0F - smoothstep(68.0F, 90.0F, postDetAge);
-            double beamHalfW = radius * (0.044 + 0.28 * widePhase) * needleFade;
+            // Exact same fade window (t = 26..50) as the 8 stacked sky magic rings
+            float pillarFade = 1.0F - smoothstep((t - 26.0F) / 24.0F);
+            float widePhase = (0.62F + 0.38F * preDetPulse) * pillarFade;
+            double beamHalfW = radius * (0.044 + 0.28 * widePhase) * (0.35F + 0.65F * pillarFade);
             float pinkTint = 0.45F * widePhase;
-            emitSoftBloomBeamQuad(vortexVc, mat, skyApex, headPos, relCam, beamHalfW, pinkTint, 0.15F, needleFade * 0.98F);
+            emitSoftBloomBeamQuad(vortexVc, mat, skyApex, headPos, relCam, beamHalfW, pinkTint, 0.15F, pillarFade * 0.98F);
 
             // Pre-detonation ground contact compression singularity right before the dome erupts (t = 18.8 .. 28.8)
             if (t >= 18.8F && t < 28.8F && bloom > 0.004F) {
@@ -645,6 +696,48 @@ public class ExplosionMagicRenderer extends EntityRenderer<ExplosionMagicEntity>
                 Vec3 jitter = new Vec3((h1 - 0.5) * 1.6, (h2 - 0.5) * 1.6 - 0.03 * t, ((h1 * 1.7) % 1.0 - 0.5) * 1.6);
                 double sz = (0.18 + 0.22 * h1) * trailFade;
                 emitBillboardQuad(vortexVc, mat, base.add(jitter), camRight, camUp, sz, sz, 0.68F + 0.16F * h2, 0.10F, 0.98F, trailFade * 0.92F);
+            }
+        }
+
+        // 5b. Crackling Inter-Ring & Vertical Pillar Mana Lightning Arcs (Mode 4a, fades with sky rings & pillar at t = 50)
+        if (t >= 4.0F && t < 50.0F && bloom > 0.004F) {
+            float skyFade = 1.0F - smoothstep((t - 26.0F) / 24.0F);
+            float arcFade = smoothstep((t - 4.0F) / 4.0F) * skyFade;
+            int stepSeed = (int) (t * 0.72F);
+            int nRings = SKY_RING_HEIGHT_FACTORS.length;
+            float collapseP = Mth.clamp((t - 7.0F) / 22.0F, 0.0F, 1.0F);
+            float ringScale = 1.0F - 0.28F * collapseP;
+
+            if (t < 46.0F) {
+                for (int b = 0; b < 10; b++) {
+                    float hb1 = hashFloat(seed + stepSeed * 29 + b * 23 + 3);
+                    float hb2 = hashFloat(seed + stepSeed * 43 + b * 37 + 9);
+                    int rA = Math.min(nRings - 2, (int) (hb1 * (nRings - 1)));
+                    int rB = Math.min(nRings - 1, rA + 1 + (hb2 > 0.62F ? 1 : 0));
+                    double angA = hb1 * Math.PI * 2.0 + t * 0.08;
+                    double angB = angA + (hb2 - 0.5) * 1.10;
+                    double radA = getSkyRingRadius(radius, rA) * ringScale * 0.85;
+                    double radB = getSkyRingRadius(radius, rB) * ringScale * 0.85;
+                    Vec3 pA = relTarget.add(Math.cos(angA) * radA, getSkyRingY(radius, rA), Math.sin(angA) * radA);
+                    Vec3 pB = relTarget.add(Math.cos(angB) * radB, getSkyRingY(radius, rB), Math.sin(angB) * radB);
+                    emitSoftBloomBeamQuad(vortexVc, mat, pA, pB, relCam, 0.45 + 0.38 * hb2, 0.16F, 0.42F + 0.26F * hb2, arcFade * 0.94F);
+                }
+            }
+            // Coiling plasma lightning arcs snapping down the vertical sky pillar (t = 15..50)
+            if (t >= 15.0F) {
+                float pReach = Mth.clamp((t - 15.0F) / 4.2F, 0.10F, 1.0F);
+                for (int b = 0; b < 6; b++) {
+                    float hb1 = hashFloat(seed + stepSeed * 59 + b * 31 + 17);
+                    float hb2 = hashFloat(seed + stepSeed * 71 + b * 47 + 23);
+                    double y0 = apexHeight * (0.15 + 0.65 * hb1) * pReach;
+                    double y1 = Math.min(apexHeight, y0 + apexHeight * (0.18 + 0.22 * hb2));
+                    double a0 = hb1 * Math.PI * 2.0 + t * 0.16;
+                    double a1 = a0 + 1.15;
+                    double colR = radius * (0.12 + 0.16 * hb2);
+                    Vec3 pA = relTarget.add(Math.cos(a0) * colR, y0, Math.sin(a0) * colR);
+                    Vec3 pB = relTarget.add(Math.cos(a1) * colR, y1, Math.sin(a1) * colR);
+                    emitSoftBloomBeamQuad(vortexVc, mat, pA, pB, relCam, 0.48 + 0.42 * hb2, 0.28F, 0.44F + 0.24F * hb1, arcFade * 0.92F);
+                }
             }
         }
 
@@ -721,11 +814,15 @@ public class ExplosionMagicRenderer extends EntityRenderer<ExplosionMagicEntity>
                     double gy = 0.8 + vUp * tSec - 0.5 * 11.2 * tSec * tSec;
                     if (gy < -0.3) continue;
 
-                    double sz = 0.15 + 0.46 * (h4 * h4);
+                    double sz = 0.16 + 0.50 * (h4 * h4);
                     Vec3 center = relTarget.add(gx, gy, gz);
                     float spinA = dt * (0.09F + 0.12F * h2) + h1 * 6.28F;
                     float spinB = dt * (0.07F + 0.10F * h3) + h2 * 6.28F;
-                    emitCraggyRockBoulder(rockVc, mat, center, relTarget, sz, spinA, spinB, i * 17 + seed, rockAlpha);
+                    if (i % 3 == 0) {
+                        emitYutaponCubeShard(rockVc, mat, center, relTarget, sz * 1.12, spinA, spinB, i * 23 + seed, rockAlpha);
+                    } else {
+                        emitCraggyRockBoulder(rockVc, mat, center, relTarget, sz, spinA, spinB, i * 17 + seed, rockAlpha);
+                    }
                 }
                 ZoltraakRenderPass.endBatchWithBloom(buffers, ZoltraakRenderTypes.BLACK_CORE, 1.0F);
             }
@@ -866,12 +963,13 @@ public class ExplosionMagicRenderer extends EntityRenderer<ExplosionMagicEntity>
 
         // 3. Sky Vortex Rings thin rim HDR accent (t = 0..50)
         if (t < 50.0F) {
+            float collapseP = Mth.clamp((t - 7.0F) / 22.0F, 0.0F, 1.0F);
             float skyFade = (1.0F - smoothstep((t - 26.0F) / 24.0F)) * 0.56F;
             float sg = ZoltraakRenderPass.irisFadeGuard(skyFade);
             int ringCount = SKY_RING_HEIGHT_FACTORS.length;
             for (int i = 0; i < ringCount; i++) {
                 double ry = getSkyRingY(radius, i);
-                double rr = radius * SKY_RING_SCALE_FACTORS[i];
+                double rr = getSkyRingRadius(radius, i) * (1.0 - 0.28 * collapseP);
                 float ringA = skyFade * (0.55F + 0.45F * (i / (float) Math.max(1, ringCount - 1)));
                 ZoltraakRenderPass.emitFeatheredRing(
                         quadVc, mat, relTarget.add(0.0, ry, 0.0), axU, axV,
@@ -881,21 +979,20 @@ public class ExplosionMagicRenderer extends EntityRenderer<ExplosionMagicEntity>
             }
         }
 
-        // 4. Persistent Vertical Laser Pillar + Pre-Detonation Compression Core HDR bloom (t = 15..116)
-        if (t >= 15.0F && t < 116.0F) {
+        // 4. Vertical Laser Pillar + Pre-Detonation Compression Core HDR bloom (fades together with 8 sky rings at t = 26..50)
+        if (t >= 15.0F && t < 50.0F) {
             float vAge = t - 15.0F;
             float strikeReach = Mth.clamp(vAge / 4.2F, 0.06F, 1.0F);
             Vec3 curTip = skyApex.lerp(relTarget, strikeReach);
-            float postDetAge = Math.max(0.0F, t - 28.0F);
-            float widePhase = 1.0F - smoothstep(14.0F, 36.0F, postDetAge);
-            float skyFade = (1.0F - smoothstep(66.0F, 88.0F, postDetAge)) * 0.84F;
+            float pillarFade = 1.0F - smoothstep((t - 26.0F) / 24.0F);
+            float skyFade = pillarFade * 0.84F;
             float g = ZoltraakRenderPass.irisFadeGuard(skyFade);
             Vec3 beamSide = relTarget.subtract(skyApex).cross(relCam.subtract(skyApex));
             beamSide = beamSide.lengthSqr() < 1.0E-5 ? new Vec3(1.0, 0.0, 0.0) : beamSide.normalize();
             ZoltraakRenderPass.emitFeatheredBeamSegment(
                     quadVc, mat, skyApex, curTip, beamSide,
-                    radius * (0.04 + 0.12 * widePhase),
-                    radius * (0.12 + 0.30 * widePhase),
+                    radius * (0.04 + 0.12 * pillarFade) * (0.35 + 0.65 * pillarFade),
+                    radius * (0.12 + 0.30 * pillarFade) * (0.35 + 0.65 * pillarFade),
                     0.98F * g, 0.90F * g, 0.68F * g, skyFade,
                     0.98F * g, 0.38F * g, 0.09F * g, skyFade * 0.56F
             );
@@ -1002,7 +1099,7 @@ public class ExplosionMagicRenderer extends EntityRenderer<ExplosionMagicEntity>
             if (ringReveal <= 0.01F) continue;
 
             float layerFade = alpha * ringReveal * (0.52F + 0.48F * (i / denom));
-            double r = radius * SKY_RING_SCALE_FACTORS[i] * scaleMult * (0.72 + 0.28 * ringReveal);
+            double r = getSkyRingRadius(radius, i) * scaleMult * (0.76 + 0.24 * ringReveal);
             Vec3 pos = center.add(0.0, getSkyRingY(radius, i), 0.0);
             double dirSpin = (i % 2 == 0 ? 1.0 : -1.15) * spinPhase + i * 0.72;
             emitHorizDiscQuad(vc, mat, pos, r, dirSpin, castProgress, (seedNorm + i * 0.17F) % 1.0F, 0.5F, layerFade);
@@ -1183,11 +1280,95 @@ public class ExplosionMagicRenderer extends EntityRenderer<ExplosionMagicEntity>
             double skyDot = unitN.dot(skyDir) * 0.5 + 0.5;
             double blastDot = Math.max(0.0, unitN.dot(blastDir));
 
-            float baseR = (float) (0.14 + 0.14 * skyDot + 0.38 * blastDot * blastDot);
-            float baseG = (float) (0.11 + 0.11 * skyDot + 0.17 * blastDot * blastDot);
-            float baseB = (float) (0.09 + 0.09 * skyDot + 0.04 * blastDot * blastDot);
+            float baseR = (float) (0.045 + 0.08 * skyDot + 0.92 * blastDot * blastDot);
+            float baseG = (float) (0.032 + 0.06 * skyDot + 0.42 * blastDot * blastDot);
+            float baseB = (float) (0.035 + 0.06 * skyDot + 0.08 * blastDot * blastDot);
             emitTri(vc, mat, v[f[0]], v[f[1]], v[f[2]], Mth.clamp(baseR, 0.0F, 1.0F), Mth.clamp(baseG, 0.0F, 1.0F), Mth.clamp(baseB, 0.0F, 1.0F), alpha);
         }
+    }
+
+    // Stylized cubic Yutapon anime debris shard (crisp jet-black backlit silhouette + blazing orange blast rim)
+    private static final float[][] CUBE_VERTS = {
+            {-1, -1, -1}, { 1, -1, -1}, { 1,  1, -1}, {-1,  1, -1},
+            {-1, -1,  1}, { 1, -1,  1}, { 1,  1,  1}, {-1,  1,  1}
+    };
+    private static final int[][] CUBE_TRIS = {
+            {0, 2, 1}, {0, 3, 2}, {4, 5, 6}, {4, 6, 7},
+            {0, 1, 5}, {0, 5, 4}, {3, 7, 6}, {3, 6, 2},
+            {0, 4, 7}, {0, 7, 3}, {1, 2, 6}, {1, 6, 5}
+    };
+
+    private static void emitYutaponCubeShard(
+            VertexConsumer vc, Matrix4f mat, Vec3 center, Vec3 blastOrigin,
+            double radius, float rotX, float rotY, int shardSeed, float alpha
+    ) {
+        float sx = 0.65F + 0.55F * hashFloat(shardSeed + 1);
+        float sy = 0.55F + 0.65F * hashFloat(shardSeed + 2);
+        float sz = 0.65F + 0.55F * hashFloat(shardSeed + 3);
+        Vec3[] v = new Vec3[8];
+        for (int i = 0; i < 8; i++) {
+            Vector3f p = new Vector3f(CUBE_VERTS[i][0] * sx, CUBE_VERTS[i][1] * sy, CUBE_VERTS[i][2] * sz);
+            p.rotateX(rotX).rotateY(rotY).mul((float) radius);
+            v[i] = center.add(p.x, p.y, p.z);
+        }
+        Vec3 toBlast = blastOrigin.subtract(center);
+        Vec3 blastDir = toBlast.lengthSqr() > 1.0E-4 ? toBlast.normalize() : new Vec3(0.0, -1.0, 0.0);
+        for (int[] f : CUBE_TRIS) {
+            Vec3 n = v[f[1]].subtract(v[f[0]]).cross(v[f[2]].subtract(v[f[0]]));
+            Vec3 unitN = n.lengthSqr() > 1.0E-6 ? n.normalize() : blastDir;
+            double bDot = Math.max(0.0, unitN.dot(blastDir));
+            float hot = (float) (bDot * bDot * bDot);
+            float r = Mth.clamp(0.035F + 0.96F * hot, 0.0F, 1.0F);
+            float g = Mth.clamp(0.025F + 0.46F * hot, 0.0F, 1.0F);
+            float b = Mth.clamp(0.030F + 0.09F * hot, 0.0F, 1.0F);
+            emitTri(vc, mat, v[f[0]], v[f[1]], v[f[2]], r, g, b, alpha);
+        }
+    }
+
+    /** Emits the world-space bounding sphere for the 3D volumetric raymarched mushroom cloud (explosion_pyroclast). */
+    private static void emitVolumetricMushroomSphere(
+            VertexConsumer vc, Matrix4f mat, Vec3 center, double radius,
+            int rings, int sectors, float uBoundRadius, float vSeedNorm,
+            float progress, float heatFlash, float insideFlag, float alpha
+    ) {
+        float cr = Mth.clamp(progress, 0.0F, 1.0F);
+        float cg = Mth.clamp(heatFlash, 0.0F, 1.0F);
+        float cb = Mth.clamp(insideFlag, 0.0F, 1.0F);
+        float ca = Mth.clamp(alpha, 0.0F, 1.0F);
+
+        for (int ri = 0; ri < rings; ri++) {
+            double phi1 = -Math.PI * 0.5 + (ri / (double) rings) * Math.PI;
+            double phi2 = -Math.PI * 0.5 + ((ri + 1) / (double) rings) * Math.PI;
+            for (int si = 0; si < sectors; si++) {
+                double th1 = (si / (double) sectors) * Math.PI * 2.0;
+                double th2 = ((si + 1) / (double) sectors) * Math.PI * 2.0;
+
+                if (ri > 0) {
+                    emitVolumeSphereVert(vc, mat, center, radius, phi1, th1, uBoundRadius, vSeedNorm, cr, cg, cb, ca);
+                    emitVolumeSphereVert(vc, mat, center, radius, phi1, th2, uBoundRadius, vSeedNorm, cr, cg, cb, ca);
+                    emitVolumeSphereVert(vc, mat, center, radius, phi2, th2, uBoundRadius, vSeedNorm, cr, cg, cb, ca);
+                }
+                if (ri < rings - 1) {
+                    emitVolumeSphereVert(vc, mat, center, radius, phi1, th1, uBoundRadius, vSeedNorm, cr, cg, cb, ca);
+                    emitVolumeSphereVert(vc, mat, center, radius, phi2, th2, uBoundRadius, vSeedNorm, cr, cg, cb, ca);
+                    emitVolumeSphereVert(vc, mat, center, radius, phi2, th1, uBoundRadius, vSeedNorm, cr, cg, cb, ca);
+                }
+            }
+        }
+    }
+
+    private static void emitVolumeSphereVert(
+            VertexConsumer vc, Matrix4f mat, Vec3 center, double radius,
+            double phi, double th, float u, float v,
+            float r, float g, float b, float a
+    ) {
+        float nx = (float) (Math.cos(phi) * Math.sin(th));
+        float ny = (float) Math.sin(phi);
+        float nz = (float) (Math.cos(phi) * Math.cos(th));
+        float px = (float) (center.x + nx * radius);
+        float py = (float) (center.y + ny * radius);
+        float pz = (float) (center.z + nz * radius);
+        vc.addVertex(mat, px, py, pz).setUv(u, v).setColor(r, g, b, a).setNormal(nx, ny, nz);
     }
 
     private static void emitPyroclasticExplosionDome(

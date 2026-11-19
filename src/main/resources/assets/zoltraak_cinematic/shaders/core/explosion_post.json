@@ -1,0 +1,54 @@
+{
+  "vertex": "zoltraak_cinematic:explosion_post",
+  "fragment": "zoltraak_cinematic:explosion_post",
+  "samplers": [
+    {
+      "name": "SceneSampler"
+    },
+    {
+      "name": "DepthSampler"
+    }
+  ],
+  "attributes": [
+    "Position",
+    "UV0"
+  ],
+  "uniforms": [
+    {
+      "name": "InverseProjectionMat",
+      "type": "matrix4x4",
+      "count": 16,
+      "values": [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]
+    },
+    {
+      "name": "BlastOrigin",
+      "type": "float",
+      "count": 4,
+      "values": [0, 0, -20, 22]
+    },
+    {
+      "name": "SkyApex",
+      "type": "float",
+      "count": 4,
+      "values": [0, 40, -20, 0]
+    },
+    {
+      "name": "BlastTiming",
+      "type": "float",
+      "count": 4,
+      "values": [0, -1, -1, 1]
+    },
+    {
+      "name": "BlastScreen",
+      "type": "float",
+      "count": 4,
+      "values": [0.5, 0.5, 0, 1]
+    },
+    {
+      "name": "BlastFlags",
+      "type": "float",
+      "count": 4,
+      "values": [1, 1, 1, 1]
+    }
+  ]
+}

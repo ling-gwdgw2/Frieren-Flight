@@ -84,6 +84,22 @@ public final class ExplosionChargeRenderer {
 
     private ExplosionChargeRenderer() {}
 
+    public record ChargePostAnchor(Vec3 targetWorld, double radius, float progress) {}
+
+    public static ChargePostAnchor getStrongestChargeAnchor(Minecraft mc, float partial) {
+        if (mc == null || mc.level == null || ACTIVE.isEmpty()) return null;
+        double radius = ZoltraakCinematicConfig.getExplosionRadius();
+        ChargePostAnchor best = null;
+        for (ChargeState s : ACTIVE.values()) {
+            if (s == null || s.releasing || s.introTicks <= 0 || s.anchorTargetWorld == null) continue;
+            float prog = s.smoothedProgress;
+            if (prog > 0.28F && (best == null || prog > best.progress)) {
+                best = new ChargePostAnchor(s.anchorTargetWorld, radius, prog);
+            }
+        }
+        return best;
+    }
+
     public static void resetState() {
         ACTIVE.clear();
         clearDeferred();
@@ -372,11 +388,10 @@ public final class ExplosionChargeRenderer {
                     );
                 }
 
-                // 1c. Ground crimson-gold swirling vortex beneath caster (Mode 0) - spins faster as full charge nears
-                float peakPressure = releasing ? 0.0F : ExplosionMagicRenderer.smoothstep((p - 0.68F) / 0.32F);
+                // 1c. Ground crimson-gold swirling vortex beneath caster (Mode 0) - constant smooth angular speed
                 ExplosionMagicRenderer.emitHorizDiscQuad(
                         vortexVc, mat, casterPos.add(0.0, 0.07, 0.0),
-                        groundR, -time * (releasing ? 0.032 : (0.055 + 0.048 * peakPressure)), p, 0.21F, 0.0F, gAlpha
+                        groundR, -time * 0.052, p, 0.21F, 0.0F, gAlpha
                 );
                 // Critical overload golden-crimson pulse ring sweeping out when approaching full charge
                 if (!releasing && p > 0.72F) {
@@ -388,28 +403,30 @@ public final class ExplosionChargeRenderer {
                     );
                 }
 
-                // 1d. Two smaller crimson vortex rings hovering directly above the caster (Mode 1)
+                // 1d. Two smaller crimson vortex rings hovering directly above the caster (Mode 1) - constant spin
                 double ringLift = releasing ? 0.65 * op : 0.0;
                 double ringWiden = releasing ? (1.0 + 0.12 * op) : 1.0;
                 if (p > 0.10F) {
-                    float cRing1 = ExplosionMagicRenderer.smoothstep((p - 0.10F) / 0.18F) * fade;
+                    float cRing1 = ExplosionMagicRenderer.smoothstep((p - 0.10F) / 0.18F);
                     ExplosionMagicRenderer.emitHorizDiscQuad(
                             vortexVc, mat, casterPos.add(0.0, 4.4 + ringLift * 0.7, 0.0),
-                            2.5 * ringWiden * (releasing ? 1.0 : cRing1), time * (releasing ? 0.038 : (0.065 + 0.050 * peakPressure)), p, 0.37F, 0.5F, cRing1 * 0.92F
+                            2.5 * ringWiden * (releasing ? 1.0 : (0.72 + 0.28 * cRing1)), time * 0.058,
+                            p, 0.37F, 0.5F, cRing1 * fade * 0.92F
                     );
                 }
                 if (p > 0.20F) {
-                    float cRing2 = ExplosionMagicRenderer.smoothstep((p - 0.20F) / 0.20F) * fade;
+                    float cRing2 = ExplosionMagicRenderer.smoothstep((p - 0.20F) / 0.20F);
                     ExplosionMagicRenderer.emitHorizDiscQuad(
                             vortexVc, mat, casterPos.add(0.0, 7.8 + ringLift, 0.0),
-                            4.2 * ringWiden * (releasing ? 1.0 : cRing2), -time * (releasing ? 0.030 : (0.052 + 0.045 * peakPressure)), p, 0.61F, 0.5F, cRing2 * 0.95F
+                            4.2 * ringWiden * (releasing ? 1.0 : (0.72 + 0.28 * cRing2)), -time * 0.048,
+                            p, 0.61F, 0.5F, cRing2 * fade * 0.95F
                     );
                 }
 
-                // 1e. 8 Stacked Fiery Sky Vortex Rings + Gathering Pre-Ignition Core (skipped during outro if fired)
+                // 1e. 8 Stacked Fiery Sky Vortex Rings + Gathering Pre-Ignition Core + Inter-Ring Lightning Arcs
                 if (!firedRelease && p > 0.12F) {
                     float skyScale = 1.0F - 0.10F * ExplosionMagicRenderer.smoothstep((p - 0.72F) / 0.28F);
-                    double skySpin = time * (0.055 + 0.065 * peakPressure);
+                    double skySpin = time * 0.055;
                     ExplosionMagicRenderer.emitSkyVortexColumn(
                             vortexVc, mat, targetRel, radius,
                             p, skyScale, fade * 0.98F, 0.42F, skySpin
@@ -423,12 +440,36 @@ public final class ExplosionChargeRenderer {
                                 0.82F + 0.14F * coreP, 0.10F, 0.98F, fade * coreP * (shadersActive ? 0.68F : 0.88F)
                         );
                     }
+                    // Jagged crackling mana lightning arcs snapping between the 8 stacked sky rings during late chant
+                    if (p > 0.48F) {
+                        float arcCharge = ExplosionMagicRenderer.smoothstep((p - 0.48F) / 0.34F) * fade;
+                        int stepSeed = (int) (time * 0.65F);
+                        int nRings = ExplosionMagicRenderer.SKY_RING_HEIGHT_FACTORS.length;
+                        int boltCount = 12;
+                        for (int b = 0; b < boltCount; b++) {
+                            float hb1 = ExplosionMagicRenderer.hashFloat(stepSeed * 31 + b * 19 + 7);
+                            float hb2 = ExplosionMagicRenderer.hashFloat(stepSeed * 47 + b * 37 + 13);
+                            int rA = Math.min(nRings - 2, (int) (hb1 * (nRings - 1)));
+                            int rB = Math.min(nRings - 1, rA + 1 + (hb2 > 0.65F ? 1 : 0));
+                            double angA = hb1 * Math.PI * 2.0 + time * 0.04;
+                            double angB = angA + (hb2 - 0.5) * 1.15;
+                            double radA = ExplosionMagicRenderer.getSkyRingRadius(radius, rA) * skyScale * 0.84;
+                            double radB = ExplosionMagicRenderer.getSkyRingRadius(radius, rB) * skyScale * 0.84;
+                            Vec3 pA = targetRel.add(Math.cos(angA) * radA, ExplosionMagicRenderer.getSkyRingY(radius, rA), Math.sin(angA) * radA);
+                            Vec3 pB = targetRel.add(Math.cos(angB) * radB, ExplosionMagicRenderer.getSkyRingY(radius, rB), Math.sin(angB) * radB);
+                            double boltW = (0.38 + 0.34 * hb2) * (0.75 + 0.25 * cfg.particleScale());
+                            float seedMode = 0.42F + 0.26F * hb2;
+                            ExplosionMagicRenderer.emitSoftBloomBeamQuad(
+                                    vortexVc, mat, pA, pB, Vec3.ZERO, boltW, 0.22F, seedMode, arcCharge * (shadersActive ? 0.72F : 0.92F)
+                            );
+                        }
+                    }
                     float skyBloomA = ExplosionMagicRenderer.smoothstep((p - 0.12F) / 0.25F) * fade * (shadersActive ? 0.16F : 0.20F);
                     if (skyBloomA > 0.008F) {
                         int nRings = ExplosionMagicRenderer.SKY_RING_HEIGHT_FACTORS.length;
                         for (int i = 0; i < nRings; i++) {
                             double ry = ExplosionMagicRenderer.getSkyRingY(radius, i);
-                            double rr = radius * ExplosionMagicRenderer.SKY_RING_SCALE_FACTORS[i] * 1.15 * skyScale;
+                            double rr = ExplosionMagicRenderer.getSkyRingRadius(radius, i) * 1.15 * skyScale;
                             ExplosionMagicRenderer.emitHorizDiscQuad(
                                     vortexVc, mat, targetRel.add(0.0, ry, 0.0), rr, 0.0,
                                     0.48F, 0.10F, 0.98F, skyBloomA * (0.50F + 0.50F * (i / (float) Math.max(1, nRings - 1)))
@@ -599,7 +640,7 @@ public final class ExplosionChargeRenderer {
                         float h = ExplosionMagicRenderer.hashFloat(i * 59 + 17);
                         float cyc = (time * (0.018F + 0.012F * h) + i / (float) funnelCount) % 1.0F;
                         double fy = minH + cyc * (maxH - minH);
-                        double funnelR = radius * (0.08 + 0.64 * Math.pow(cyc, 1.32)) * (0.55 + 0.55 * h);
+                        double funnelR = radius * (0.08 + 0.64 * Math.pow(cyc, 1.32)) * (0.55 + 0.55 * h) * ZoltraakCinematicClientConfig.getExplosionSkyRingScale();
                         double ang = i * 2.1 + time * 0.075 - cyc * 4.2;
                         Vec3 fPos = targetRel.add(Math.cos(ang) * funnelR, fy, Math.sin(ang) * funnelR);
                         float sa = funnelFade * (float) Math.sin(cyc * Math.PI) * 0.92F;
@@ -700,11 +741,10 @@ public final class ExplosionChargeRenderer {
         if (!firedRelease && p > 0.14F) {
             float skyAlpha = ExplosionMagicRenderer.smoothstep((p - 0.14F) / 0.24F) * fade * 0.58F;
             float g = ZoltraakRenderPass.irisFadeGuard(skyAlpha);
-            double[] sRatio = ExplosionMagicRenderer.SKY_RING_SCALE_FACTORS;
-            int ringCount = sRatio.length;
+            int ringCount = ExplosionMagicRenderer.SKY_RING_SCALE_FACTORS.length;
             for (int i = 0; i < ringCount; i++) {
                 double ry = ExplosionMagicRenderer.getSkyRingY(radius, i);
-                double rr = radius * sRatio[i];
+                double rr = ExplosionMagicRenderer.getSkyRingRadius(radius, i);
                 float ringA = skyAlpha * (0.55F + 0.45F * (i / (float) Math.max(1, ringCount - 1)));
                 ZoltraakRenderPass.emitFeatheredRing(
                         irisVc, mat, targetRel.add(0.0, ry, 0.0), axU, axV,

@@ -732,7 +732,7 @@ public final class GargantuaPostProcessor {
         return 0;
     }
 
-    private static void drawScreenQuad(float x0, float y0, float x1, float y1, float u0, float v0, float u1, float v1) {
+    static void drawScreenQuad(float x0, float y0, float x1, float y1, float u0, float v0, float u1, float v1) {
         Tesselator tesselator = Tesselator.getInstance();
         BufferBuilder builder = tesselator.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
         builder.addVertex(x0, y0, 0.0f).setUv(u0, v0);

@@ -80,6 +80,8 @@ public class ZoltraakCinematicConfig {
     public static final ModConfigSpec.DoubleValue EXPLOSION_RADIUS;
     public static final ModConfigSpec.BooleanValue EXPLOSION_BREAK_BLOCKS;
     public static final ModConfigSpec.DoubleValue EXPLOSION_CRATER_DEPTH;
+    public static final ModConfigSpec.BooleanValue EXPLOSION_VOLCANIC_CRATER;
+    public static final ModConfigSpec.BooleanValue EXPLOSION_CRATER_FIRE;
     public static final ModConfigSpec.BooleanValue EXPLOSION_DRAIN_MANA;
     public static final ModConfigSpec.BooleanValue EXPLOSION_EXHAUSTION_ENABLED;
     public static final ModConfigSpec.IntValue EXPLOSION_EXHAUSTION_TICKS;
@@ -257,11 +259,11 @@ public class ZoltraakCinematicConfig {
         // 7. Items & Relics
         builder.comment("Staff & Relic Settings").push("items");
         STAFF_CAST_SPEED_BONUS = builder
-                .comment("Cast speed bonus (+15%) from Frieren's Staff.")
+                .comment("Cast speed bonus from Frieren's Staff (0.15 = +15% cast time reduction).")
                 .defineInRange("staffCastSpeedBonus", 0.15d, 0.0d, 1.0d);
         STAFF_MANA_REGEN_BONUS = builder
-                .comment("Mana regen bonus (mana/s) from Frieren's Staff.")
-                .defineInRange("staffManaRegenBonus", 5.0d, 0.0d, 50.0d);
+                .comment("Mana regen multiplier bonus from Frieren's Staff (0.25 = +25% mana regen).")
+                .defineInRange("staffManaRegenBonus", 0.25d, 0.0d, 2.0d);
         CHRONOS_WATCH_RADIUS = builder
                 .comment("Bubble radius in blocks for the Chronos Time Watch.")
                 .defineInRange("watchRadius", 16.0d, 4.0d, 64.0d);
@@ -286,6 +288,12 @@ public class ZoltraakCinematicConfig {
         EXPLOSION_CRATER_DEPTH = builder
                 .comment("Maximum crater depth (in blocks) at the center of Explosion Magic.")
                 .defineInRange("explosionCraterDepth", 6.0d, 1.0d, 16.0d);
+        EXPLOSION_VOLCANIC_CRATER = builder
+                .comment("Scorches the carved Explosion crater with a molten magma core, branching magma fissures, and volcanic blackstone/basalt/deepslate.")
+                .define("explosionVolcanicCrater", true);
+        EXPLOSION_CRATER_FIRE = builder
+                .comment("Ignites scattered surface flames across the scorched volcanic crater (requires explosionVolcanicCrater).")
+                .define("explosionCraterFire", true);
         EXPLOSION_DRAIN_MANA = builder
                 .comment("If true (and not in Creative), casting Explosion Magic drains all remaining mana to 0.")
                 .define("explosionDrainMana", true);
@@ -506,7 +514,7 @@ public class ZoltraakCinematicConfig {
     }
 
     public static double getStaffManaRegenBonus() {
-        return SPEC.isLoaded() ? STAFF_MANA_REGEN_BONUS.get() : 5.0d;
+        return SPEC.isLoaded() ? STAFF_MANA_REGEN_BONUS.get() : 0.25d;
     }
 
     public static double getChronosWatchRadius() {
@@ -535,6 +543,14 @@ public class ZoltraakCinematicConfig {
 
     public static double getExplosionCraterDepth() {
         return SPEC.isLoaded() ? EXPLOSION_CRATER_DEPTH.get() : 6.0d;
+    }
+
+    public static boolean isExplosionVolcanicCrater() {
+        return !SPEC.isLoaded() || EXPLOSION_VOLCANIC_CRATER.get();
+    }
+
+    public static boolean isExplosionCraterFire() {
+        return !SPEC.isLoaded() || EXPLOSION_CRATER_FIRE.get();
     }
 
     public static boolean isExplosionDrainMana() {

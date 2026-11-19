@@ -9,6 +9,7 @@ import com.frierenflight.zoltraakcinematic.registry.ModCinematicSpells;
 import com.frierenflight.zoltraakcinematic.spell.ExplosionSpell;
 import io.redspace.ironsspellbooks.damage.DamageSources;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
@@ -282,11 +283,18 @@ public class ExplosionMagicEntity extends Entity implements TraceableEntity, Own
         int minZ = Mth.floor(center.z - craterR);
         int maxZ = Mth.ceil(center.z + craterR);
 
+        int sizeX = maxX - minX + 1;
+        int sizeZ = maxZ - minZ + 1;
+        int[][] carvedFloor = new int[sizeX][sizeZ];
+        boolean[][] insideCrater = new boolean[sizeX][sizeZ];
+
         BlockPos.MutableBlockPos mPos = new BlockPos.MutableBlockPos();
         double invR2 = 1.0 / (craterR * craterR);
 
+        // Pass 1: Carve parabolic blast bowl and record final floor height per column
         for (int x = minX; x <= maxX; x++) {
             double dx = x + 0.5 - center.x;
+            int ix = x - minX;
             for (int z = minZ; z <= maxZ; z++) {
                 double dz = z + 0.5 - center.z;
                 double hr2 = (dx * dx + dz * dz) * invR2;
@@ -298,6 +306,9 @@ public class ExplosionMagicEntity extends Entity implements TraceableEntity, Own
 
                 double bowlFloorY = center.y - depth * (1.0 - Math.min(1.0, hr2)) + jitter * 0.65;
                 int floorBlockY = Math.max(minY, Mth.floor(bowlFloorY));
+                int iz = z - minZ;
+                insideCrater[ix][iz] = true;
+                carvedFloor[ix][iz] = floorBlockY;
 
                 for (int y = maxY; y >= floorBlockY; y--) {
                     double dy = Math.max(0.0, y + 0.5 - center.y);
@@ -313,6 +324,163 @@ public class ExplosionMagicEntity extends Entity implements TraceableEntity, Own
                 }
             }
         }
+
+        if (!ZoltraakCinematicConfig.isExplosionVolcanicCrater()) {
+            return;
+        }
+
+        // Pass 2: Scorch the carved crater into a volcanic magma core, branching fissures, dark charred stone & scattered fire
+        boolean igniteFire = ZoltraakCinematicConfig.isExplosionCraterFire();
+        int seed = getSeed();
+        double angleOffset1 = (seed & 255) * 0.02454369;
+        double angleOffset2 = ((seed >> 8) & 255) * 0.02454369;
+
+        BlockState magmaState = Blocks.MAGMA_BLOCK.defaultBlockState();
+        BlockState blackstoneState = Blocks.BLACKSTONE.defaultBlockState();
+        BlockState basaltState = Blocks.BASALT.defaultBlockState();
+        BlockState deepslateState = Blocks.COBBLED_DEEPSLATE.defaultBlockState();
+        BlockState fireState = Blocks.FIRE.defaultBlockState();
+        BlockPos.MutableBlockPos abovePos = new BlockPos.MutableBlockPos();
+
+        for (int x = minX; x <= maxX; x++) {
+            double dx = x + 0.5 - center.x;
+            int ix = x - minX;
+            for (int z = minZ; z <= maxZ; z++) {
+                int iz = z - minZ;
+                if (!insideCrater[ix][iz]) continue;
+
+                double dz = z + 0.5 - center.z;
+                double rNorm = Math.sqrt(Math.max(0.0, (dx * dx + dz * dz) * invR2));
+                int floorBlockY = carvedFloor[ix][iz];
+
+                // Locate exposed solid terrain block at or just below the carved floor (avoids floating blocks over caves/air)
+                int surfaceY = -9999;
+                int searchMinY = Math.max(level.getMinBuildHeight() + 1, floorBlockY - 3);
+                for (int sy = floorBlockY - 1; sy >= searchMinY; sy--) {
+                    mPos.set(x, sy, z);
+                    BlockState s = level.getBlockState(mPos);
+                    if (!s.getFluidState().isEmpty()) {
+                        surfaceY = -9999; // Never scorch underwater or inside lava pools
+                        break;
+                    }
+                    if (!s.isAir()) {
+                        if (isScorchableTerrain(level, mPos, s)) {
+                            surfaceY = sy;
+                        }
+                        break;
+                    }
+                }
+                if (surfaceY == -9999) continue;
+
+                // Ensure the block directly above the crater surface is open air (not under a roof or fluid)
+                abovePos.set(x, surfaceY + 1, z);
+                BlockState aboveState = level.getBlockState(abovePos);
+                if (!aboveState.isAir() || !aboveState.getFluidState().isEmpty()) continue;
+
+                // Organic multi-frequency noise & domain-warped radial fissures radiating outward from the epicenter
+                double nCoarse = volcanicNoise(x * 0.16, z * 0.16, seed);
+                double nFine = volcanicNoise(x * 0.42 + 17.3, z * 0.42 - 11.7, seed ^ 0x5A3C);
+                double hRand = columnHash(x, z, seed);
+                double angle = Math.atan2(dz, dx);
+
+                double warp = (nCoarse - 0.5) * 2.4 + (nFine - 0.5) * 0.9;
+                double fissure1 = Math.pow(1.0 - Math.abs(Math.sin((angle * 6.0 + rNorm * 3.6 + warp + angleOffset1) * 0.5)), 3.2);
+                double fissure2 = Math.pow(1.0 - Math.abs(Math.sin((angle * 11.0 - rNorm * 5.0 - warp * 0.8 + angleOffset2) * 0.5)), 4.0) * 0.84;
+                double fissure = Math.max(fissure1, fissure2);
+
+                // Ragged outer scorch edge so the rim blends naturally into surrounding grass/dirt/stone
+                double scorchReach = 0.86 + (nCoarse - 0.5) * 0.22 + fissure * 0.14;
+                if (rNorm > scorchReach) continue;
+
+                // Determine volcanic block type for surface crust
+                double coreRadius = 0.34 + (nCoarse - 0.5) * 0.16;
+                boolean isMagmaCore = rNorm < coreRadius && hRand < (0.86 - rNorm * 0.35);
+                boolean isMagmaFissure = rNorm < 0.86 && fissure > (0.48 + rNorm * 0.22);
+
+                BlockState chosenSurface;
+                if (isMagmaCore || isMagmaFissure) {
+                    chosenSurface = magmaState;
+                } else {
+                    chosenSurface = pickScorchedStone(rNorm, nCoarse, nFine, hRand, blackstoneState, basaltState, deepslateState);
+                }
+
+                mPos.set(x, surfaceY, z);
+                level.setBlock(mPos, chosenSurface, 2);
+
+                // Also scorch exposed stepped wall sides on steeper inner crater slopes (no raw dirt seams peeking out)
+                int minNeighborFloor = floorBlockY;
+                if (ix > 0 && insideCrater[ix - 1][iz]) minNeighborFloor = Math.min(minNeighborFloor, carvedFloor[ix - 1][iz]);
+                if (ix + 1 < sizeX && insideCrater[ix + 1][iz]) minNeighborFloor = Math.min(minNeighborFloor, carvedFloor[ix + 1][iz]);
+                if (iz > 0 && insideCrater[ix][iz - 1]) minNeighborFloor = Math.min(minNeighborFloor, carvedFloor[ix][iz - 1]);
+                if (iz + 1 < sizeZ && insideCrater[ix][iz + 1]) minNeighborFloor = Math.min(minNeighborFloor, carvedFloor[ix][iz + 1]);
+
+                int wallBottomY = Math.max(level.getMinBuildHeight() + 1, Math.min(surfaceY - 1, minNeighborFloor - 1));
+                int wallLimitY = Math.max(wallBottomY, surfaceY - 2);
+                for (int wy = surfaceY - 1; wy >= wallLimitY; wy--) {
+                    mPos.set(x, wy, z);
+                    BlockState ws = level.getBlockState(mPos);
+                    if (!isScorchableTerrain(level, mPos, ws)) break;
+                    BlockState wallMat = (isMagmaFissure && wy == surfaceY - 1 && hRand < 0.45)
+                            ? magmaState
+                            : pickScorchedStone(rNorm, nCoarse, nFine, columnHash(x, z + wy * 13, seed), blackstoneState, basaltState, deepslateState);
+                    level.setBlock(mPos, wallMat, 2);
+                }
+
+                // Scattered surface fire on magma veins & charred rock
+                if (igniteFire && rNorm < 0.84) {
+                    double fireChance = (chosenSurface == magmaState)
+                            ? (0.14 - rNorm * 0.06)
+                            : (0.065 * (1.0 - rNorm * 0.65));
+                    double fireRoll = columnHash(x * 3 + 11, z * 5 - 7, seed ^ 0x2F91);
+                    if (fireRoll < fireChance && fireState.canSurvive(level, abovePos)) {
+                        level.setBlock(abovePos, fireState, 2);
+                    }
+                }
+            }
+        }
+    }
+
+    private static boolean isScorchableTerrain(ServerLevel level, BlockPos pos, BlockState state) {
+        if (state.isAir() || state.hasBlockEntity() || !state.getFluidState().isEmpty()) {
+            return false;
+        }
+        float destroySpeed = state.getDestroySpeed(level, pos);
+        if (destroySpeed < 0.0f || state.getBlock().getExplosionResistance() >= 900.0f) {
+            return false;
+        }
+        return state.isFaceSturdy(level, pos, Direction.UP);
+    }
+
+    private static BlockState pickScorchedStone(
+            double rNorm, double nCoarse, double nFine, double hRand,
+            BlockState blackstone, BlockState basalt, BlockState cobbledDeepslate
+    ) {
+        // Inner crater leans charred blackstone + basalt; outer rim transitions softly through cobbled deepslate
+        double rimBlend = Mth.clamp((rNorm - 0.32) / 0.55, 0.0, 1.0);
+        double patch = nCoarse * 0.62 + nFine * 0.28 + hRand * 0.10;
+        if (patch < 0.44 - rimBlend * 0.14) {
+            return blackstone;
+        }
+        if (patch < 0.78 - rimBlend * 0.16) {
+            return basalt;
+        }
+        return cobbledDeepslate;
+    }
+
+    private static double volcanicNoise(double x, double z, int seed) {
+        double s1 = (seed & 0xFF) * 0.13;
+        double s2 = ((seed >> 8) & 0xFF) * 0.17;
+        double a = Math.sin(x * 1.13 + s1) * Math.cos(z * 1.07 - s2);
+        double b = Math.sin((x * 0.71 - z * 0.89) * 1.65 + s2);
+        double c = Math.cos((x * 0.93 + z * 0.61) * 2.35 - s1);
+        return Mth.clamp(0.5 + (a * 0.45 + b * 0.35 + c * 0.20) * 0.5, 0.0, 1.0);
+    }
+
+    private static double columnHash(int x, int z, int seed) {
+        int h = x * 374761393 + z * 668265263 + seed * 1442695041;
+        h = (h ^ (h >>> 13)) * 1274126177;
+        h ^= (h >>> 16);
+        return (h & 0x7FFFFFFF) / (double) 0x7FFFFFFF;
     }
 
     @Override

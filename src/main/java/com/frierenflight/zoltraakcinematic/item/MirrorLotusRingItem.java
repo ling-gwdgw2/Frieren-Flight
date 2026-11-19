@@ -28,10 +28,11 @@ public class MirrorLotusRingItem extends CurioBaseItem {
                 .rarity(Rarity.EPIC)
                 .fireResistant());
         withAttributes(Curios.RING_SLOT,
-                new AttributeContainer(ModCinematicAttributes.ZOLTRAAK_SPELL_POWER, 0.25, AttributeModifier.Operation.ADD_MULTIPLIED_BASE),
+                new AttributeContainer(ModCinematicAttributes.ZOLTRAAK_SPELL_POWER, 0.15, AttributeModifier.Operation.ADD_MULTIPLIED_BASE),
                 new AttributeContainer(AttributeRegistry.COOLDOWN_REDUCTION, 0.15, AttributeModifier.Operation.ADD_MULTIPLIED_BASE),
+                new AttributeContainer(AttributeRegistry.CAST_TIME_REDUCTION, 0.10, AttributeModifier.Operation.ADD_MULTIPLIED_BASE),
                 new AttributeContainer(AttributeRegistry.MAX_MANA, 150.0, AttributeModifier.Operation.ADD_VALUE),
-                new AttributeContainer(AttributeRegistry.MANA_REGEN, 1.0, AttributeModifier.Operation.ADD_VALUE)
+                new AttributeContainer(AttributeRegistry.MANA_REGEN, 0.15, AttributeModifier.Operation.ADD_MULTIPLIED_BASE)
         );
     }
 

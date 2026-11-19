@@ -1,9 +1,12 @@
 // Copyright (c) 2026 Aling7788565. All Rights Reserved.
 package com.frierenflight.zoltraakcinematic.item;
 
+import com.google.common.collect.ImmutableMultimap;
+import com.google.common.collect.Multimap;
 import io.redspace.ironsspellbooks.api.registry.AttributeRegistry;
 import io.redspace.ironsspellbooks.item.weapons.StaffItem;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.item.Item;
@@ -13,9 +16,8 @@ import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 public class FrierenStaffItem extends StaffItem {
@@ -26,6 +28,10 @@ public class FrierenStaffItem extends StaffItem {
     private static final UUID CAST_TIME_REDUCTION_UUID = UUID.fromString("e5a7b4f3-1c25-4b6d-aa95-0c43271b2434");
     private static final UUID MANA_REGEN_UUID = UUID.fromString("f6b8c5a4-2d36-4c7e-bb06-1d54382c3545");
 
+    private volatile Multimap<Attribute, AttributeModifier> cachedMainhandModifiers;
+    private volatile double cachedCastSpeed = Double.NaN;
+    private volatile double cachedManaRegen = Double.NaN;
+
     public FrierenStaffItem() {
         super(new Item.Properties()
                 .stacksTo(1)
@@ -33,28 +39,39 @@ public class FrierenStaffItem extends StaffItem {
                 .fireResistant(),
                 6.0,
                 -3.0,
-                createStaffAttributes());
+                Collections.emptyMap());
     }
 
-    private static Map<Attribute, AttributeModifier> createStaffAttributes() {
-        Map<Attribute, AttributeModifier> map = new HashMap<>();
-        map.put(AttributeRegistry.SPELL_POWER.get(),
-                new AttributeModifier(SPELL_POWER_UUID, "Frieren Staff Spell Power", 0.45, AttributeModifier.Operation.MULTIPLY_BASE));
-        map.put(com.frierenflight.zoltraakcinematic.registry.ModCinematicAttributes.ZOLTRAAK_SPELL_POWER.get(),
-                new AttributeModifier(ZOLTRAAK_POWER_UUID, "Frieren Staff Zoltraak Power", 0.35, AttributeModifier.Operation.MULTIPLY_BASE));
-        map.put(AttributeRegistry.MAX_MANA.get(),
-                new AttributeModifier(MAX_MANA_UUID, "Frieren Staff Max Mana", 500.0, AttributeModifier.Operation.ADDITION));
-        map.put(AttributeRegistry.COOLDOWN_REDUCTION.get(),
-                new AttributeModifier(COOLDOWN_REDUCTION_UUID, "Frieren Staff Cooldown Reduction", 0.20, AttributeModifier.Operation.MULTIPLY_BASE));
-        map.put(AttributeRegistry.CAST_TIME_REDUCTION.get(),
-                new AttributeModifier(CAST_TIME_REDUCTION_UUID, "Frieren Staff Cast Speed",
-                        com.frierenflight.zoltraakcinematic.config.ZoltraakCinematicConfig.getStaffCastSpeedBonus(),
-                        AttributeModifier.Operation.MULTIPLY_BASE));
-        map.put(AttributeRegistry.MANA_REGEN.get(),
-                new AttributeModifier(MANA_REGEN_UUID, "Frieren Staff Mana Regen",
-                        com.frierenflight.zoltraakcinematic.config.ZoltraakCinematicConfig.getStaffManaRegenBonus(),
-                        AttributeModifier.Operation.MULTIPLY_BASE));
-        return map;
+    @Override
+    public Multimap<Attribute, AttributeModifier> getDefaultAttributeModifiers(EquipmentSlot slot) {
+        if (slot != EquipmentSlot.MAINHAND) {
+            return super.getDefaultAttributeModifiers(slot);
+        }
+        double castSpeed = com.frierenflight.zoltraakcinematic.config.ZoltraakCinematicConfig.getStaffCastSpeedBonus();
+        double manaRegen = com.frierenflight.zoltraakcinematic.config.ZoltraakCinematicConfig.getStaffManaRegenBonus();
+        Multimap<Attribute, AttributeModifier> current = this.cachedMainhandModifiers;
+        if (current != null && Double.compare(castSpeed, this.cachedCastSpeed) == 0 && Double.compare(manaRegen, this.cachedManaRegen) == 0) {
+            return current;
+        }
+        ImmutableMultimap.Builder<Attribute, AttributeModifier> builder = ImmutableMultimap.builder();
+        builder.putAll(super.getDefaultAttributeModifiers(slot));
+        builder.put(AttributeRegistry.SPELL_POWER.get(),
+                new AttributeModifier(SPELL_POWER_UUID, "Frieren Staff Spell Power", 0.20, AttributeModifier.Operation.MULTIPLY_BASE));
+        builder.put(com.frierenflight.zoltraakcinematic.registry.ModCinematicAttributes.ZOLTRAAK_SPELL_POWER.get(),
+                new AttributeModifier(ZOLTRAAK_POWER_UUID, "Frieren Staff Zoltraak Power", 0.20, AttributeModifier.Operation.MULTIPLY_BASE));
+        builder.put(AttributeRegistry.MAX_MANA.get(),
+                new AttributeModifier(MAX_MANA_UUID, "Frieren Staff Max Mana", 250.0, AttributeModifier.Operation.ADDITION));
+        builder.put(AttributeRegistry.COOLDOWN_REDUCTION.get(),
+                new AttributeModifier(COOLDOWN_REDUCTION_UUID, "Frieren Staff Cooldown Reduction", 0.10, AttributeModifier.Operation.MULTIPLY_BASE));
+        builder.put(AttributeRegistry.CAST_TIME_REDUCTION.get(),
+                new AttributeModifier(CAST_TIME_REDUCTION_UUID, "Frieren Staff Cast Speed", castSpeed, AttributeModifier.Operation.MULTIPLY_BASE));
+        builder.put(AttributeRegistry.MANA_REGEN.get(),
+                new AttributeModifier(MANA_REGEN_UUID, "Frieren Staff Mana Regen", manaRegen, AttributeModifier.Operation.MULTIPLY_BASE));
+        Multimap<Attribute, AttributeModifier> built = builder.build();
+        this.cachedCastSpeed = castSpeed;
+        this.cachedManaRegen = manaRegen;
+        this.cachedMainhandModifiers = built;
+        return built;
     }
 
     @Override

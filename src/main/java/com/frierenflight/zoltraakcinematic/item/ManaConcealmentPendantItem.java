@@ -25,12 +25,13 @@ public class ManaConcealmentPendantItem extends CurioBaseItem {
     public ManaConcealmentPendantItem() {
         super(new Item.Properties()
                 .stacksTo(1)
-                .rarity(Rarity.EPIC)
+                .rarity(Rarity.RARE)
                 .fireResistant());
         withAttributes(Curios.NECKLACE_SLOT,
-                new AttributeContainer(ModCinematicAttributes.ZOLTRAAK_MAGIC_RESIST, 0.20, AttributeModifier.Operation.ADD_MULTIPLIED_BASE),
-                new AttributeContainer(AttributeRegistry.CAST_TIME_REDUCTION, 0.10, AttributeModifier.Operation.ADD_MULTIPLIED_BASE),
-                new AttributeContainer(AttributeRegistry.MAX_MANA, 200.0, AttributeModifier.Operation.ADD_VALUE)
+                new AttributeContainer(ModCinematicAttributes.ZOLTRAAK_MAGIC_RESIST, 0.25, AttributeModifier.Operation.ADD_MULTIPLIED_BASE),
+                new AttributeContainer(AttributeRegistry.SPELL_RESIST, 0.10, AttributeModifier.Operation.ADD_MULTIPLIED_BASE),
+                new AttributeContainer(AttributeRegistry.CAST_TIME_REDUCTION, 0.15, AttributeModifier.Operation.ADD_MULTIPLIED_BASE),
+                new AttributeContainer(AttributeRegistry.MAX_MANA, 150.0, AttributeModifier.Operation.ADD_VALUE)
         );
     }
 

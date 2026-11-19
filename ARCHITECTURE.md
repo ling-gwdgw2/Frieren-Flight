@@ -219,7 +219,7 @@ Zoltraak Cinematic - NeoForge 1.21.1/
         ├── META-INF/neoforge.mods.toml         # Mod manifest + sodium:config_api_user declaration
         └── assets/zoltraak_cinematic/
             ├── shaders/core/                   # 78 files (26 GLSL 150 programs: .json, .vsh, .fsh)
-            ├── textures/, models/, sounds/ (15 .ogg), lang/ (en_us.json, th_th.json — 211 keys each)
+            ├── textures/, models/, sounds/ (15 .ogg), lang/ (en_us.json, th_th.json — 247 keys each)
             └── geo/, animations/               # GeckoLib boss geometry & animations
 ```
 
@@ -261,13 +261,13 @@ Four syncable `MagicPercentAttribute` traits (default `1.0D`, range `-100.0D` to
 
 All **11** registered items are fire-resistant (`fireResistant()`):
 
-1. `frieren_staff` (`FrierenStaffItem`): Epic `StaffItem` with `+45%` Spell Power, `+35%` Zoltraak Spell Power, `+500` Max Mana, `+20%` Cooldown Reduction, plus configurable Cast Time Reduction (`items.staffCastSpeedBonus`, default `+15%`) and Mana Regen (`items.staffManaRegenBonus`, default `5.0`) via `Services.PLATFORM.applyStaffAttributes(...)` on NeoForge and `FrierenStaffItem` on Forge.
-2. `ordinary_grimoire` (`OrdinaryGrimoireItem`): 10-slot Epic `SpellBook` (`+30%` Zoltraak Spell Power, `+15%` Spell Power, `+300` Max Mana, `+15%` Cooldown Reduction).
-3. `elder_sage_grimoire` (`ElderSageGrimoireItem`): 12-slot Epic `SpellBook` (`+50%` Zoltraak Spell Power, `+20%` Spell Power, `+1000` Max Mana, `+30%` Cooldown Reduction, `+20%` Cast Time Reduction).
-4. `mirror_lotus_ring` (`MirrorLotusRingItem`): Ring Curio (`+25%` Zoltraak Spell Power, `+15%` Cooldown Reduction, `+150` Max Mana, `+1.0` Mana Regen).
-5. `mana_concealment_pendant` (`ManaConcealmentPendantItem`): Necklace Curio (`+20%` Zoltraak Magic Resist, `+10%` Cast Time Reduction, `+200` Max Mana).
-6. `corruption_core` (`CorruptionCoreItem`): Necklace Curio (`+35%` Zoltraak Spell Power, `+350` Max Mana, `+2.5` Mana Regen).
-7. `chronos_dilatation_watch` (`ChronosDilatationWatchItem`): Charm Curio (`+15%` Cooldown Reduction, `+35%` Black Hole Spell Power); right-clicking unleashes a Time Dilation Field applying Slowness IV and Mining Fatigue IV (configured via `items.watchRadius`, `items.watchDurationTicks`, `items.watchCooldownSec`).
+1. `frieren_staff` (`FrierenStaffItem`): Epic `StaffItem` with `+20%` Spell Power, `+20%` Zoltraak Spell Power, `+250` Max Mana, `+10%` Cooldown Reduction, plus dynamically-evaluated Cast Time Reduction (`items.staffCastSpeedBonus`, default `+15%`) and Mana Regen (`items.staffManaRegenBonus`, default `+25%`) via `FrierenStaffItem#getDefaultAttributeModifiers` on both NeoForge and Forge.
+2. `ordinary_grimoire` (`OrdinaryGrimoireItem`): 10-slot Rare `SpellBook` (`+15%` Zoltraak Spell Power, `+5%` Spell Power, `+200` Max Mana, `+10%` Cooldown Reduction).
+3. `elder_sage_grimoire` (`ElderSageGrimoireItem`): 12-slot Epic `SpellBook` (`+25%` Zoltraak Spell Power, `+10%` Spell Power, `+500` Max Mana, `+15%` Cooldown Reduction, `+15%` Cast Time Reduction).
+4. `mirror_lotus_ring` (`MirrorLotusRingItem`): Ring Curio (`+15%` Zoltraak Spell Power, `+15%` Cooldown Reduction, `+10%` Cast Time Reduction, `+150` Max Mana, `+15%` Mana Regen).
+5. `mana_concealment_pendant` (`ManaConcealmentPendantItem`): Rare Necklace Curio (`+25%` Zoltraak Magic Resist, `+10%` Spell Resist, `+15%` Cast Time Reduction, `+150` Max Mana).
+6. `corruption_core` (`CorruptionCoreItem`): Epic Necklace Curio (`+20%` Zoltraak Spell Power, `+200` Max Mana, `+25%` Mana Regen).
+7. `chronos_dilatation_watch` (`ChronosDilatationWatchItem`): Epic Charm Curio (`+10%` Cooldown Reduction, `+25%` Black Hole Spell Power); right-clicking unleashes a spherical Time Dilation Field applying Slowness IV and Mining Fatigue IV to mobs (reduced to Slowness II / Mining Fatigue II for 50% duration on bosses, configured via `items.watchRadius`, `items.watchDurationTicks`, `items.watchCooldownSec`).
 8. `horn_of_corruption` (`HornOfCorruptionItem`): Rare crafting catalyst dropped by Qual (`stacksTo(16)`).
 9. `gargantua_scroll` (`GargantuaScrollItem`): Epic `Scroll` pre-bound via `ISpellContainer` to `gargantua` Level 1 (`stacksTo(16)`).
 10. `qual_sealing_stone`: BlockItem for `ModCinematicBlocks.QUAL_SEALING_STONE` (Epic).
@@ -492,7 +492,7 @@ All core spell, circle, barrier, impact, and preview shaders support `ColorModul
 3. **Clean & Automated Verification Suite (`--clean`, `--verify`, `--test`)**:
    - `--clean` removes temporary staging/class directories under `build/`.
    - `--verify` builds the requested target(s) and automatically verifies them; `--test` checks existing JARs standalone (or builds first when paired with `--target`).
-   - Validates both packaged JARs (**379** entries in NeoForge `2.0.0`, **382** in Forge `2.0.0`) across: bytecode major versions (`<= 65` Java 21 / `<= 61` Java 17), manifests & `LICENSE`/`NOTICE.txt` in root + `META-INF/`, Forge `MANIFEST.MF` MixinConfigs, ServiceLoader SPI, Mixin configs/classes & `zoltraak_cinematic.forge.refmap.json` Searge coverage, valid JSON/MCMETA parsing across every entry, `en_us.json`/`th_th.json` localization parity (**211** keys, zero blanks), all **26** GLSL 150 shaders (**78** files, `#version 150`, `.vsh`/`.json` attribute parity, sampler checks, sync with `ZoltraakCinematicShaders.java`), `sounds.json` -> `.ogg` & model/blockstate references, loader-appropriate Curios tags & crafting recipes, Sodium Config API registration (no `@ConfigEntryPointForge`), Forge `m_` SRG remapping, and zero NeoForge bytecode leaks in Forge.
+   - Validates both packaged JARs (**389** entries in NeoForge `2.0.0`, **392** in Forge `2.0.0`) across: bytecode major versions (`<= 65` Java 21 / `<= 61` Java 17), manifests & `LICENSE`/`NOTICE.txt` in root + `META-INF/`, Forge `MANIFEST.MF` MixinConfigs, ServiceLoader SPI, Mixin configs/classes & `zoltraak_cinematic.forge.refmap.json` Searge coverage, valid JSON/MCMETA parsing across every entry, `en_us.json`/`th_th.json` localization parity (**247** keys, zero blanks), all **28** GLSL 150 shaders (**84** files, `#version 150`, `.vsh`/`.json` attribute parity, sampler checks, sync with `ZoltraakCinematicShaders.java`), `sounds.json` -> `.ogg` & model/blockstate references, loader-appropriate Curios tags & crafting recipes, Sodium Config API registration (no `@ConfigEntryPointForge`), Forge `m_` SRG remapping, and zero NeoForge bytecode leaks in Forge.
 
 ---
 

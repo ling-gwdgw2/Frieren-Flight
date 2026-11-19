@@ -38,10 +38,12 @@ public final class ZoltraakCinematicShaders {
    public static ShaderInstance explosionVortexRing;
    public static ShaderInstance explosionDome;
    public static ShaderInstance explosionDustWave;
+   public static ShaderInstance explosionPyroclast;
+   public static ShaderInstance explosionPost;
 
    @SubscribeEvent
    /**
-    * Registers all 26 custom Core GLSL 150 shaders for the Zoltraak Cinematic rendering pipeline.
+    * Registers all 28 custom Core GLSL 150 shaders for the Zoltraak Cinematic rendering pipeline.
     */
    public static void onRegisterShaders(RegisterShadersEvent e) {
       registerSafe(e, "cinematic_singularity_corona", s -> corona = s);
@@ -70,6 +72,8 @@ public final class ZoltraakCinematicShaders {
       registerSafe(e, "explosion_vortex_ring", s -> explosionVortexRing = s);
       registerSafe(e, "explosion_dome", DefaultVertexFormat.POSITION_TEX_COLOR_NORMAL, s -> explosionDome = s);
       registerSafe(e, "explosion_dust_wave", s -> explosionDustWave = s);
+      registerSafe(e, "explosion_pyroclast", DefaultVertexFormat.POSITION_TEX_COLOR_NORMAL, s -> explosionPyroclast = s);
+      registerSafe(e, "explosion_post", DefaultVertexFormat.POSITION_TEX, s -> explosionPost = s);
    }
 
    private static void registerSafe(RegisterShadersEvent e, String name, java.util.function.Consumer<ShaderInstance> onLoaded) {
