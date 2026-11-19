@@ -437,6 +437,8 @@ public final class DefenseBarrierEntity extends Entity {
                     double checkRadius = mode() == MODE_DOME ? DOME_RADIUS + 2.0 : BARRIER_RADIUS + 2.5;
                     for (Projectile p : serverLevel.getEntitiesOfClass(Projectile.class, this.getBoundingBox().inflate(checkRadius))) {
                         if (!p.isRemoved() && !this.friendly(p.getOwner())) {
+                            if (p instanceof ZoltraakBarrageProjectileEntity stoppedBp && stoppedBp.isImpactStopped()) continue;
+
                             boolean deflectArrows = com.frierenflight.zoltraakcinematic.config.ZoltraakCinematicConfig.isBarrierBlockArrows();
                             boolean deflectMagic = com.frierenflight.zoltraakcinematic.config.ZoltraakCinematicConfig.isBarrierBlockMagic();
 
@@ -452,12 +454,14 @@ public final class DefenseBarrierEntity extends Entity {
 
                             if (contact.isPresent()) {
                                 float pDmg = 6.0f;
+                                float barrageScale = 1.0f;
                                 if (p instanceof AbstractMagicProjectile m) {
                                     pDmg = m.getDamage();
                                 } else if (p instanceof AbstractArrow arrow) {
                                     pDmg = (float) (arrow.getBaseDamage() * p.getDeltaMovement().length());
                                 } else if (p instanceof ZoltraakBarrageProjectileEntity bp) {
-                                    pDmg = bp.getDamage();
+                                    barrageScale = (float) com.frierenflight.zoltraakcinematic.config.ZoltraakCinematicConfig.getBarrageDamageScale();
+                                    pDmg = bp.getDamage() * barrageScale;
                                 }
 
                                 // Corrupted Barrage shreds barrier capacity 2x faster and pierces 25% wither bleed.
@@ -480,7 +484,7 @@ public final class DefenseBarrierEntity extends Entity {
                                         });
                                         bp.stopOnImpact(contact.get());
                                     } else {
-                                        bp.setDamage(remainingOrig);
+                                        bp.setDamage(barrageScale > 0.001F ? (remainingOrig / barrageScale) : 0.0F);
                                     }
                                 } else if (absorbed >= pDmg && pDmg > 0.0F) {
                                     if (p instanceof ZoltraakBarrageProjectileEntity bp) {
@@ -493,7 +497,7 @@ public final class DefenseBarrierEntity extends Entity {
                                 } else if (p instanceof AbstractArrow arrow && pDmg > 0.0F) {
                                     arrow.setBaseDamage(arrow.getBaseDamage() * (1.0F - absorbed / pDmg));
                                 } else if (p instanceof ZoltraakBarrageProjectileEntity bp) {
-                                    bp.setDamage(Math.max(0.0F, pDmg - absorbed));
+                                    bp.setDamage(barrageScale > 0.001F ? Math.max(0.0F, (pDmg - absorbed) / barrageScale) : 0.0F);
                                 }
                             }
                         }

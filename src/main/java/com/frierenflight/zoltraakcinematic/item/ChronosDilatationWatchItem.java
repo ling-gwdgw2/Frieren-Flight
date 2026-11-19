@@ -64,6 +64,10 @@ public class ChronosDilatationWatchItem extends CurioBaseItem {
             List<net.minecraft.world.entity.LivingEntity> targets = level.getEntitiesOfClass(
                     net.minecraft.world.entity.LivingEntity.class, box,
                     e -> e != caster && e.isAlive()
+                            && !(e instanceof net.minecraft.world.entity.decoration.ArmorStand)
+                            && !(e instanceof net.minecraft.world.entity.player.Player p
+                                    && (p.isCreative() || p.isSpectator()
+                                            || (caster instanceof net.minecraft.world.entity.player.Player cp && !cp.canHarmPlayer(p))))
                             && e.distanceToSqr(caster) <= radiusSq
                             && (!respectFF || !io.redspace.ironsspellbooks.damage.DamageSources.isFriendlyFireBetween(caster, e))
             );

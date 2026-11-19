@@ -64,9 +64,7 @@ public class GargantuaScrollItem extends Scroll {
     @Override
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
-        if (!level.isClientSide) {
-            ensureBound(stack);
-        }
+        ensureBound(stack);
         return super.use(level, player, hand);
     }
 

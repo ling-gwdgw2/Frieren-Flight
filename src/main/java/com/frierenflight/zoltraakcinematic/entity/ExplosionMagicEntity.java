@@ -15,7 +15,6 @@ import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
 import net.minecraft.world.damagesource.DamageSource;
@@ -186,26 +185,7 @@ public class ExplosionMagicEntity extends Entity implements TraceableEntity, Own
     public void tick() {
         super.tick();
         if (!this.level().isClientSide && this.level() instanceof ServerLevel serverLevel) {
-            float timeScale = getTimeScale();
-            int skyLockTick = Math.max(2, Math.round(7.0f * timeScale));
-            int pillarDropTick = Math.max(skyLockTick + 2, Math.round(15.0f * timeScale));
             int detonateTick = getDetonateTick();
-
-            if (this.tickCount == 1) {
-                Vec3 s = getStartPos();
-                serverLevel.playSound(null, s.x, s.y, s.z, ModCinematicSounds.ZOLTRAAK_GREAT_FIRE.get(), SoundSource.PLAYERS, 2.0f, 1.48f);
-            }
-            if (this.tickCount == skyLockTick) {
-                Vec3 t = getTargetPos();
-                double apexY = t.y + 22.0 + getRadius() * 2.15;
-                serverLevel.playSound(null, t.x, apexY, t.z, ModCinematicSounds.ZOLTRAAK_CHARGE.get(), SoundSource.PLAYERS, 2.2f, 1.72f);
-                serverLevel.playSound(null, t.x, t.y + 22.0, t.z, SoundEvents.BEACON_ACTIVATE, SoundSource.PLAYERS, 1.8f, 1.65f);
-            }
-            if (this.tickCount == pillarDropTick) {
-                Vec3 t = getTargetPos();
-                serverLevel.playSound(null, t.x, t.y, t.z, ModCinematicSounds.ZOLTRAAK_FIRE.get(), SoundSource.PLAYERS, 2.2f, 0.85f);
-                serverLevel.playSound(null, t.x, t.y, t.z, SoundEvents.LIGHTNING_BOLT_IMPACT, SoundSource.PLAYERS, 2.2f, 0.78f);
-            }
 
             if (this.tickCount >= detonateTick && !this.blastResolved) {
                 this.blastResolved = true;
@@ -223,12 +203,8 @@ public class ExplosionMagicEntity extends Entity implements TraceableEntity, Own
         double radius = getRadius();
         Entity owner = getOwner();
 
-        // Multi-layered thunderous detonation stack
+        // Single clean explosion detonation sound
         level.playSound(null, center.x, center.y, center.z, ModCinematicSounds.SINGULARITY_EXPLODE.get(), SoundSource.PLAYERS, 4.2f, 0.68f);
-        level.playSound(null, center.x, center.y, center.z, ModCinematicSounds.ZOLTRAAK_IMPACT.get(), SoundSource.PLAYERS, 3.5f, 0.60f);
-        level.playSound(null, center.x, center.y, center.z, ModCinematicSounds.ZOLTRAAK_GREAT_FIRE.get(), SoundSource.PLAYERS, 3.6f, 0.62f);
-        level.playSound(null, center.x, center.y, center.z, SoundEvents.WARDEN_SONIC_BOOM, SoundSource.PLAYERS, 2.8f, 0.66f);
-        level.playSound(null, center.x, center.y, center.z, SoundEvents.LIGHTNING_BOLT_THUNDER, SoundSource.PLAYERS, 3.4f, 0.76f);
 
         applyBlastDamage(level, center, radius, owner);
 
@@ -257,7 +233,8 @@ public class ExplosionMagicEntity extends Entity implements TraceableEntity, Own
             if (target == null || !target.isAlive() || target instanceof ArmorStand) continue;
             if (owner != null && target == owner) continue;
             if (owner != null && respectFF && DamageSources.isFriendlyFireBetween(owner, target)) continue;
-            if (target instanceof Player player && (player.isCreative() || player.isSpectator())) continue;
+            if (target instanceof Player player && (player.isCreative() || player.isSpectator()
+                    || (owner instanceof Player op && !op.canHarmPlayer(player)))) continue;
 
             double dist = Math.sqrt(e.getBoundingBox().distanceToSqr(center));
             if (dist > reach || !hitTargets.add(target.getUUID())) continue;
@@ -271,14 +248,14 @@ public class ExplosionMagicEntity extends Entity implements TraceableEntity, Own
 
             double norm = Mth.clamp(dist / reach, 0.0, 1.0);
             float dmg = (float) (baseDamage * (1.0 - 0.68 * Math.pow(norm, 1.3)));
-            ZoltraakDamage.apply(target, dmg, dmgSource, school, true);
-
-            Vec3 delta = target.getBoundingBox().getCenter().subtract(center);
-            double deltaLen = delta.length();
-            Vec3 dir = deltaLen > 0.05 ? delta.scale(1.0 / deltaLen) : new Vec3(0.0, 1.0, 0.0);
-            double kb = 1.6 + (1.0 - norm) * 2.2;
-            target.push(dir.x * kb, 0.45 + (1.0 - norm) * 0.85, dir.z * kb);
-            target.hurtMarked = true;
+            if (ZoltraakDamage.apply(target, dmg, dmgSource, school, true)) {
+                Vec3 delta = target.getBoundingBox().getCenter().subtract(center);
+                double deltaLen = delta.length();
+                Vec3 dir = deltaLen > 0.05 ? delta.scale(1.0 / deltaLen) : new Vec3(0.0, 1.0, 0.0);
+                double kb = 1.6 + (1.0 - norm) * 2.2;
+                target.push(dir.x * kb, 0.45 + (1.0 - norm) * 0.85, dir.z * kb);
+                target.hurtMarked = true;
+            }
         }
     }
 

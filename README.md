@@ -26,9 +26,9 @@
 
 In v2.0.0, all rendering, camera choreography, shaders, and audio run completely standalone without external particle-engine dependencies:
 - **Procedural Vector Geometry (Blaze3D & JOML)**: Real-time dynamic ribbons, tapered cylinders, 24-circle barrage arrays, layered blast debris/embers, and Class-I Frequency-7 geodesic shields (`492` cells / `1,470` edges).
-- **26 Original GLSL 150 Core Shaders (78 files)**: Dedicated vertex/fragment pipelines including a 4-pass `GL_RGBA16F` relativistic black hole pipeline (`gargantua`, `gargantua_bloom_down`, `gargantua_bloom_up`, `gargantua_composite`), lensing previews, photonic/abyssal beams, pyroclastic impact domes (`zoltraak_blast_dome`, `zoltraak_pyroclast`), stylized Explosion Magic pipelines (`explosion_dome`, `explosion_dust_wave`, `explosion_vortex_ring`), hexagonal barriers, shockwaves, and unsealing rituals.
+- **28 Original GLSL 150 Core Shaders (84 files)**: Dedicated vertex/fragment pipelines including a 4-pass `GL_RGBA16F` relativistic black hole pipeline (`gargantua`, `gargantua_bloom_down`, `gargantua_bloom_up`, `gargantua_composite`), lensing previews, photonic/abyssal beams, pyroclastic impact domes (`zoltraak_blast_dome`, `zoltraak_pyroclast`), stylized Explosion Magic pipelines (`explosion_dome`, `explosion_dust_wave`, `explosion_post`, `explosion_pyroclast`, `explosion_vortex_ring`), hexagonal barriers, shockwaves, and unsealing rituals.
 - **Iris / Oculus & Sodium Compatibility**: Automatic shader-pack detection with deferred emissive passes (`ShaderCompatibility`, `ZoltraakRenderPass`) plus native Sodium Video Settings integration on NeoForge 1.21.1 (`ZoltraakSodiumConfig`).
-- **Keyframe Camera Rig & 15 Synthesized DSP Sounds**: Smooth cutscene camera control (`CinematicRigController`) and custom-synthesized `.ogg` audio effects, with full **English (`en_us`) & Thai (`th_th`)** localization (`211` keys).
+- **Keyframe Camera Rig & 15 Synthesized DSP Sounds**: Smooth cutscene camera control (`CinematicRigController`) and custom-synthesized `.ogg` audio effects, with full **English (`en_us`) & Thai (`th_th`)** localization (`247` keys).
 
 ---
 
@@ -37,23 +37,23 @@ In v2.0.0, all rendering, camera choreography, shaders, and audio run completely
 ### 1. Magic Schools & Spells (2 สายเวทเฉพาะ + สาย Fire, 8 คาถา)
 | Spell ID | Display Name | School | Highlights |
 | :--- | :--- | :--- | :--- |
-| `zoltraak` | **Zoltraak: Frieren Blast** | `ordinary_magic` | Fast piercing photonic beam with impact shockwave; crouch/sneak triggers **Great Zoltraak** (`LARGE` mode) with extended range and cutscene. |
-| `corrupted_zoltraak` | **Corrupted Zoltraak: Qual** | `ordinary_magic` | Qual's forbidden void beam with magenta flares, armor-piercing damage, and Wither effect. |
+| `zoltraak` | **Zoltraak: Frieren Blast** | `ordinary_magic` | Fast piercing photonic beam with a 12-block impact shockwave and bright glow. |
+| `corrupted_zoltraak` | **Corrupted Zoltraak: Qual** | `ordinary_magic` | Qual's forbidden void beam with magenta flares, armor-piercing damage, barrier shattering, and Wither effect. |
 | `zoltraak_barrage` | **Zoltraak: Rapid Barrage** | `ordinary_magic` | Summons a **24-circle** magic array firing continuous guided light bolts. |
 | `corrupted_barrage` | **Corrupted Zoltraak: Rapid Barrage** | `ordinary_magic` | Dark-matter **24-circle** rapid barrage designed to pressure barriers and wither targets. |
 | `defense` | **Defensive Magic (防御魔法)** | `ordinary_magic` | Deploys a hexagonal magic shield in front of the caster, or a **360° Geodesic Dome** when sneaking/double-pressing, while still allowing offensive casting. |
 | `flight` | **Flight Magic (飛行魔法)** | `ordinary_magic` | Free 3D aerial flight with dynamic mana consumption based on altitude and sprint speed, HUD readout, and camera turn-tilt. |
 | `gargantua` | **Gargantua: Event Horizon** | `black_hole` | 4.0-second incantation summoning a supermassive black hole with gravitational light bending, accretion disk, debris pull, and collapse detonation. |
-| `explosion` | **Explosion Magic** | `irons_spellbooks:fire` | 3.5-second Crimson Demon-style incantation channeling stacked sky vortex rings before unleashing a sky strike, sunburst blast dome, crater, full mana drain, and brief exhaustion. |
+| `explosion` | **Explosion Magic** | `irons_spellbooks:fire` | 5.5-second Crimson Demon-style incantation channeling stacked sky vortex rings before unleashing a sky strike, sunburst blast dome, volcanic crater, full mana drain, and brief exhaustion. |
 
 ### 2. Boss Encounter & Unsealing Ritual
-- **Qual, Elder Sage of Corruption (`qual_boss`)**: Multi-phase aerial boss (`1500` base HP + player scaling) featuring 4-tier combat AI (`QualCataclysmicGoal`, `QualAntiBarrierGoal` with anti-shield Shadow Blink, `QualCombatGoal`, `QualFollowPlayerGoal`).
+- **Qual, Elder Sage of Corruption (`qual_boss`)**: Multi-phase aerial boss (`2000` base HP + player scaling) featuring 4-tier combat AI (`QualCataclysmicGoal`, `QualAntiBarrierGoal` with anti-shield Shadow Blink, `QualCombatGoal`, `QualFollowPlayerGoal`).
 - **Qual's Sealing Stone (`qual_sealing_stone`)**: Indestructible ritual monolith block that initiates a 5-second unsealing ceremony before awakening Qual.
 
 ### 3. Items, Curios & Relics (11 ไอเทม)
 - **Staff & Spellbooks**: `Frieren's Staff` (`frieren_staff`), `Grimoire of Ordinary Magic` (`ordinary_grimoire`, 10 slots), `Grimoire of the Elder Sage` (`elder_sage_grimoire`, 12 slots)
 - **Curios Relics**: `Ring of the Mirror Lotus` (`mirror_lotus_ring`), `Mana Concealment Pendant` (`mana_concealment_pendant`), `Qual's Core of Corruption` (`corruption_core`), `Chronos Time Watch` (`chronos_dilatation_watch` — activates a Time Dilation Field)
-- **Progression & Utility**: `Saint Quartz of Corruption` (`horn_of_corruption`), `Scroll of Black Hole` (`gargantua_scroll`), `Qual's Sealing Stone` (`qual_sealing_stone`), `Qual Spawn Egg` (`qual_spawn_egg`)
+- **Progression & Utility**: `Horn of Corruption` (`horn_of_corruption`), `Scroll of Black Hole` (`gargantua_scroll`), `Qual's Sealing Stone` (`qual_sealing_stone`), `Qual Spawn Egg` (`qual_spawn_egg`)
 
 ### 4. Visual Settings Studio
 - Press `\` (**Backslash**, chosen to avoid colliding with Iris's default `K` key) or open the mod configuration menu (and Sodium Video Settings on NeoForge 1.21.1) to tune first-person barrier/circle visibility, per-spell glow brightness (`0%–200%`), Gargantua raymarch quality (`Low 32` to `Ultra 128`), screen flashes, camera shake, and mod sound / tinnitus volume in real time.
@@ -87,7 +87,7 @@ In v2.0.0, all rendering, camera choreography, shaders, and audio run completely
 ### Dependencies
 - **Required**:
   - [Iron's Spells 'n Spellbooks](https://www.curseforge.com/minecraft/mc-mods/irons-spells-n-spellbooks)
-  - [GeckoLib](https://www.curseforge.com/minecraft/mc-mods/geckolib) *(explicitly required on Forge 1.20.1; used for Qual boss geometry & animations)*
+  - [GeckoLib](https://www.curseforge.com/minecraft/mc-mods/geckolib) *(required on both NeoForge 1.21.1 and Forge 1.20.1 for Qual boss geometry & animations)*
   - [Curios API](https://www.curseforge.com/minecraft/mc-mods/curios) *(for Curio ring, necklace, charm, and spellbook slots)*
 - **Optional / Supported**:
   - **Iris** / **Oculus** Shaders

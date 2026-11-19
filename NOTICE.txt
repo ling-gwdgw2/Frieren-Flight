@@ -35,7 +35,7 @@ Zoltraak: Cinematic Edition is authored under All Rights Reserved and built
 with original clean-room implementations across all Java code, keyframe camera
 rig choreography (CinematicRigController, CameraTrack, CameraTransform,
 CameraRigFrame, CameraObstacleSolver), Blaze3D/JOML procedural geometry,
-custom Qual boss model/animations/textures, synthesized audio, and all 26
+custom Qual boss model/animations/textures, synthesized audio, and all 28
 GLSL 150 core shaders (covering all 8 registered spells):
   - Early pre-1.0.4 spell prototypes were permanently replaced in Version 1.0.4.
   - gargantua.fsh and its 3 post-processing bloom passes (gargantua_bloom_down,
@@ -44,15 +44,16 @@ GLSL 150 core shaders (covering all 8 registered spells):
     FBM accretion disk rendering, blackbody/plasma shading, Karis-weighted HDR
     downsampling, bicubic B-spline upsampling, and ACES filmic tone mapping.
   - Explosion Magic & pyroclastic impact shaders (explosion_dome,
-    explosion_dust_wave, explosion_vortex_ring, zoltraak_blast_dome,
-    zoltraak_pyroclast) are authored clean-room in GLSL 150 with multi-pass
-    additive/translucent volumetric layering.
+    explosion_dust_wave, explosion_post, explosion_pyroclast,
+    explosion_vortex_ring, zoltraak_blast_dome, zoltraak_pyroclast) are
+    authored clean-room in GLSL 150 with multi-pass additive/translucent
+    volumetric layering and screen-space HDR post-processing.
   - client/cinematic/ was rewritten from scratch around an original keyframe
     timeline and camera obstacle solver architecture.
   - qual_boss (.geo.json, .animation.json, .png, _glowmask.png) is a clean-room
     original creation with zero third-party skins or character models.
 
-Protected Code & GLSL 150 Core Shaders (26 Programs — All Rights Reserved):
+Protected Code & GLSL 150 Core Shaders (28 Programs — All Rights Reserved):
   - barrage_fx (.fsh, .vsh, .json)
   - black_magic_circle (.fsh, .vsh, .json)
   - cinematic_abyssal_beam (.fsh, .vsh, .json)
@@ -65,6 +66,8 @@ Protected Code & GLSL 150 Core Shaders (26 Programs — All Rights Reserved):
   - defense_barrier (.fsh, .vsh, .json)
   - explosion_dome (.fsh, .vsh, .json)
   - explosion_dust_wave (.fsh, .vsh, .json)
+  - explosion_post (.fsh, .vsh, .json)
+  - explosion_pyroclast (.fsh, .vsh, .json)
   - explosion_vortex_ring (.fsh, .vsh, .json)
   - gargantua (.fsh, .vsh, .json)
   - gargantua_bloom_down (.fsh, .vsh, .json)

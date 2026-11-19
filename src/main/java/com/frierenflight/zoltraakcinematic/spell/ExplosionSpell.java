@@ -6,7 +6,6 @@ import com.frierenflight.zoltraakcinematic.config.ZoltraakCinematicConfig;
 import com.frierenflight.zoltraakcinematic.entity.ExplosionMagicEntity;
 import com.frierenflight.zoltraakcinematic.entity.ZoltraakCinematicBeamEntity;
 import com.frierenflight.zoltraakcinematic.platform.Services;
-import com.frierenflight.zoltraakcinematic.registry.ModCinematicSounds;
 import io.redspace.ironsspellbooks.api.config.DefaultConfig;
 import io.redspace.ironsspellbooks.api.magic.MagicData;
 import io.redspace.ironsspellbooks.api.registry.SchoolRegistry;
@@ -24,8 +23,6 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
@@ -86,12 +83,12 @@ public class ExplosionSpell extends AbstractSpell {
 
     @Override
     public Optional<SoundEvent> getCastStartSound() {
-        return Optional.of(ModCinematicSounds.SINGULARITY_CHARGE.get());
+        return Optional.empty();
     }
 
     @Override
     public Optional<SoundEvent> getCastFinishSound() {
-        return Optional.of(ModCinematicSounds.ZOLTRAAK_GREAT_FIRE.get());
+        return Optional.empty();
     }
 
     @Override
@@ -121,35 +118,6 @@ public class ExplosionSpell extends AbstractSpell {
             if (playerMagicData.getMana() < minCreativeMana) {
                 playerMagicData.setMana(minCreativeMana);
             }
-        }
-
-        if (playerMagicData == null) return;
-        int total = playerMagicData.getCastDuration();
-        int remaining = playerMagicData.getCastDurationRemaining();
-        int elapsed = total - remaining;
-
-        int sealTick = Math.max(4, Math.round(total * 0.14f));
-        int skyTick = Math.max(sealTick + 4, Math.round(total * 0.38f));
-        int gatherTick = Math.max(skyTick + 4, Math.round(total * 0.66f));
-        int peakTick = Math.max(gatherTick + 4, Math.round(total * 0.85f));
-
-        if (elapsed == sealTick) {
-            level.playSound(null, entity.getX(), entity.getY(), entity.getZ(),
-                    SoundEvents.BEACON_ACTIVATE, SoundSource.PLAYERS, 1.25f, 0.88f);
-        } else if (elapsed == skyTick) {
-            level.playSound(null, entity.getX(), entity.getY(), entity.getZ(),
-                    SoundEvents.BEACON_ACTIVATE, SoundSource.PLAYERS, 1.45f, 1.25f);
-            Vec3 target = computeTargetPosition(level, entity, 1.0f, CAST_RANGE);
-            level.playSound(null, target.x, target.y + 18.0, target.z,
-                    SoundEvents.LIGHTNING_BOLT_THUNDER, SoundSource.PLAYERS, 0.65f, 0.82f);
-        } else if (elapsed == gatherTick) {
-            level.playSound(null, entity.getX(), entity.getY(), entity.getZ(),
-                    ModCinematicSounds.ZOLTRAAK_CHARGE.get(), SoundSource.PLAYERS, 1.55f, 1.28f);
-        } else if (elapsed == peakTick) {
-            level.playSound(null, entity.getX(), entity.getY(), entity.getZ(),
-                    ModCinematicSounds.ZOLTRAAK_CHARGE.get(), SoundSource.PLAYERS, 1.85f, 1.62f);
-            level.playSound(null, entity.getX(), entity.getY(), entity.getZ(),
-                    SoundEvents.BEACON_ACTIVATE, SoundSource.PLAYERS, 1.35f, 1.65f);
         }
     }
 

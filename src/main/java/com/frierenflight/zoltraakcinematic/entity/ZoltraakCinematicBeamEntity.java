@@ -519,11 +519,8 @@ public class ZoltraakCinematicBeamEntity extends Entity implements IZoltraakVisu
 
         int fireTick = mode().charge;
         if (level().isClientSide) {
-            if (tickCount == 1 && mode() == ZoltraakMode.LARGE) {
-                net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
-                if (mc.player != null && (owner == mc.player || (owner == null && entityData.get(DATA_OWNER_ID) == mc.player.getId()))) {
-                    com.frierenflight.zoltraakcinematic.client.cinematic.ZoltraakCutscenes.playGreatZoltraak(mc.player, this);
-                }
+            if (tickCount == 1 && mode() == ZoltraakMode.LARGE && com.frierenflight.zoltraakcinematic.platform.Services.PLATFORM.isClient()) {
+                ClientHandler.triggerGreatCutscene(this);
             }
 
             if (tickCount >= fireTick && tickCount <= fireTick + mode().pulse) {
@@ -614,6 +611,9 @@ public class ZoltraakCinematicBeamEntity extends Entity implements IZoltraakVisu
                 }
 
                 if (level() instanceof ServerLevel serverLevel) {
+                    // Run direct piercing core beam damage FIRST so entities directly in the beam path
+                    // receive 100% core beam damage rather than reduced radial splash falloff.
+                    applyPiercingBeamDamage(serverLevel, start, look);
 
                     if (didImpact) {
                         double blastRadius = mode() == ZoltraakMode.LARGE ? 21.0 : 12.0;
@@ -652,14 +652,14 @@ public class ZoltraakCinematicBeamEntity extends Entity implements IZoltraakVisu
                                 float minFloor = (barrierAbsorbedAmount > 0.0f) ? 0.0f : 12.0f * factor;
                                 float blastDmg = Math.max(minFloor, effectiveBaseDamage * factor);
 
-                                applyBeamDamage(target, blastDmg, spellSource);
-
-                                Vec3 knockVec = target.position().subtract(impactPos);
-                                if (knockVec.lengthSqr() > 0.001) {
-                                    double knockFactor = com.frierenflight.zoltraakcinematic.config.ZoltraakCinematicConfig.getBeamKnockback();
-                                    knockVec = knockVec.normalize().scale(Math.max(0.4, factor * knockFactor));
-                                    target.push(knockVec.x, factor * 0.45, knockVec.z);
-                                    target.hurtMarked = true;
+                                if (applyBeamDamage(target, blastDmg, spellSource)) {
+                                    Vec3 knockVec = target.position().subtract(impactPos);
+                                    if (knockVec.lengthSqr() > 0.001) {
+                                        double knockFactor = com.frierenflight.zoltraakcinematic.config.ZoltraakCinematicConfig.getBeamKnockback();
+                                        knockVec = knockVec.normalize().scale(Math.max(0.4, factor * knockFactor));
+                                        target.push(knockVec.x, factor * 0.45, knockVec.z);
+                                        target.hurtMarked = true;
+                                    }
                                 }
                             }
                         }
@@ -726,39 +726,41 @@ public class ZoltraakCinematicBeamEntity extends Entity implements IZoltraakVisu
                         }
                     }
                 }
+            } else if (level() instanceof ServerLevel serverLevel) {
+                // Piercing beam active raycast damage on subsequent pulse ticks (Full Base Power dealt once per pierced entity)
+                applyPiercingBeamDamage(serverLevel, start, look);
+            }
+        }
+    }
+
+    private void applyPiercingBeamDamage(ServerLevel serverLevel, Vec3 start, Vec3 look) {
+        float beamDamage = Math.max(0.0f, effectiveBeamDamage() - barrierAbsorbedAmount);
+        if (beamDamage <= 0.001f) {
+            return;
+        }
+        Vec3 pEnd = start.add(look.scale(getBeamLength()));
+        AABB beamBox = new AABB(start, pEnd).inflate(mode() == ZoltraakMode.LARGE ? 5.25 : 2.25);
+        List<Entity> rawBeamEntities = serverLevel.getEntities(this, beamBox, Entity::isAlive);
+
+        net.minecraft.world.damagesource.DamageSource spellSource = getSpellDamageSource();
+
+        for (Entity rawEntity : rawBeamEntities) {
+            LivingEntity target = ZoltraakDamage.resolveLivingTarget(rawEntity);
+            if (!isValidTarget(target) || hitEntityIds.contains(target.getId())) {
+                continue;
             }
 
-            // Piercing beam active raycast damage (Full Base Power dealt once per pierced entity)
-            if (level() instanceof ServerLevel serverLevel) {
-                float beamDamage = Math.max(0.0f, effectiveBeamDamage() - barrierAbsorbedAmount);
-                if (beamDamage > 0.001f) {
-                    Vec3 pStart = start;
-                    Vec3 pEnd = start.add(look.scale(getBeamLength()));
-                    AABB beamBox = new AABB(pStart, pEnd).inflate(mode() == ZoltraakMode.LARGE ? 5.25 : 2.25);
-                    List<Entity> rawBeamEntities = serverLevel.getEntities(this, beamBox, Entity::isAlive);
+            Vec3 toTarget = rawEntity.getBoundingBox().getCenter().subtract(start);
+            double proj = toTarget.dot(look);
+            if (proj >= 0 && proj <= getBeamLength()) {
+                Vec3 closest = start.add(look.scale(proj));
+                if (rawEntity.getBoundingBox().distanceToSqr(closest) <= (mode() == ZoltraakMode.LARGE ? 20.25 : 4.05)) {
+                    hitEntityIds.add(target.getId());
 
-                    net.minecraft.world.damagesource.DamageSource spellSource = getSpellDamageSource();
-
-                    for (Entity rawEntity : rawBeamEntities) {
-                        LivingEntity target = ZoltraakDamage.resolveLivingTarget(rawEntity);
-                        if (!isValidTarget(target) || hitEntityIds.contains(target.getId())) {
-                            continue;
-                        }
-
-                        Vec3 toTarget = rawEntity.getBoundingBox().getCenter().subtract(pStart);
-                        double proj = toTarget.dot(look);
-                        if (proj >= 0 && proj <= getBeamLength()) {
-                            Vec3 closest = pStart.add(look.scale(proj));
-                            if (rawEntity.getBoundingBox().distanceToSqr(closest) <= (mode() == ZoltraakMode.LARGE ? 20.25 : 4.05)) {
-                                hitEntityIds.add(target.getId());
-
-                                applyBeamDamage(target, beamDamage, spellSource);
-
-                                Vec3 pushVec = look.normalize().scale(mode() == ZoltraakMode.LARGE ? 1.5 : 0.8);
-                                target.push(pushVec.x, 0.25, pushVec.z);
-                                target.hurtMarked = true;
-                            }
-                        }
+                    if (applyBeamDamage(target, beamDamage, spellSource)) {
+                        Vec3 pushVec = look.normalize().scale(mode() == ZoltraakMode.LARGE ? 1.5 : 0.8);
+                        target.push(pushVec.x, 0.25, pushVec.z);
+                        target.hurtMarked = true;
                     }
                 }
             }
@@ -779,12 +781,18 @@ public class ZoltraakCinematicBeamEntity extends Entity implements IZoltraakVisu
         if (target instanceof net.minecraft.world.entity.decoration.ArmorStand) {
             return false;
         }
+        if (target instanceof Player p && (p.isCreative() || (owner instanceof Player op && !op.canHarmPlayer(p)))) {
+            return false;
+        }
         boolean respectFF = com.frierenflight.zoltraakcinematic.config.ZoltraakCinematicConfig.isProtectAllies();
         return owner == null || !respectFF || !DamageSources.isFriendlyFireBetween(owner, target);
     }
 
-    private void applyBeamDamage(LivingEntity target, float amount, net.minecraft.world.damagesource.DamageSource spellSource) {
-        ZoltraakDamage.apply(target, amount, spellSource, ModCinematicSchools.ORDINARY_MAGIC.get(), true);
+    private boolean applyBeamDamage(LivingEntity target, float amount, net.minecraft.world.damagesource.DamageSource spellSource) {
+        boolean damaged = ZoltraakDamage.apply(target, amount, spellSource, ModCinematicSchools.ORDINARY_MAGIC.get(), true);
+        if (!damaged) {
+            return false;
+        }
         if (black()) {
             int witherTicks = com.frierenflight.zoltraakcinematic.config.ZoltraakCinematicConfig.getBlackWitherTicks();
             target.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.WITHER, witherTicks, 1));
@@ -793,6 +801,7 @@ public class ZoltraakCinematicBeamEntity extends Entity implements IZoltraakVisu
         if (com.frierenflight.zoltraakcinematic.config.ZoltraakCinematicConfig.isBreakShieldOnHit() && target.isBlocking() && target instanceof Player p) {
             p.disableShield();
         }
+        return true;
     }
 
     private static boolean isBeamUnbreakable(Level level, BlockPos pos, BlockState state) {
@@ -960,5 +969,14 @@ public class ZoltraakCinematicBeamEntity extends Entity implements IZoltraakVisu
         compound.putFloat("MaxRange", this.maxRange);
         compound.putInt("ColorTheme", getColorTheme());
         compound.putInt("Mode", mode().ordinal());
+    }
+
+    private static final class ClientHandler {
+        private static void triggerGreatCutscene(ZoltraakCinematicBeamEntity beam) {
+            net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
+            if (mc.player != null && (beam.owner == mc.player || (beam.owner == null && beam.entityData.get(DATA_OWNER_ID) == mc.player.getId()))) {
+                com.frierenflight.zoltraakcinematic.client.cinematic.ZoltraakCutscenes.playGreatZoltraak(mc.player, beam);
+            }
+        }
     }
 }

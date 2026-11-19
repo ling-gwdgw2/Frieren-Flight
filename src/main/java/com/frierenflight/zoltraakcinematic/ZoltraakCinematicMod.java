@@ -27,8 +27,7 @@ public class ZoltraakCinematicMod {
         container.registerConfig(ModConfig.Type.COMMON, ZoltraakCinematicConfig.SPEC, "zoltraak_cinematic-common.toml");
         if (FMLEnvironment.dist == Dist.CLIENT) {
             container.registerConfig(ModConfig.Type.CLIENT, com.frierenflight.zoltraakcinematic.config.ZoltraakCinematicClientConfig.SPEC, "zoltraak_cinematic-client.toml");
-            container.registerExtensionPoint(net.neoforged.neoforge.client.gui.IConfigScreenFactory.class,
-                    (modContainer, parentScreen) -> new com.frierenflight.zoltraakcinematic.client.gui.ZoltraakConfigScreen(parentScreen));
+            ClientSetup.registerConfigScreen(container);
         }
 
         com.frierenflight.zoltraakcinematic.registry.ModCinematicAttributes.register(modEventBus);
@@ -64,6 +63,13 @@ public class ZoltraakCinematicMod {
             event.accept(ModCinematicItems.GARGANTUA_SCROLL.get().getDefaultInstance());
             event.accept(ModCinematicItems.QUAL_SEALING_STONE.get());
             event.accept(ModCinematicItems.QUAL_SPAWN_EGG.get());
+        }
+    }
+
+    private static final class ClientSetup {
+        private static void registerConfigScreen(ModContainer container) {
+            container.registerExtensionPoint(net.neoforged.neoforge.client.gui.IConfigScreenFactory.class,
+                    (modContainer, parentScreen) -> new com.frierenflight.zoltraakcinematic.client.gui.ZoltraakConfigScreen(parentScreen));
         }
     }
 }

@@ -1,11 +1,13 @@
 modLoader="javafml"
 loaderVersion="[4,)"
 license="All Rights Reserved"
+issueTrackerURL="https://github.com/ling-gwdgw2/Frieren-Flight/issues"
 
 [[mods]]
 modId="zoltraak_cinematic"
 version="2.0.0"
 displayName="Zoltraak: Cinematic Edition"
+displayURL="https://github.com/ling-gwdgw2/Frieren-Flight"
 logoFile="logo.png"
 authors="Aling7788565"
 credits="Inspired by Sousou no Frieren. Powered by Iron's Spells 'n Spellbooks."
@@ -29,6 +31,20 @@ side="BOTH"
 modId="irons_spellbooks"
 type="required"
 versionRange="[1.21.1,)"
+ordering="AFTER"
+side="BOTH"
+
+[[dependencies.zoltraak_cinematic]]
+modId="geckolib"
+type="required"
+versionRange="[4.0.0,)"
+ordering="AFTER"
+side="BOTH"
+
+[[dependencies.zoltraak_cinematic]]
+modId="curios"
+type="required"
+versionRange="[9.0.0,)"
 ordering="AFTER"
 side="BOTH"
 

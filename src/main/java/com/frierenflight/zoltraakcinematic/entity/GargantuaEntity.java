@@ -218,8 +218,9 @@ public class GargantuaEntity extends Entity implements TraceableEntity, OwnableE
     }
 
     public static boolean isEntityImmuneToVortex(Entity entity, LivingEntity caster) {
-        if (entity == null) return true;
-        if (entity == caster) return true;
+        if (entity == null || entity == caster) return true;
+        if (entity instanceof net.minecraft.world.entity.decoration.ArmorStand) return true;
+        if (entity instanceof Player p && (p.isCreative() || p.isSpectator())) return true;
         if (caster instanceof com.frierenflight.zoltraakcinematic.entity.boss.QualBossEntity &&
             entity instanceof com.frierenflight.zoltraakcinematic.entity.boss.QualBossEntity) {
             return true;
@@ -750,8 +751,9 @@ public class GargantuaEntity extends Entity implements TraceableEntity, OwnableE
                     }
                     dmg = Math.min(maxTidalCap, dmg);
 
-                    ZoltraakDamage.apply(targetLiving, dmg, damageSource, ModCinematicSchools.BLACK_HOLE.get(), true);
-                    noteSwallowed();
+                    if (ZoltraakDamage.apply(targetLiving, dmg, damageSource, ModCinematicSchools.BLACK_HOLE.get(), true)) {
+                        noteSwallowed();
+                    }
                 }
             }
 
@@ -881,11 +883,11 @@ public class GargantuaEntity extends Entity implements TraceableEntity, OwnableE
             double dist = Math.sqrt(target.getBoundingBox().distanceToSqr(center));
             float falloff = (float) Math.max(0.25, 1.0 - dist / blastRadius);
             float finalDamage = baseDamage * falloff;
-            ZoltraakDamage.apply(target, finalDamage, damageSource, ModCinematicSchools.BLACK_HOLE.get(), false);
-
-            Vec3 push = target.position().subtract(center).normalize().scale(3.2 * falloff);
-            target.setDeltaMovement(target.getDeltaMovement().add(push));
-            target.hurtMarked = true;
+            if (ZoltraakDamage.apply(target, finalDamage, damageSource, ModCinematicSchools.BLACK_HOLE.get(), false)) {
+                Vec3 push = target.position().subtract(center).normalize().scale(3.2 * falloff);
+                target.setDeltaMovement(target.getDeltaMovement().add(push));
+                target.hurtMarked = true;
+            }
         }
     }
 

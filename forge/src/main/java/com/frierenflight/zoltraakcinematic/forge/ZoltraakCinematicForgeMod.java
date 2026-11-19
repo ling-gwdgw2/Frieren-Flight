@@ -30,12 +30,7 @@ public class ZoltraakCinematicForgeMod {
         context.registerConfig(ModConfig.Type.COMMON, ZoltraakCinematicConfig.SPEC, "zoltraak_cinematic-common.toml");
         if (FMLEnvironment.dist == Dist.CLIENT) {
             context.registerConfig(ModConfig.Type.CLIENT, ZoltraakCinematicClientConfig.SPEC, "zoltraak_cinematic-client.toml");
-            ModLoadingContext.get().registerExtensionPoint(
-                    net.minecraftforge.client.ConfigScreenHandler.ConfigScreenFactory.class,
-                    () -> new net.minecraftforge.client.ConfigScreenHandler.ConfigScreenFactory(
-                            (minecraft, screen) -> new com.frierenflight.zoltraakcinematic.client.gui.ZoltraakConfigScreen(screen)
-                    )
-            );
+            ClientSetup.registerConfigScreen(context);
         }
 
         // Register Deferred Registers to Forge Mod Event Bus
@@ -80,6 +75,17 @@ public class ZoltraakCinematicForgeMod {
             if (ModCinematicItems.GARGANTUA_SCROLL != null) event.accept(ModCinematicItems.GARGANTUA_SCROLL.get().getDefaultInstance());
             if (ModCinematicItems.QUAL_SEALING_STONE != null) event.accept(ModCinematicItems.QUAL_SEALING_STONE.get());
             if (ModCinematicItems.QUAL_SPAWN_EGG != null) event.accept(ModCinematicItems.QUAL_SPAWN_EGG.get());
+        }
+    }
+
+    private static final class ClientSetup {
+        private static void registerConfigScreen(ModLoadingContext context) {
+            context.registerExtensionPoint(
+                    net.minecraftforge.client.ConfigScreenHandler.ConfigScreenFactory.class,
+                    () -> new net.minecraftforge.client.ConfigScreenHandler.ConfigScreenFactory(
+                            (minecraft, screen) -> new com.frierenflight.zoltraakcinematic.client.gui.ZoltraakConfigScreen(screen)
+                    )
+            );
         }
     }
 }
