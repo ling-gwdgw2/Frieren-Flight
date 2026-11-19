@@ -18,6 +18,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
@@ -244,7 +245,8 @@ public class ExplosionMagicEntity extends Entity implements TraceableEntity, Own
         );
         float baseDamage = ExplosionSpell.computeBlastDamage(getPower());
         var school = ModCinematicSpells.EXPLOSION.get().getSchoolType();
-        var dmgSource = ExplosionDamage.source(level, this, owner);
+        DamageSource mobDmgSource = ExplosionDamage.source(level, this, this);
+        DamageSource playerDmgSource = owner != null ? ExplosionDamage.source(level, this, owner) : mobDmgSource;
         boolean respectFF = ZoltraakCinematicConfig.isProtectAllies();
 
         List<Entity> candidates = level.getEntities(this, bounds, Entity::isAlive);
@@ -259,6 +261,13 @@ public class ExplosionMagicEntity extends Entity implements TraceableEntity, Own
 
             double dist = Math.sqrt(e.getBoundingBox().distanceToSqr(center));
             if (dist > reach || !hitTargets.add(target.getUUID())) continue;
+
+            // Use blast entity as causingEntity for mobs/bosses so range-capped bosses (e.g. L_Ender's Cataclysm)
+            // measure distance from the detonation epicenter rather than the distant caster, while preserving kill credit.
+            DamageSource dmgSource = (target instanceof Player && owner != null) ? playerDmgSource : mobDmgSource;
+            if (owner instanceof Player player) {
+                target.setLastHurtByPlayer(player);
+            }
 
             double norm = Mth.clamp(dist / reach, 0.0, 1.0);
             float dmg = (float) (baseDamage * (1.0 - 0.68 * Math.pow(norm, 1.3)));
