@@ -266,7 +266,7 @@ def adapt_common_source_for_forge(filename, code):
 
     # 6. Matrix & RenderPass
     code = code.replace('import com.mojang.blaze3d.vertex.ByteBufferBuilder;\n', '')
-    code = code.replace('new ByteBufferBuilder(262144)', 'new com.mojang.blaze3d.vertex.BufferBuilder(256)')
+    code = code.replace('new ByteBufferBuilder(262144)', 'new com.mojang.blaze3d.vertex.BufferBuilder(262144)')
     code = code.replace('org.joml.Matrix4fStack', 'com.mojang.blaze3d.vertex.PoseStack')
     code = code.replace('Matrix4fStack', 'PoseStack')
     code = code.replace('modelViewStack.set(draw.modelView);', 'modelViewStack.last().pose().set(draw.modelView);')
@@ -352,13 +352,30 @@ def adapt_common_source_for_forge(filename, code):
         code = code.replace('if (!(source.getLevel() instanceof ServerLevel serverLevel)) return 0;', 'ServerLevel serverLevel = source.getLevel();')
         code = code.replace('schoolHolder.isBound()', 'schoolHolder.isPresent()')
 
-    # 19. GargantuaPostProcessor adaptations
+    # 19. Post-processor & camera matrix adaptations for MC 1.20.1:
+    # In MC 1.20.1, Camera.rotation() faces +Z (180 deg Y-flipped vs 1.21.1's -Z forward) and omits roll,
+    # whereas RenderSystem.getInverseViewRotationMatrix() holds the exact inverse view rotation (V_rot^T)
+    # computed by GameRenderer.renderLevel including roll/shake.
+    if 'GargantuaPostProcessor.java' in filename or 'ExplosionPostProcessor.java' in filename:
+        code = re.sub(
+            r'new\s+Matrix4f\(\)\.rotation\(\s*new\s+(?:org\.joml\.)?Quaternionf\(\s*camera\.rotation\(\)\s*\)\.conjugate\(\)\s*\)',
+            'new Matrix4f(new org.joml.Matrix3f(RenderSystem.getInverseViewRotationMatrix()).transpose())',
+            code,
+        )
     if 'GargantuaPostProcessor.java' in filename:
         code = code.replace(
             'BufferBuilder builder = tesselator.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);',
             'BufferBuilder builder = tesselator.getBuilder();\n        builder.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);',
         )
         code = code.replace('builder.buildOrThrow()', 'builder.end()')
+
+    # 19b. MC 1.20.1 cameraOrientation()/camera.rotation() maps (+1, 0, 0) to camera-left (-camRight);
+    # negate X so billboard right vectors match MC 1.21.1 chirality & UV orientation.
+    code = re.sub(
+        r'new\s+Vector3f\(\s*1\.0[fF]\s*,\s*0\.0[fF]\s*,\s*0\.0[fF]\s*\)\.rotate\((mc\.getEntityRenderDispatcher\(\)\.cameraOrientation\(\)|this\.entityRenderDispatcher\.cameraOrientation\(\)|camera\.rotation\(\)|camRot)\)',
+        r'new Vector3f(-1.0F, 0.0F, 0.0F).rotate(\1)',
+        code,
+    )
 
     # 20. ZoltraakConfigScreen 1.20.1 Screen.renderBackground adaptation
     if 'ZoltraakConfigScreen.java' in filename:
@@ -372,6 +389,56 @@ def adapt_common_source_for_forge(filename, code):
         )
 
     return code
+
+
+FORGE_IVIEWROT_PYROCLAST_SHADERS = ('explosion_pyroclast', 'zoltraak_pyroclast')
+FORGE_IVIEWROT_DOME_SHADERS = ('explosion_dome', 'zoltraak_blast_dome')
+FORGE_IVIEWROT_SHADERS = FORGE_IVIEWROT_PYROCLAST_SHADERS + FORGE_IVIEWROT_DOME_SHADERS
+
+
+def adapt_core_shader_for_forge(fname, raw_bytes):
+    """Adapt MC 1.21.1 core shaders that assume ModelViewMat holds camera rotation to MC 1.20.1 IViewRotMat.
+
+    In MC 1.20.1, LevelRenderer bakes camera view rotation into PoseStack (Position is already in eye space)
+    while ModelViewMat is Identity and built-in uniform IViewRotMat stores V_rot^-1 (V_rot^T).
+    """
+    stem, ext = os.path.splitext(fname)
+    if stem not in FORGE_IVIEWROT_SHADERS:
+        return raw_bytes
+
+    text = raw_bytes.decode('utf-8')
+    if ext == '.json':
+        data = json.loads(text)
+        uniforms = data.setdefault('uniforms', [])
+        if not any(u.get('name') == 'IViewRotMat' for u in uniforms):
+            uniforms.append({
+                'name': 'IViewRotMat',
+                'type': 'matrix3x3',
+                'count': 9,
+                'values': [1, 0, 0, 0, 1, 0, 0, 0, 1],
+            })
+        return (json.dumps(data, indent=2) + '\n').encode('utf-8')
+
+    if ext == '.vsh':
+        if 'uniform mat3 IViewRotMat;' not in text:
+            text = text.replace(
+                'uniform mat4 ModelViewMat;',
+                'uniform mat4 ModelViewMat;\nuniform mat3 IViewRotMat;',
+                1,
+            )
+        if stem in FORGE_IVIEWROT_PYROCLAST_SHADERS:
+            text = text.replace(
+                'vCamToFragWorld = eyePos.xyz * mat3(ModelViewMat);',
+                'vCamToFragWorld = IViewRotMat * eyePos.xyz;',
+            )
+        elif stem in FORGE_IVIEWROT_DOME_SHADERS:
+            text = text.replace(
+                'vEyeNormal = (ModelViewMat * vec4(Normal, 0.0)).xyz;',
+                'vEyeNormal = (ModelViewMat * vec4(transpose(IViewRotMat) * Normal, 0.0)).xyz;',
+            )
+        return text.encode('utf-8')
+
+    return raw_bytes
 
 
 def adapt_recipe_for_forge(raw_bytes):
@@ -413,6 +480,11 @@ def copy_forge_resources(bin_dir):
                 if rel_posix == f'data/{MOD_ID}/recipe' and fname.endswith('.json'):
                     with open(src, 'rb') as rf:
                         adapted = adapt_recipe_for_forge(rf.read())
+                    with open(dst, 'wb') as wf:
+                        wf.write(adapted)
+                elif rel_posix == f'assets/{MOD_ID}/shaders/core' and fname.endswith(('.json', '.vsh')):
+                    with open(src, 'rb') as rf:
+                        adapted = adapt_core_shader_for_forge(fname, rf.read())
                     with open(dst, 'wb') as wf:
                         wf.write(adapted)
                 else:
@@ -643,6 +715,7 @@ def build_forge(deploy=False, deploy_dirs=None):
     merged_mc = os.path.join(BASE_DIR, 'libs_forge', 'forge-1.20.1-minecraft-merged.jar')
     irons_cp = os.path.join(BASE_DIR, 'libs_forge', 'irons_spellbooks-1.20.1-3.16.2.jar')
     geckolib_cp = os.path.join(BASE_DIR, 'libs_forge', 'geckolib-forge-1.20.1-4.8.4.jar')
+    embeddium_cp = os.path.join(BASE_DIR, 'libs_forge', 'embeddium-0.3.31+mc1.20.1.jar')
 
     if os.path.exists(out_jar):
         try:
@@ -657,6 +730,8 @@ def build_forge(deploy=False, deploy_dirs=None):
         mappings_file, 'named', 'srg',
         merged_mc, irons_cp, geckolib_cp,
     ]
+    if os.path.exists(embeddium_cp):
+        cmd_remap.append(embeddium_cp)
     res_remap = subprocess.run(cmd_remap, capture_output=True, text=True)
     if res_remap.returncode != 0:
         print("[Forge ERROR] Remapping to SRG failed!")
@@ -984,6 +1059,54 @@ def _verify_loader_specifics(rep, z, names, target_key, spec):
             not excluded_present and not leaks,
             "Forge bytecode isolation: Zero NeoForge-only classes or unadapted API markers found",
             f"Forge isolation failure: excluded_present={excluded_present}, leaks={leaks[:5]}",
+        )
+
+        # Verify MC 1.20.1 post-processor camera view matrix uses RenderSystem.getInverseViewRotationMatrix()
+        # (unobfuscated Blaze3D method) rather than 180-deg-flipped Camera.rotation() (m_90567_).
+        bad_post_cam = []
+        for cls_name in (
+            'com/frierenflight/zoltraakcinematic/client/renderer/GargantuaPostProcessor.class',
+            'com/frierenflight/zoltraakcinematic/client/renderer/ExplosionPostProcessor.class',
+        ):
+            if cls_name not in names:
+                bad_post_cam.append(f"{cls_name}:missing")
+                continue
+            raw = z.read(cls_name)
+            if b'getInverseViewRotationMatrix' not in raw or b'm_90567_' in raw:
+                bad_post_cam.append(os.path.basename(cls_name))
+        rep.check(
+            not bad_post_cam,
+            "Forge 1.20.1 camera view matrix: GargantuaPostProcessor & ExplosionPostProcessor use RenderSystem.getInverseViewRotationMatrix()",
+            f"Forge 1.20.1 post-processor camera view matrix not adapted: {bad_post_cam}",
+        )
+
+        # Verify MC 1.20.1 IViewRotMat shader adaptations for volumetric pyroclasts and blast domes
+        bad_iview_shaders = []
+        for sname in FORGE_IVIEWROT_SHADERS:
+            jp = f'assets/{MOD_ID}/shaders/core/{sname}.json'
+            vp = f'assets/{MOD_ID}/shaders/core/{sname}.vsh'
+            jtxt = z.read(jp).decode('utf-8') if jp in names else ''
+            vtxt = z.read(vp).decode('utf-8') if vp in names else ''
+            if '"IViewRotMat"' not in jtxt or 'uniform mat3 IViewRotMat;' not in vtxt:
+                bad_iview_shaders.append(sname)
+            elif sname in FORGE_IVIEWROT_PYROCLAST_SHADERS and 'IViewRotMat * eyePos.xyz' not in vtxt:
+                bad_iview_shaders.append(f"{sname}:vsh")
+            elif sname in FORGE_IVIEWROT_DOME_SHADERS and 'transpose(IViewRotMat) * Normal' not in vtxt:
+                bad_iview_shaders.append(f"{sname}:vsh")
+        rep.check(
+            not bad_iview_shaders,
+            f"Forge 1.20.1 core shader view-space adaptation: All {len(FORGE_IVIEWROT_SHADERS)} shaders use IViewRotMat",
+            f"Forge 1.20.1 IViewRotMat shader adaptation failed: {bad_iview_shaders}",
+        )
+
+        # Verify Embeddium 0.3.x Video Options GUI integration is bundled and SRG-remapped
+        emb_cls = 'com/frierenflight/zoltraakcinematic/forge/compat/ZoltraakEmbeddiumConfig.class'
+        emb_raw = z.read(emb_cls) if emb_cls in names else b''
+        emb_ok = bool(emb_raw) and b'OptionGUIConstructionEvent' in emb_raw and b'm_237115_' in emb_raw
+        rep.check(
+            emb_ok,
+            "Embeddium Config API: ZoltraakEmbeddiumConfig verified (OptionGUIConstructionEvent + SRG Component.translatable)",
+            f"Embeddium Config API check failed (present={bool(emb_raw)})!",
         )
     else:
         manifest_file = spec['manifest_file']

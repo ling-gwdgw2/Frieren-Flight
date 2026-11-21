@@ -16,22 +16,22 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(value = Camera.class)
 public abstract class CameraMixin {
 
-    @Shadow
+    @Shadow(aliases = "f_90560_")
     private boolean detached;
 
-    @Shadow
+    @Shadow(aliases = "f_90552_")
     private Vec3 position;
 
-    @Shadow
+    @Shadow(aliases = "f_90557_")
     private float xRot;
 
-    @Shadow
+    @Shadow(aliases = "f_90558_")
     private float yRot;
 
-    @Shadow
+    @Shadow(aliases = "m_90581_")
     protected abstract void setPosition(Vec3 pos);
 
-    @Shadow
+    @Shadow(aliases = "m_90572_")
     protected abstract void setRotation(float yRot, float xRot);
 
     @Inject(method = "setup", at = @At("TAIL"))

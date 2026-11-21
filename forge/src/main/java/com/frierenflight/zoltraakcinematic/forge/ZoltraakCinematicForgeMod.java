@@ -31,6 +31,7 @@ public class ZoltraakCinematicForgeMod {
         if (FMLEnvironment.dist == Dist.CLIENT) {
             context.registerConfig(ModConfig.Type.CLIENT, ZoltraakCinematicClientConfig.SPEC, "zoltraak_cinematic-client.toml");
             ClientSetup.registerConfigScreen(context);
+            ClientSetup.registerOptionalCompat();
         }
 
         // Register Deferred Registers to Forge Mod Event Bus
@@ -86,6 +87,12 @@ public class ZoltraakCinematicForgeMod {
                             (minecraft, screen) -> new com.frierenflight.zoltraakcinematic.client.gui.ZoltraakConfigScreen(screen)
                     )
             );
+        }
+
+        private static void registerOptionalCompat() {
+            if (net.minecraftforge.fml.ModList.get().isLoaded("embeddium")) {
+                com.frierenflight.zoltraakcinematic.forge.compat.ZoltraakEmbeddiumConfig.register();
+            }
         }
     }
 }
