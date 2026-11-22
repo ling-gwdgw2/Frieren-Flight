@@ -13,10 +13,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(value = PlayerModel.class)
 public abstract class PlayerModelPoseMixin {
 
-    @Inject(method = "setupAnim(Lnet/minecraft/world/entity/LivingEntity;FFFFF)V", at = @At("TAIL"))
+    @Inject(method = "setupAnim(Lnet/minecraft/world/entity/LivingEntity;FFFFF)V", at = @At("TAIL"), require = 0)
     private void zoltraak$gargantuaPose(LivingEntity entity, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch, CallbackInfo ci) {
         HumanoidModel<?> model = (HumanoidModel<?>) (Object) this;
         GargantuaCasterPose.apply(entity, model.rightArm, model.leftArm, headPitch, netHeadYaw);
     }
 }
-

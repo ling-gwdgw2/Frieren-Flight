@@ -59,7 +59,8 @@ vec3 computeExplosionTerrainGlow(
     vec3 totalGlow = vec3(0.0);
 
     // 1. Sky Vortex Ring / Pillar Down-Light (fades out together with the 8 sky rings & vertical pillar at t = 26..50)
-    float skyActivity = max(chargeInt * 0.65, (normT >= 0.0 && normT < 50.0) ? (1.0 - smoothstep(26.0, 50.0, normT)) * 0.92 : 0.0);
+    float skyPillarFade = (normT >= 0.0 && normT < 50.0) ? (1.0 - smoothstep(26.0, 50.0, normT)) * 0.92 : 0.0;
+    float skyActivity = max(chargeInt * 0.65, skyPillarFade);
     if (skyActivity > 0.01) {
         vec3 skyLightPos = mix(blastCenter, skyApex, 0.58);
         vec3 toSky = skyLightPos - pos;
@@ -76,7 +77,8 @@ vec3 computeExplosionTerrainGlow(
 
     // 2. Pre-Detonation Pillar Impact & Full Detonation Fireball + Sweeping Shockwave Light Ring
     if (normT >= 17.5 && blastProg < 0.96) {
-        vec3 fireLightPos = blastCenter + upAxis * (visualR * (blastProg >= 0.0 ? (0.36 + 0.28 * blastProg) : 0.14));
+        float fireLiftFrac = blastProg >= 0.0 ? (0.36 + 0.28 * blastProg) : 0.14;
+        vec3 fireLightPos = blastCenter + upAxis * (visualR * fireLiftFrac);
         vec3 toFire = fireLightPos - pos;
         float distFire = length(toFire);
         float maxRange = max(96.0, visualR * 5.2);

@@ -6,7 +6,7 @@
 
 <p align="center">
   <strong>Cinematic Zoltraak (一般攻撃魔法 - ゾルトラーク), Defensive Magic, Flight, Explosion Magic &amp; Relativistic Black Hole Spells for Iron's Spells 'n Spellbooks</strong><br>
-  <em>เวอร์ชัน 2.0.0 — รองรับทั้ง Minecraft NeoForge 1.21.1 และ Forge 1.20.1 พร้อมเอนจินเรนเดอร์และ GLSL 150 Shaders ในตัว 100%</em>
+  <em>เวอร์ชัน 2.0.1 — รองรับทั้ง Minecraft NeoForge 1.21.1 และ Forge 1.20.1 พร้อมเอนจินเรนเดอร์และ GLSL 150 Shaders ในตัว 100%</em>
 </p>
 
 <p align="center">
@@ -27,7 +27,7 @@
 In v2.0.0, all rendering, camera choreography, shaders, and audio run completely standalone without external particle-engine dependencies:
 - **Procedural Vector Geometry (Blaze3D & JOML)**: Real-time dynamic ribbons, tapered cylinders, 24-circle barrage arrays, layered blast debris/embers, and Class-I Frequency-7 geodesic shields (`492` cells / `1,470` edges).
 - **28 Original GLSL 150 Core Shaders (84 files)**: Dedicated vertex/fragment pipelines including a 4-pass `GL_RGBA16F` relativistic black hole pipeline (`gargantua`, `gargantua_bloom_down`, `gargantua_bloom_up`, `gargantua_composite`), lensing previews, photonic/abyssal beams, pyroclastic impact domes (`zoltraak_blast_dome`, `zoltraak_pyroclast`), stylized Explosion Magic pipelines (`explosion_dome`, `explosion_dust_wave`, `explosion_post`, `explosion_pyroclast`, `explosion_vortex_ring`), hexagonal barriers, shockwaves, and unsealing rituals.
-- **Iris / Oculus & Sodium Compatibility**: Automatic shader-pack detection with deferred emissive passes (`ShaderCompatibility`, `ZoltraakRenderPass`) plus native Sodium Video Settings integration on NeoForge 1.21.1 (`ZoltraakSodiumConfig`).
+- **Iris / Oculus & Sodium / Embeddium Compatibility**: Automatic shader-pack detection with deferred emissive passes (`ShaderCompatibility`, `ZoltraakRenderPass`) plus native Video Settings integration for **Sodium** (NeoForge 1.21.1) and **Embeddium** (Forge 1.20.1).
 - **Keyframe Camera Rig & 15 Synthesized DSP Sounds**: Smooth cutscene camera control (`CinematicRigController`) and custom-synthesized `.ogg` audio effects, with full **English (`en_us`) & Thai (`th_th`)** localization (`247` keys).
 
 ---
@@ -56,7 +56,28 @@ In v2.0.0, all rendering, camera choreography, shaders, and audio run completely
 - **Progression & Utility**: `Horn of Corruption` (`horn_of_corruption`), `Scroll of Black Hole` (`gargantua_scroll`), `Qual's Sealing Stone` (`qual_sealing_stone`), `Qual Spawn Egg` (`qual_spawn_egg`)
 
 ### 4. Visual Settings Studio
-- Press `\` (**Backslash**, chosen to avoid colliding with Iris's default `K` key) or open the mod configuration menu (and Sodium Video Settings on NeoForge 1.21.1) to tune first-person barrier/circle visibility, per-spell glow brightness (`0%–200%`), Gargantua raymarch quality (`Low 32` to `Ultra 128`), screen flashes, camera shake, and mod sound / tinnitus volume in real time.
+- Press `\` (**Backslash**, chosen to avoid colliding with Iris's default `K` key) or open the mod configuration menu (and **Sodium** Video Settings on NeoForge 1.21.1 / **Embeddium** Video Settings on Forge 1.20.1) to tune first-person barrier/circle visibility, per-spell glow brightness (`0%–200%`), Gargantua raymarch quality (`Low 32` to `Ultra 128`), screen flashes, camera shake, and mod sound / tinnitus volume in real time.
+
+---
+
+## Survival Progression / วิธีหาและคราฟต์สโครลในโหมด Survival
+
+All spells integrate directly with **Iron's Spells 'n Spellbooks** progression (**Scroll Forge**, **Inscription Table**, and **Arcane Anvil**):
+
+### Crafting Scrolls at the Scroll Forge
+| School | Spells | Required Focus Item | Ink Rarity |
+| :--- | :--- | :--- | :--- |
+| **Ordinary Magic** (`ordinary_magic`) | Defensive Magic, Flight, Zoltraak, Corrupted Zoltraak, Rapid Barrage, Corrupted Barrage | **Nether Star** *(intentional endgame focus)* | Uncommon / Rare / Epic Ink |
+| **Black Hole** (`black_hole`) | Gargantua: Event Horizon | **Dragon Egg** *(or craft `Scroll of Black Hole` directly on a Crafting Table)* | Legendary Ink |
+| **Fire** (`irons_spellbooks:fire`) | Explosion Magic | **Blaze Rod** | Legendary Ink |
+
+### Obtaining & Equipping Spells in Survival
+1. **Craft a Scroll** at Iron's Spells' **Scroll Forge** using **Ink** + **Paper** + the school's **Focus Item** above (or craft `Scroll of Black Hole` directly on a Crafting Table with a Dragon Egg, Legendary Ink, Ender Runes, Arcane Essence, and Paper).
+2. **Inscribe into a Spellbook**: Place your Scroll and any Spellbook (such as `Grimoire of Ordinary Magic` or `Grimoire of the Elder Sage`) into the **Inscription Table** so you can cast the spell repeatedly without consuming the scroll.
+3. **Upgrade Spell Level**: Use the **Arcane Anvil** with matching Ink to upgrade inscribed scrolls to higher levels.
+4. **Boss & Endgame Relics**: Craft **Qual's Sealing Stone** to awaken **Qual, Elder Sage of Corruption**, then use his drops (`Horn of Corruption` & `Qual's Core of Corruption`) to forge **Frieren's Staff** and **Grimoire of the Elder Sage**.
+
+> **สรุปสั้นๆ สำหรับโหมด Survival**: คราฟต์สโครลที่ **Scroll Forge** ของ Iron's Spells โดยใช้ **หมึก (Ink) + กระดาษ + Focus Item** ประจำสายเวท (**Nether Star** สำหรับสาย Ordinary Magic เพื่อสมดุลช่วงท้ายเกม, **Dragon Egg** สำหรับสาย Black Hole หรือคราฟต์คัมภีร์หลุมดำบนโต๊ะคราฟต์, และ **Blaze Rod** สำหรับ Explosion Magic) จากนั้นนำไปบันทึก (**Inscribe**) ลงสมุดเวทที่ **Inscription Table** เพื่อใช้งานได้ถาวรครับ
 
 ---
 
@@ -81,8 +102,8 @@ In v2.0.0, all rendering, camera choreography, shaders, and audio run completely
 ### Supported Targets
 | Platform | Minecraft | Mod Loader | Output Artifact |
 | :--- | :---: | :---: | :--- |
-| **NeoForge** | `1.21.1` | NeoForge `21.1+` | `zoltraak_cinematic-neoforge-1.21.1-2.0.0.jar` |
-| **Forge** | `1.20.1` | Forge `47+` | `zoltraak_cinematic-forge-1.20.1-2.0.0.jar` |
+| **NeoForge** | `1.21.1` | NeoForge `21.1+` | `zoltraak_cinematic-neoforge-1.21.1-2.0.1.jar` |
+| **Forge** | `1.20.1` | Forge `47+` | `zoltraak_cinematic-forge-1.20.1-2.0.1.jar` |
 
 ### Dependencies
 - **Required**:
@@ -91,7 +112,7 @@ In v2.0.0, all rendering, camera choreography, shaders, and audio run completely
   - [Curios API](https://www.curseforge.com/minecraft/mc-mods/curios) *(for Curio ring, necklace, charm, and spellbook slots)*
 - **Optional / Supported**:
   - **Iris** / **Oculus** Shaders
-  - **Sodium** (native config integration on NeoForge 1.21.1)
+  - **Sodium** (native config integration on NeoForge 1.21.1) & **Embeddium** (native config integration on Forge 1.20.1)
 
 ### Installation Steps
 1. Install Minecraft **1.21.1 (NeoForge)** or **1.20.1 (Forge)** along with the required dependencies above.
@@ -135,6 +156,7 @@ python build_multiloader.py --target neoforge --deploy --deploy-dir "path/to/ins
 
 ## Documentation / เอกสารประกอบในโปรเจกต์
 
+- **[`CHANGELOG.md`](CHANGELOG.md)**: Release history and detailed patch notes (v2.0.1 & v2.0.0).
 - **[`ARCHITECTURE.md`](ARCHITECTURE.md)**: Technical architecture, rendering pipeline, dual-loader staging, and entity/shader diagrams.
 - **[`LICENSE`](LICENSE)**: Full proprietary license terms (`All Rights Reserved`) with explicit permissions and Thai summary.
 - **[`NOTICE.txt`](NOTICE.txt)**: Clean-room originality statement, asset/shader/audio inventory, third-party exceptions, and fan work disclaimer.

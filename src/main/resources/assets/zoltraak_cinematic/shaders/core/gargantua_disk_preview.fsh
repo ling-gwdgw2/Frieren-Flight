@@ -15,7 +15,8 @@ void main() {
     if (r > 1.0) discard;
 
     float theta = atan(p.y, p.x);
-    float t = (GameTime > 0.001 ? GameTime : 1.0) * 1.3;
+    float baseTime = GameTime > 0.001 ? GameTime : 1.0;
+    float t = baseTime * 1.3;
 
     float castProgress = clamp(vColor.r, 0.0, 1.0);
     float pulse = clamp(vColor.g, 0.0, 1.0);

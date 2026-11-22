@@ -23,7 +23,8 @@ void main() {
     float frontOnly = smoothstep(-0.06, 0.08, rawDot);
     float backMix = mix(0.28, 1.0, frontOnly);
 
-    float t = (GameTime > 0.001 ? GameTime : 1.0) * 1.4;
+    float baseTime = GameTime > 0.001 ? GameTime : 1.0;
+    float t = baseTime * 1.4;
 
     float castProgress = clamp(vColor.r, 0.0, 1.0);
     float pulse = clamp(vColor.g, 0.0, 1.0);

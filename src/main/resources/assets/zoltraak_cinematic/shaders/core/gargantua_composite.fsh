@@ -265,10 +265,12 @@ void main() {
 
     float aspect = InverseProjectionMat[0][0] / max(InverseProjectionMat[1][1], 1.0e-5);
     vec2 lensScale = vec2(1.0 / max(aspect, 0.1), 1.0);
-    bool hitTerrainInVolume = (!isActualSky && sceneDistance < (along + (isBlasting ? shockR : boundRadius) * uScale));
+    float volumeRadius = isBlasting ? shockR : boundRadius;
+    bool hitTerrainInVolume = !isActualSky && sceneDistance < along + volumeRadius * uScale;
+    float frontLimit = isBlasting ? along : holeDistance;
 
     vec3 lensedBg;
-    if (hitTerrainInVolume && sceneDistance < (isBlasting ? along : holeDistance)) {
+    if (hitTerrainInVolume && sceneDistance < frontLimit) {
         lensedBg = (worldGlowFlag > 0.5) ? applySoftTerrainLight(rawScene, terrainGlow) : rawScene;
     } else {
         float warpStrength = hitTerrainInVolume ? 0.014 : 0.026;
@@ -331,7 +333,8 @@ void main() {
         vec2 relVec = (impactVec.xy / max(uScale, 0.05));
         float alongDisk = abs(dot(relVec, diskDir2D));
         float perpDisk = abs(dot(relVec, vec2(-diskDir2D.y, diskDir2D.x)));
-        float outerOnly = mix(smoothstep(0.85 * baseScale, 1.35 * baseScale, impactR), 1.0, isBlasting ? smoothstep(0.0, 0.04, blastProg) : 0.0);
+        float blastOuterBlend = isBlasting ? smoothstep(0.0, 0.04, blastProg) : 0.0;
+        float outerOnly = mix(smoothstep(0.85 * baseScale, 1.35 * baseScale, impactR), 1.0, blastOuterBlend);
         float flareScale = isBlasting
                 ? (1.65 * exp(-pow(blastProg / 0.14, 2.0)) * (1.0 - smoothstep(0.18, 0.45, blastProg)))
                 : (1.0 + 0.35 * crit);

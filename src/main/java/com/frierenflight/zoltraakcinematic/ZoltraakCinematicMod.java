@@ -1,7 +1,6 @@
 // Copyright (c) 2026 Aling7788565. All Rights Reserved.
 package com.frierenflight.zoltraakcinematic;
 
-import com.frierenflight.zoltraakcinematic.client.ZoltraakCinematicClientEvents;
 import com.frierenflight.zoltraakcinematic.registry.ModCinematicEntities;
 import com.frierenflight.zoltraakcinematic.registry.ModCinematicItems;
 import com.frierenflight.zoltraakcinematic.registry.ModCinematicSounds;
@@ -46,7 +45,7 @@ public class ZoltraakCinematicMod {
         modEventBus.addListener(this::buildCreativeModeTabContents);
 
         if (FMLEnvironment.dist == Dist.CLIENT) {
-            ZoltraakCinematicClientEvents.register(modEventBus);
+            ClientSetup.registerClientEvents(modEventBus);
         }
     }
 
@@ -70,6 +69,11 @@ public class ZoltraakCinematicMod {
         private static void registerConfigScreen(ModContainer container) {
             container.registerExtensionPoint(net.neoforged.neoforge.client.gui.IConfigScreenFactory.class,
                     (modContainer, parentScreen) -> new com.frierenflight.zoltraakcinematic.client.gui.ZoltraakConfigScreen(parentScreen));
+        }
+
+        private static void registerClientEvents(IEventBus modEventBus) {
+            com.frierenflight.zoltraakcinematic.client.ZoltraakCinematicClientEvents.register(modEventBus);
+            com.frierenflight.zoltraakcinematic.client.NeoForgeClientRenderHooks.register();
         }
     }
 }

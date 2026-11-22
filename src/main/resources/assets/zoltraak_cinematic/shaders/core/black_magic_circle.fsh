@@ -81,7 +81,8 @@ void main() {
     float firstPersonMask = radialCenterFade * innerCut;
 
     // Center glow (faded around crosshair in first-person)
-    float coreGlow = exp(-r * r * 42.0) * 0.35 * runeLuma * centerKeep * (vColor.b < 0.96 ? 0.0 : 1.0);
+    float coreMask = vColor.b < 0.96 ? 0.0 : 1.0;
+    float coreGlow = exp(-r * r * 42.0) * 0.35 * runeLuma * centerKeep * coreMask;
 
     // Dark violet palette
     vec3 darkPurple     = vec3(0.28, 0.10, 0.44);

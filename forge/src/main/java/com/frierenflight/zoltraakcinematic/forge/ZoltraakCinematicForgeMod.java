@@ -2,7 +2,6 @@
 package com.frierenflight.zoltraakcinematic.forge;
 
 import com.frierenflight.zoltraakcinematic.ZoltraakCinematicMod;
-import com.frierenflight.zoltraakcinematic.client.ZoltraakCinematicClientEvents;
 import com.frierenflight.zoltraakcinematic.command.GargantuaCommands;
 import com.frierenflight.zoltraakcinematic.config.ZoltraakCinematicClientConfig;
 import com.frierenflight.zoltraakcinematic.config.ZoltraakCinematicConfig;
@@ -59,7 +58,7 @@ public class ZoltraakCinematicForgeMod {
 
         // Register Client Events & Renderers
         if (FMLEnvironment.dist == Dist.CLIENT) {
-            ZoltraakCinematicClientEvents.register(modBus);
+            ClientSetup.registerClientEvents(modBus);
         }
     }
 
@@ -93,6 +92,11 @@ public class ZoltraakCinematicForgeMod {
             if (net.minecraftforge.fml.ModList.get().isLoaded("embeddium")) {
                 com.frierenflight.zoltraakcinematic.forge.compat.ZoltraakEmbeddiumConfig.register();
             }
+        }
+
+        private static void registerClientEvents(IEventBus modBus) {
+            com.frierenflight.zoltraakcinematic.client.ZoltraakCinematicClientEvents.register(modBus);
+            com.frierenflight.zoltraakcinematic.forge.client.ForgeClientRenderHooks.register();
         }
     }
 }

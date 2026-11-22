@@ -14,7 +14,7 @@ import zipfile
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MOD_ID = 'zoltraak_cinematic'
-MOD_VERSION = '2.0.0'
+MOD_VERSION = '2.0.1'
 
 CORE_SHADER_NAMES = [
     'barrage_fx',
@@ -77,12 +77,14 @@ NEOFORGE_ONLY_FILES = {
     'NeoForgePlatformHelper.java',
     'ModCinematicNetworking.java',
     'ZoltraakSodiumConfig.java',
+    'NeoForgeClientRenderHooks.java',
 }
 
 NEOFORGE_ONLY_CLASSES = [
     'com/frierenflight/zoltraakcinematic/platform/neoforge/NeoForgePlatformHelper.class',
     'com/frierenflight/zoltraakcinematic/network/ModCinematicNetworking.class',
     'com/frierenflight/zoltraakcinematic/compat/sodium/ZoltraakSodiumConfig.class',
+    'com/frierenflight/zoltraakcinematic/client/NeoForgeClientRenderHooks.class',
 ]
 
 NEOFORGE_ONLY_BYTECODE_MARKERS = [
@@ -646,7 +648,8 @@ def build_forge(deploy=False, deploy_dirs=None):
             if not fname.endswith('.java'):
                 continue
             rel = os.path.relpath(os.path.join(root, fname), src_base)
-            if rel in forge_overridden_rel_paths or fname in NEOFORGE_ONLY_FILES:
+            rel_posix = rel.replace(os.sep, '/')
+            if rel in forge_overridden_rel_paths or fname in NEOFORGE_ONLY_FILES or rel_posix.startswith('com/frierenflight/zoltraakcinematic/mixin/'):
                 continue
 
             dst = os.path.join(stage_dir, rel)
@@ -932,6 +935,16 @@ def _verify_shaders(rep, z, names):
             if sname and sname not in fsh:
                 shader_errors.append(f"{shader}: sampler '{sname}' not referenced in .fsh")
 
+        # Veil's GLSL AST recompiler strips parentheses around parenthesized ternaries nested
+        # inside arithmetic/comparison expressions (e.g. `a * (cond ? b : c)` -> `a * cond ? b : c`).
+        for stage_ext, stage_src in (('.vsh', vsh), ('.fsh', fsh)):
+            for lineno, sline in enumerate(stage_src.splitlines(), 1):
+                stripped = sline.strip()
+                if stripped.startswith('//') or '?' not in stripped:
+                    continue
+                if re.search(r'(?:[+\-*/<>]=?|\b(?:if|while)\s*\()\s*[^;]*\([^()]*\?[^()]*:[^()]*\)', stripped) or re.search(r'\([^()]*\?[^()]*:[^()]*\)\s*[+\-*/<>]=?', stripped):
+                    shader_errors.append(f"{shader}{stage_ext}:{lineno}: parenthesized ternary nested in expression (unsafe for Veil GLSL recompiler)")
+
     rep.check(
         not missing_shaders and not shader_errors,
         f"GLSL 150 Shaders: All {len(CORE_SHADER_NAMES)} pipelines ({len(CORE_SHADER_NAMES) * 3} files) verified (#version 150, attributes, varyings, uniforms, samplers)",
@@ -1036,6 +1049,22 @@ def _verify_data_and_recipes(rep, z, names, target_key, spec):
         f"Recipe issues: missing={missing_recipes}, invalid={bad_recipes}, wrong_dir={stale_recipe_paths}",
     )
 
+    focus_tag_sub = 'item' if target_key == 'neoforge' else 'items'
+    lootable_path = f'data/irons_spellbooks/tags/{focus_tag_sub}/lootable_focus.json'
+    lootable_ok = False
+    if lootable_path in names:
+        ldata = json.loads(z.read(lootable_path).decode('utf-8'))
+        removed = set(ldata.get('remove', []))
+        lootable_ok = (
+            '#zoltraak_cinematic:ordinary_magic_focus' in removed
+            and '#zoltraak_cinematic:black_hole_focus' in removed
+        )
+    rep.check(
+        lootable_ok,
+        f"Focus loot protection ({lootable_path}): Excludes Nether Star & Dragon Egg focuses from dungeon chests",
+        f"Missing or incomplete lootable_focus exclusion at {lootable_path}!",
+    )
+
 
 def _verify_loader_specifics(rep, z, names, target_key, spec):
     if target_key == 'forge':
@@ -1097,6 +1126,14 @@ def _verify_loader_specifics(rep, z, names, target_key, spec):
             not bad_iview_shaders,
             f"Forge 1.20.1 core shader view-space adaptation: All {len(FORGE_IVIEWROT_SHADERS)} shaders use IViewRotMat",
             f"Forge 1.20.1 IViewRotMat shader adaptation failed: {bad_iview_shaders}",
+        )
+
+        # Verify NeoForge 1.21.1 mixin classes never leak into the Forge 1.20.1 JAR
+        leaked_nf_mixins = sorted(n for n in names if n.startswith('com/frierenflight/zoltraakcinematic/mixin/') and n.endswith('.class'))
+        rep.check(
+            not leaked_nf_mixins,
+            "Forge mixin isolation: Zero NeoForge 1.21.1 mixin classes leaked into Forge JAR",
+            f"NeoForge mixin classes leaked into Forge JAR: {leaked_nf_mixins}",
         )
 
         # Verify Embeddium 0.3.x Video Options GUI integration is bundled and SRG-remapped

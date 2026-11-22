@@ -72,7 +72,8 @@ void main() {
     float elev = clamp(vUv.y, 0.0, 1.0);
 
     // Seam-free 3D plasma turbulence across spherical direction L
-    vec3 flowPos = L * (shellKind > 0.3 && shellKind < 0.7 ? 4.6 : 3.5) + vec3(0.0, -animTime * 0.65, 0.0);
+    float flowScale = shellKind > 0.3 && shellKind < 0.7 ? 4.6 : 3.5;
+    vec3 flowPos = L * flowScale + vec3(0.0, -animTime * 0.65, 0.0);
     float warp = fbm3(flowPos * 1.15);
     float surfNoise = fbm3(flowPos + vec3(warp * 0.90));
     float ridge = pow(ridgedPlasma(L * 5.6 + vec3(warp * 1.5, -animTime * 1.1, warp * 0.9)), 3.0);

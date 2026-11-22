@@ -1,43 +1,11 @@
 {
   "mappings": {
-    "com/frierenflight/zoltraakcinematic/forge/mixin/GameRendererMixin": {
-      "renderLevel": "Lnet/minecraft/client/renderer/GameRenderer;m_109089_(FJLcom/mojang/blaze3d/vertex/PoseStack;)V",
-      "bobHurt": "Lnet/minecraft/client/renderer/GameRenderer;m_109117_(Lcom/mojang/blaze3d/vertex/PoseStack;F)V",
-      "getFov": "Lnet/minecraft/client/renderer/GameRenderer;m_109141_(Lnet/minecraft/client/Camera;FZ)D",
-      "renderItemInHand": "Lnet/minecraft/client/renderer/GameRenderer;m_109120_(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/Camera;F)V",
-      "Lnet/minecraft/client/renderer/LevelRenderer;renderLevel(Lcom/mojang/blaze3d/vertex/PoseStack;FJZLnet/minecraft/client/Camera;Lnet/minecraft/client/renderer/GameRenderer;Lnet/minecraft/client/renderer/LightTexture;Lorg/joml/Matrix4f;)V": "Lnet/minecraft/client/renderer/LevelRenderer;m_109599_(Lcom/mojang/blaze3d/vertex/PoseStack;FJZLnet/minecraft/client/Camera;Lnet/minecraft/client/renderer/GameRenderer;Lnet/minecraft/client/renderer/LightTexture;Lorg/joml/Matrix4f;)V"
-    },
-    "com/frierenflight/zoltraakcinematic/forge/mixin/CameraMixin": {
-      "setup": "Lnet/minecraft/client/Camera;m_90575_(Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/world/entity/Entity;ZZF)V",
-      "setPosition(Lnet/minecraft/world/phys/Vec3;)V": "Lnet/minecraft/client/Camera;m_90581_(Lnet/minecraft/world/phys/Vec3;)V",
-      "setRotation(FF)V": "Lnet/minecraft/client/Camera;m_90572_(FF)V",
-      "detached": "f_90560_:Z",
-      "position": "f_90552_:Lnet/minecraft/world/phys/Vec3;",
-      "xRot": "f_90557_:F",
-      "yRot": "f_90558_:F"
-    },
     "com/frierenflight/zoltraakcinematic/forge/mixin/PlayerModelPoseMixin": {
       "setupAnim(Lnet/minecraft/world/entity/LivingEntity;FFFFF)V": "Lnet/minecraft/client/model/PlayerModel;m_6973_(Lnet/minecraft/world/entity/LivingEntity;FFFFF)V"
     }
   },
   "data": {
     "searge": {
-      "com/frierenflight/zoltraakcinematic/forge/mixin/GameRendererMixin": {
-        "renderLevel": "Lnet/minecraft/client/renderer/GameRenderer;m_109089_(FJLcom/mojang/blaze3d/vertex/PoseStack;)V",
-        "bobHurt": "Lnet/minecraft/client/renderer/GameRenderer;m_109117_(Lcom/mojang/blaze3d/vertex/PoseStack;F)V",
-        "getFov": "Lnet/minecraft/client/renderer/GameRenderer;m_109141_(Lnet/minecraft/client/Camera;FZ)D",
-        "renderItemInHand": "Lnet/minecraft/client/renderer/GameRenderer;m_109120_(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/Camera;F)V",
-        "Lnet/minecraft/client/renderer/LevelRenderer;renderLevel(Lcom/mojang/blaze3d/vertex/PoseStack;FJZLnet/minecraft/client/Camera;Lnet/minecraft/client/renderer/GameRenderer;Lnet/minecraft/client/renderer/LightTexture;Lorg/joml/Matrix4f;)V": "Lnet/minecraft/client/renderer/LevelRenderer;m_109599_(Lcom/mojang/blaze3d/vertex/PoseStack;FJZLnet/minecraft/client/Camera;Lnet/minecraft/client/renderer/GameRenderer;Lnet/minecraft/client/renderer/LightTexture;Lorg/joml/Matrix4f;)V"
-      },
-      "com/frierenflight/zoltraakcinematic/forge/mixin/CameraMixin": {
-        "setup": "Lnet/minecraft/client/Camera;m_90575_(Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/world/entity/Entity;ZZF)V",
-        "setPosition(Lnet/minecraft/world/phys/Vec3;)V": "Lnet/minecraft/client/Camera;m_90581_(Lnet/minecraft/world/phys/Vec3;)V",
-        "setRotation(FF)V": "Lnet/minecraft/client/Camera;m_90572_(FF)V",
-        "detached": "f_90560_:Z",
-        "position": "f_90552_:Lnet/minecraft/world/phys/Vec3;",
-        "xRot": "f_90557_:F",
-        "yRot": "f_90558_:F"
-      },
       "com/frierenflight/zoltraakcinematic/forge/mixin/PlayerModelPoseMixin": {
         "setupAnim(Lnet/minecraft/world/entity/LivingEntity;FFFFF)V": "Lnet/minecraft/client/model/PlayerModel;m_6973_(Lnet/minecraft/world/entity/LivingEntity;FFFFF)V"
       }

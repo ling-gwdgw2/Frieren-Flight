@@ -80,7 +80,8 @@ void main() {
     float firstPersonMask = radialCenterFade * innerCut;
 
     // Subtle center glow (keeps inner rune geometry legible and clears crosshair in first-person)
-    float coreFocus = exp(-r * r * 42.0) * 0.14 * runeLuma * centerKeep * (vColor.b < 0.96 ? 0.0 : 1.0);
+    float coreMask = vColor.b < 0.96 ? 0.0 : 1.0;
+    float coreFocus = exp(-r * r * 42.0) * 0.14 * runeLuma * centerKeep * coreMask;
 
     // Clean anime sky-ice halo around crisp pure-white rune centers
     vec3 skyIce = vec3(0.48, 0.82, 1.00);

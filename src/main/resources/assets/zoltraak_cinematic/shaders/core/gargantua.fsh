@@ -390,7 +390,8 @@ void evaluateRelativisticDetonation(
         float impact3D = length(roLocal + rdLocal * tCenter);
         float rimWidth = mix(0.065, 0.22, sedov) * mix(baseScale, 1.0, 0.5);
         float rimDist = (impact3D - shockR) / max(rimWidth, 0.04);
-        float rimProfile = exp(-rimDist * rimDist * (rimDist > 0.0 ? 2.4 : 1.1));
+        float rimK = rimDist > 0.0 ? 2.4 : 1.1;
+        float rimProfile = exp(-rimDist * rimDist * rimK);
         if (rimProfile > 0.002) {
             float cool = smoothstep(0.05, 0.70, blastProg);
             vec3 rimTint = mix(vec3(0.68, 1.08, 1.92), vec3(1.62, 1.16, 0.62), cool);
@@ -418,7 +419,8 @@ void evaluateRelativisticDetonation(
             float optThick = min(slabH / rdYabs, 1.15) * incWeight;
 
             float rNorm = (rPlanar - eqFront) / max(eqWidth, 0.20);
-            float ringProf = exp(-rNorm * rNorm * (rNorm > 0.0 ? 6.8 : 1.45));
+            float ringK = rNorm > 0.0 ? 6.8 : 1.45;
+            float ringProf = exp(-rNorm * rNorm * ringK);
 
             if (ringProf > 0.004) {
                 float azimTurns = atan2(-pEq.x, -pEq.z) * (1.0 / TWO_PI);
@@ -541,7 +543,8 @@ void main() {
     // Clamp to a minimum 0.052-radian grazing elevation so edge-on camera angles still display disk thickness
     float sinElev = dot(camDirUnit, axis);
     if (abs(sinElev) < 0.052) {
-        float targetSin = (sinElev >= 0.0 ? 1.0 : -1.0) * 0.052;
+        float elevSign = sinElev >= 0.0 ? 1.0 : -1.0;
+        float targetSin = elevSign * 0.052;
         axis = normalize(axis + camDirUnit * (targetSin - sinElev));
     }
 
@@ -587,7 +590,8 @@ void main() {
         raypos += eyevec * dither * ds;
 
         float horizonThreshold = 0.52 * baseScale * shadowAlive;
-        float effLensMult = lensMult * (isBlasting ? (1.0 - smoothstep(0.0, 0.14, blastProg)) : 1.0);
+        float blastLensScale = isBlasting ? (1.0 - smoothstep(0.0, 0.14, blastProg)) : 1.0;
+        float effLensMult = lensMult * blastLensScale;
         float maxHazeR = 2.62 * baseScale;
         float discOuterGuardR = 0.55 * baseScale + 5.3 * outerScale * 1.15 + ds;
         float discBaseThickness = 0.15 * mix(baseScale, outerScale, 0.35);

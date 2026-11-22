@@ -1,11 +1,11 @@
 # Zoltraak: Cinematic Edition — Architecture & Technical Documentation
 
-**Version:** 2.0.0 | **Minecraft:** 1.21.1 & 1.20.1 | **Mod Loaders:** NeoForge 21.1.248+ / Forge 47.3.0+ | **Target API:** Iron's Spells 'n Spellbooks
+**Version:** 2.0.1 | **Minecraft:** 1.21.1 & 1.20.1 | **Mod Loaders:** NeoForge 21.1.248+ / Forge 47.3.0+ | **Target API:** Iron's Spells 'n Spellbooks
 
-This document provides a comprehensive technical reference for **Zoltraak: Cinematic Edition** (`zoltraak_cinematic`), detailing the dual-loader build pipeline, domain registry, combat & singularity mechanics, Core GLSL 150 shader pipeline, Iris Dual-Pass Emissive Bridge, cinematic camera choreography, real-time configuration UI, and official Sodium 0.8+ integration.
+This document provides a comprehensive technical reference for **Zoltraak: Cinematic Edition** (`zoltraak_cinematic`), detailing the dual-loader build pipeline, domain registry, combat & singularity mechanics, Core GLSL 150 shader pipeline, Iris/Oculus Dual-Pass Emissive Bridge, cinematic camera choreography, real-time configuration UI, and official Sodium 0.8+ / Embeddium 0.3.x integration.
 
 > Related project documentation:
-> [README.md](README.md) • [LICENSE](LICENSE) • [NOTICE.txt](NOTICE.txt)
+> [README.md](README.md) • [CHANGELOG.md](CHANGELOG.md) • [LICENSE](LICENSE) • [NOTICE.txt](NOTICE.txt)
 
 ---
 
@@ -13,11 +13,11 @@ This document provides a comprehensive technical reference for **Zoltraak: Cinem
 
 **Zoltraak: Cinematic Edition** is a magic, combat, and visual effects mod inspired by *Sousou no Frieren* and *KonoSuba: God's Blessing on This Wonderful World!*, built upon **Iron's Spells 'n Spellbooks**, **GeckoLib**, and **Curios**. Its architecture emphasizes zero external particle-library lock-in, full cross-loader portability, and shader-pack compatibility:
 
-- **Dual-Loader Trunk & Sparse Override Pipeline**: A single Python build orchestrator ([`build_multiloader.py`](build_multiloader.py)) compiles **95** NeoForge 1.21.1 Java classes with JDK 21 (`-source 21 -target 21`), then stages and adapts the trunk alongside **16** Forge 1.20.1 adapter files (**100** compiled classes total, targeting Java 17 bytecode via `-source 17 -target 17`) and remaps them to SRG via `tiny-remapper`.
-- **26 Procedural Core GLSL 150 Shaders**: Dedicated fragment/vertex pipelines including a 4-pass `GL_RGBA16F` volumetric black hole & multi-octave HDR bloom chain (`gargantua`, `gargantua_bloom_down`, `gargantua_bloom_up`, `gargantua_composite`), pre-cast spatial horizon previews (`gargantua_disk_preview`, `gargantua_sphere_preview`), Frequency-7 geodesic shields (`defense_barrier`), Qual's accretion corona (`cinematic_singularity_corona`), 24-circle barrage shockwaves (`barrage_fx`, `rapid_zoltraak_bullet`), pyroclastic blast shells (`zoltraak_blast_dome`, `zoltraak_pyroclast`), stylized Explosion Magic pipelines (`explosion_vortex_ring`, `explosion_dome`, `explosion_dust_wave`), optical flares, plumes, and unsealing rituals.
-- **Iris Dual-Pass Emissive Bridge & Deferred Sorting**: Zero-overhead vanilla rendering paired with automatic Iris/Oculus detection via [`ShaderCompatibility`](src/main/java/com/frierenflight/zoltraakcinematic/client/renderer/ShaderCompatibility.java), routing emissive spell geometry through `RENDERTYPE_EYES_SHADER` (`AFTER_WEATHER`) before fullscreen lensing capture (`AFTER_ENTITIES`).
-- **Keyframe Timeline Camera Rig & Mixins**: Priority-based multi-phase cutscene playback ([`CinematicRigController`](src/main/java/com/frierenflight/zoltraakcinematic/client/cinematic/CinematicRigController.java)) backed by [`CameraMixin`](src/main/java/com/frierenflight/zoltraakcinematic/mixin/CameraMixin.java), [`GameRendererMixin`](src/main/java/com/frierenflight/zoltraakcinematic/mixin/GameRendererMixin.java), and [`PlayerModelPoseMixin`](src/main/java/com/frierenflight/zoltraakcinematic/mixin/PlayerModelPoseMixin.java).
-- **Real-Time Studio UI & Official Sodium 0.8+ Integration**: Instant live-preview client tuning via [`ZoltraakConfigScreen`](src/main/java/com/frierenflight/zoltraakcinematic/client/gui/ZoltraakConfigScreen.java) (`\` key / Mod screen / Sodium shortcut) and native Sodium Video Options pages via [`ZoltraakSodiumConfig`](src/main/java/com/frierenflight/zoltraakcinematic/compat/sodium/ZoltraakSodiumConfig.java).
+- **Dual-Loader Trunk & Sparse Override Pipeline**: A single Python build orchestrator ([`build_multiloader.py`](build_multiloader.py)) compiles **96** NeoForge 1.21.1 Java classes with JDK 21 (`-source 21 -target 21`), then stages and adapts **82** shared trunk files alongside **16** Forge 1.20.1 adapter files (**98** compiled classes total, targeting Java 17 bytecode via `-source 17 -target 17`) and remaps them to SRG via `tiny-remapper`.
+- **28 Procedural Core GLSL 150 Shaders (84 files)**: Dedicated fragment/vertex pipelines (Veil GLSL AST-recompiler safe) including a 4-pass `GL_RGBA16F` volumetric black hole & multi-octave HDR bloom chain (`gargantua`, `gargantua_bloom_down`, `gargantua_bloom_up`, `gargantua_composite`), pre-cast spatial horizon previews (`gargantua_disk_preview`, `gargantua_sphere_preview`), Frequency-7 geodesic shields (`defense_barrier`), Qual's accretion corona (`cinematic_singularity_corona`), 24-circle barrage shockwaves (`barrage_fx`, `rapid_zoltraak_bullet`), pyroclastic blast shells (`zoltraak_blast_dome`, `zoltraak_pyroclast`), stylized Explosion Magic pipelines (`explosion_vortex_ring`, `explosion_dome`, `explosion_dust_wave`, `explosion_pyroclast`, `explosion_post`), optical flares, plumes, and unsealing rituals.
+- **Iris/Oculus Dual-Pass Emissive Bridge & Deferred Sorting**: Zero-overhead vanilla rendering paired with automatic Iris/Oculus detection via [`ShaderCompatibility`](src/main/java/com/frierenflight/zoltraakcinematic/client/renderer/ShaderCompatibility.java), routing emissive spell geometry through `RENDERTYPE_EYES_SHADER` (`AFTER_WEATHER`) before fullscreen lensing capture (`AFTER_ENTITIES`) and `HIGHEST`-priority `AFTER_LEVEL` replay.
+- **Event-Driven Camera Rig & Minimal Non-Fatal Mixins**: Priority-based multi-phase cutscene playback ([`CinematicRigController`](src/main/java/com/frierenflight/zoltraakcinematic/client/cinematic/CinematicRigController.java)) driven by official loader client events ([`NeoForgeClientRenderHooks`](src/main/java/com/frierenflight/zoltraakcinematic/client/NeoForgeClientRenderHooks.java) / [`ForgeClientRenderHooks`](forge/src/main/java/com/frierenflight/zoltraakcinematic/forge/client/ForgeClientRenderHooks.java)) with zero `GameRendererMixin` and non-fatal (`require = 0`) [`PlayerModelPoseMixin`](src/main/java/com/frierenflight/zoltraakcinematic/mixin/PlayerModelPoseMixin.java) + zero-`@Shadow` NeoForge [`CameraMixin`](src/main/java/com/frierenflight/zoltraakcinematic/mixin/CameraMixin.java).
+- **Real-Time Studio UI & Sodium / Embeddium Integration**: Instant live-preview client tuning via [`ZoltraakConfigScreen`](src/main/java/com/frierenflight/zoltraakcinematic/client/gui/ZoltraakConfigScreen.java) (`\` key / Mod screen / Video Settings shortcut), native Sodium 0.8+ pages on NeoForge 1.21.1 ([`ZoltraakSodiumConfig`](src/main/java/com/frierenflight/zoltraakcinematic/compat/sodium/ZoltraakSodiumConfig.java)), and native Embeddium 0.3.x pages on Forge 1.20.1 ([`ZoltraakEmbeddiumConfig`](forge/src/main/java/com/frierenflight/zoltraakcinematic/forge/compat/ZoltraakEmbeddiumConfig.java)).
 
 ---
 
@@ -125,8 +125,8 @@ flowchart LR
     end
 
     subgraph Targets ["Production Artifacts"]
-        NF_Jar["zoltraak_cinematic-neoforge-1.21.1-2.0.0.jar"]
-        Forge_Jar["zoltraak_cinematic-forge-1.20.1-2.0.0.jar"]
+        NF_Jar["zoltraak_cinematic-neoforge-1.21.1-2.0.1.jar"]
+        Forge_Jar["zoltraak_cinematic-forge-1.20.1-2.0.1.jar"]
     end
 
     NF_Src --> JDK21
@@ -157,7 +157,8 @@ flowchart LR
 ```text
 Zoltraak Cinematic - NeoForge 1.21.1/
 ├── build_multiloader.py                        # Dual-loader compiler, recipe/tag/SRG adapter, --clean, --deploy & --test/--verify suite
-├── ARCHITECTURE.md                             # System architecture & technical specification (v2.0.0)
+├── ARCHITECTURE.md                             # System architecture & technical specification (v2.0.1)
+├── CHANGELOG.md                                # Version history & patch update notes
 ├── LICENSE                                     # Proprietary All Rights Reserved license with modpack & audio/image grants
 ├── NOTICE.txt                                  # Clean-room statement, asset inventory, third-party notices & disclaimers
 ├── README.md                                   # Project overview, feature list, installation, build & usage rights
@@ -487,12 +488,12 @@ All core spell, circle, barrier, impact, and preview shaders support `ColorModul
 
 [`build_multiloader.py`](build_multiloader.py) automates full cross-loader compilation without a Gradle daemon:
 
-1. **NeoForge 1.21.1 Build (`--target neoforge`)**: Compiles `src/main/java` (95 files) against `libs/` using `-source 21 -target 21`, merges resources/mixins, bundles root `LICENSE` and `NOTICE.txt` into both root and `META-INF/`, packages `zoltraak_cinematic-neoforge-1.21.1-2.0.0.jar`, and optionally deploys via `--deploy` (`--deploy-dir` or `ZOLTRAAK_NEOFORGE_DEPLOY_DIRS`).
-2. **Forge 1.20.1 Build (`--target forge`)**: Excludes the 3 NeoForge-only files, adapts 84 shared trunk files (`adapt_common_source_for_forge`) alongside 16 Forge files (`forge/src/main/java`, 100 compiled classes total), compiles with `-source 17 -target 17` against `libs_forge/`, converts MC 1.21+ data layouts (`data/zoltraak_cinematic/recipe/*.json` `result.id` -> `recipes/*.json` `result.item` and `tags/item` -> `tags/items`), injects `MixinConfigs: zoltraak_cinematic.forge.mixins.json` into `META-INF/MANIFEST.MF` via `--manifest`, bundles `LICENSE` and `NOTICE.txt`, remaps bytecode to SRG using `tools/remapper/` (`tiny-remapper`, excluded via `.gitignore`), packages `zoltraak_cinematic-forge-1.20.1-2.0.0.jar`, and optionally deploys via `--deploy`.
+1. **NeoForge 1.21.1 Build (`--target neoforge`)**: Compiles `src/main/java` (96 files) against `libs/` using `-source 21 -target 21`, merges resources/mixins, bundles root `LICENSE` and `NOTICE.txt` into both root and `META-INF/`, packages `zoltraak_cinematic-neoforge-1.21.1-2.0.1.jar`, and optionally deploys via `--deploy` (`--deploy-dir` or `ZOLTRAAK_NEOFORGE_DEPLOY_DIRS`).
+2. **Forge 1.20.1 Build (`--target forge`)**: Excludes the 4 NeoForge-only files and NeoForge `mixin/` classes, adapts 82 shared trunk files (`adapt_common_source_for_forge`) alongside 16 Forge files (`forge/src/main/java`, 98 compiled files total), compiles with `-source 17 -target 17` against `libs_forge/`, converts MC 1.21+ data layouts (`data/zoltraak_cinematic/recipe/*.json` `result.id` -> `recipes/*.json` `result.item` and `tags/item` -> `tags/items`) plus MC 1.20.1 `IViewRotMat` core shaders, injects `MixinConfigs: zoltraak_cinematic.forge.mixins.json` into `META-INF/MANIFEST.MF` via `--manifest`, bundles `LICENSE` and `NOTICE.txt`, remaps bytecode to SRG using `tools/remapper/` (`tiny-remapper`, excluded via `.gitignore`), packages `zoltraak_cinematic-forge-1.20.1-2.0.1.jar`, and optionally deploys via `--deploy`.
 3. **Clean & Automated Verification Suite (`--clean`, `--verify`, `--test`)**:
    - `--clean` removes temporary staging/class directories under `build/`.
    - `--verify` builds the requested target(s) and automatically verifies them; `--test` checks existing JARs standalone (or builds first when paired with `--target`).
-   - Validates both packaged JARs (**389** entries in NeoForge `2.0.0`, **392** in Forge `2.0.0`) across: bytecode major versions (`<= 65` Java 21 / `<= 61` Java 17), manifests & `LICENSE`/`NOTICE.txt` in root + `META-INF/`, Forge `MANIFEST.MF` MixinConfigs, ServiceLoader SPI, Mixin configs/classes & `zoltraak_cinematic.forge.refmap.json` Searge coverage, valid JSON/MCMETA parsing across every entry, `en_us.json`/`th_th.json` localization parity (**247** keys, zero blanks), all **28** GLSL 150 shaders (**84** files, `#version 150`, `.vsh`/`.json` attribute parity, sampler checks, sync with `ZoltraakCinematicShaders.java`), `sounds.json` -> `.ogg` & model/blockstate references, loader-appropriate Curios tags & crafting recipes, Sodium Config API registration (no `@ConfigEntryPointForge`), Forge `m_` SRG remapping, and zero NeoForge bytecode leaks in Forge.
+   - Validates both packaged JARs (**392** entries in NeoForge `2.0.1`, **398** in Forge `2.0.1`) across: bytecode major versions (`<= 65` Java 21 / `<= 61` Java 17), manifests & `LICENSE`/`NOTICE.txt` in root + `META-INF/`, Forge `MANIFEST.MF` MixinConfigs, ServiceLoader SPI, Mixin configs/classes & `zoltraak_cinematic.forge.refmap.json` Searge coverage, zero leaked NeoForge mixins in Forge, valid JSON/MCMETA parsing across every entry, `en_us.json`/`th_th.json` localization parity (**247** keys, zero blanks), all **28** GLSL 150 shaders (**84** files, `#version 150`, `.vsh`/`.json` attribute parity, sampler checks, Veil nested-ternary AST safety check, sync with `ZoltraakCinematicShaders.java`), `sounds.json` -> `.ogg` & model/blockstate references, loader-appropriate Curios tags, crafting recipes & `lootable_focus.json` dungeon loot protection, Sodium Config API (NeoForge) / Embeddium Config API (Forge), Forge `m_` SRG remapping, Forge 1.20.1 `IViewRotMat` / `getInverseViewRotationMatrix()` camera adaptation, and zero NeoForge bytecode leaks in Forge.
 
 ---
 

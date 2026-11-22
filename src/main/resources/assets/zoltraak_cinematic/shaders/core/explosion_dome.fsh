@@ -124,8 +124,8 @@ void main() {
         float outsideLimb = clamp(ndotv / 0.73, 0.0, 1.0);
         float outsideGlow = pow(outsideLimb, 2.0) * smoothstep(0.0, 0.32, ndotv);
         float insideAtten = 1.0 - smoothstep(0.72, 0.95, ndotv) * 0.76;
-        float glowStrength = (ndotv < 0.73 ? outsideGlow : (0.94 * insideAtten))
-                           * rootMerge * (0.80 + 0.32 * cellular);
+        float baseGlow = ndotv < 0.73 ? outsideGlow : (0.94 * insideAtten);
+        float glowStrength = baseGlow * rootMerge * (0.80 + 0.32 * cellular);
 
         vec3 crimsonOuter = vec3(1.06, 0.18, 0.02);
         vec3 amberBloom = vec3(1.22, 0.58, 0.08);
