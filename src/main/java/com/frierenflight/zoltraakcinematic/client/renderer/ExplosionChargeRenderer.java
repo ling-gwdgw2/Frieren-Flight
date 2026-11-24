@@ -179,7 +179,13 @@ public final class ExplosionChargeRenderer {
             if (living == mc.player) {
                 if (ClientMagicData.isCasting() && isExplosionSpellId(ClientMagicData.getCastingSpellId())) {
                     isCastingExplosion = true;
-                    progress = Mth.clamp(ClientMagicData.getCastCompletionPercent(), 0.0F, 1.0F);
+                    int castDur = ClientMagicData.getCastDuration();
+                    int castRem = ClientMagicData.getCastDurationRemaining();
+                    if (castDur > 0) {
+                        progress = Mth.clamp(1.0F - Math.max(0.0F, castRem - partial) / (float) castDur, 0.0F, 1.0F);
+                    } else {
+                        progress = Mth.clamp(ClientMagicData.getCastCompletionPercent(), 0.0F, 1.0F);
+                    }
                 }
             } else {
                 SyncedSpellData synced = ClientMagicData.getSyncedSpellData(living);
@@ -197,14 +203,22 @@ public final class ExplosionChargeRenderer {
                 if (state.releasing) {
                     state.releasing = false;
                     state.outroTicks = 0;
+                    state.smoothedProgress = 0.0F;
                 }
-                if (state.lastIntroTick != gameTick) {
+                boolean newTick = state.lastIntroTick != gameTick;
+                if (newTick) {
                     state.lastIntroTick = gameTick;
                     if (state.introTicks < 6) state.introTicks++;
                 }
-                state.smoothedProgress = living == mc.player
-                        ? progress
-                        : Mth.clamp(state.smoothedProgress + 0.014F, 0.0F, 0.98F);
+                if (living == mc.player) {
+                    // Enforce monotonic sub-tick progress within a cast, while resetting cleanly if a brand-new cast starts immediately
+                    state.smoothedProgress = (progress + 0.15F < state.smoothedProgress)
+                            ? progress
+                            : Math.max(state.smoothedProgress, progress);
+                } else if (newTick) {
+                    float stepPerTick = 1.0F / Math.max(20.0F, (float) ZoltraakCinematicConfig.getExplosionCastTimeTicks());
+                    state.smoothedProgress = Mth.clamp(state.smoothedProgress + stepPerTick, 0.0F, 0.98F);
+                }
                 Vec3 rawTarget = ExplosionSpell.computeTargetPosition(mc.level, living, partial, ExplosionSpell.CAST_RANGE);
                 state.smoothedTarget = state.smoothedTarget == null ? rawTarget : state.smoothedTarget.lerp(rawTarget, 0.25);
                 state.anchorCasterWorld = living.getPosition(partial);
@@ -325,9 +339,12 @@ public final class ExplosionChargeRenderer {
                 Vec3 casterPos = casterWorld.subtract(camPos);
                 Vec3 staffRel = staffWorld.subtract(camPos);
                 Vec3 targetRel = targetWorld.subtract(camPos);
+                // Seamless handoff guard: keep drawing the 8 sky rings during firedRelease until ExplosionMagicEntity arrives on client (prevents 1-2 tick blink-out)
+                boolean skyRingsHandedOff = firedRelease
+                        && (outroT >= 6.0F || ExplosionMagicRenderer.hasActiveEntityNear(mc, targetWorld));
 
                 if (irisBloomProxy) {
-                    emitIrisChargeProxy(buffers, mat, casterPos, staffRel, targetRel, camRight, camUp, radius, p, time, fade, releasing, firedRelease, outroT, op, isFpLocal, cfg);
+                    emitIrisChargeProxy(buffers, mat, casterPos, staffRel, targetRel, camRight, camUp, radius, p, time, fade, releasing, firedRelease, skyRingsHandedOff, outroT, op, isFpLocal, cfg);
                     continue;
                 }
 
@@ -403,14 +420,14 @@ public final class ExplosionChargeRenderer {
                     );
                 }
 
-                // 1d. Two smaller crimson vortex rings hovering directly above the caster (Mode 1) - constant spin
+                // 1d. Two smaller crimson vortex rings hovering directly above the caster (Mode 1) - constant spin & zero cancel pop
                 double ringLift = releasing ? 0.65 * op : 0.0;
                 double ringWiden = releasing ? (1.0 + 0.12 * op) : 1.0;
                 if (p > 0.10F) {
                     float cRing1 = ExplosionMagicRenderer.smoothstep((p - 0.10F) / 0.18F);
                     ExplosionMagicRenderer.emitHorizDiscQuad(
                             vortexVc, mat, casterPos.add(0.0, 4.4 + ringLift * 0.7, 0.0),
-                            2.5 * ringWiden * (releasing ? 1.0 : (0.72 + 0.28 * cRing1)), time * 0.058,
+                            2.5 * ringWiden * (0.72 + 0.28 * cRing1), time * 0.058,
                             p, 0.37F, 0.5F, cRing1 * fade * 0.92F
                     );
                 }
@@ -418,18 +435,19 @@ public final class ExplosionChargeRenderer {
                     float cRing2 = ExplosionMagicRenderer.smoothstep((p - 0.20F) / 0.20F);
                     ExplosionMagicRenderer.emitHorizDiscQuad(
                             vortexVc, mat, casterPos.add(0.0, 7.8 + ringLift, 0.0),
-                            4.2 * ringWiden * (releasing ? 1.0 : (0.72 + 0.28 * cRing2)), -time * 0.048,
+                            4.2 * ringWiden * (0.72 + 0.28 * cRing2), -time * 0.048,
                             p, 0.61F, 0.5F, cRing2 * fade * 0.95F
                     );
                 }
 
                 // 1e. 8 Stacked Fiery Sky Vortex Rings + Gathering Pre-Ignition Core + Inter-Ring Lightning Arcs
-                if (!firedRelease && p > 0.12F) {
-                    float skyScale = 1.0F - 0.10F * ExplosionMagicRenderer.smoothstep((p - 0.72F) / 0.28F);
+                // Hold skyScale = 1.0F steady once revealed so handoff into ExplosionMagicRenderer (scale 1.0 -> 0.72) has zero pop/jump!
+                if (!skyRingsHandedOff && p > 0.12F) {
+                    float skyAlpha = firedRelease ? 0.98F : fade * 0.98F;
                     double skySpin = time * 0.055;
                     ExplosionMagicRenderer.emitSkyVortexColumn(
                             vortexVc, mat, targetRel, radius,
-                            p, skyScale, fade * 0.98F, 0.42F, skySpin
+                            p, 1.0F, skyAlpha, ExplosionMagicRenderer.SKY_COLUMN_SEED, skySpin
                     );
                     if (p > 0.54F) {
                         float coreP = ExplosionMagicRenderer.smoothstep((p - 0.54F) / 0.46F);
@@ -437,12 +455,12 @@ public final class ExplosionChargeRenderer {
                         double coreR = radius * (0.14 + 0.24 * coreP);
                         ExplosionMagicRenderer.emitBillboardQuad(
                                 vortexVc, mat, apexCenter, camRight, camUp, coreR, coreR,
-                                0.82F + 0.14F * coreP, 0.10F, 0.98F, fade * coreP * (shadersActive ? 0.68F : 0.88F)
+                                0.82F + 0.14F * coreP, 0.10F, 0.98F, skyAlpha * coreP * (shadersActive ? 0.68F : 0.88F)
                         );
                     }
                     // Jagged crackling mana lightning arcs snapping between the 8 stacked sky rings during late chant
                     if (p > 0.48F) {
-                        float arcCharge = ExplosionMagicRenderer.smoothstep((p - 0.48F) / 0.34F) * fade;
+                        float arcCharge = ExplosionMagicRenderer.smoothstep((p - 0.48F) / 0.34F) * skyAlpha;
                         int stepSeed = (int) (time * 0.65F);
                         int nRings = ExplosionMagicRenderer.SKY_RING_HEIGHT_FACTORS.length;
                         int boltCount = 12;
@@ -453,8 +471,8 @@ public final class ExplosionChargeRenderer {
                             int rB = Math.min(nRings - 1, rA + 1 + (hb2 > 0.65F ? 1 : 0));
                             double angA = hb1 * Math.PI * 2.0 + time * 0.04;
                             double angB = angA + (hb2 - 0.5) * 1.15;
-                            double radA = ExplosionMagicRenderer.getSkyRingRadius(radius, rA) * skyScale * 0.84;
-                            double radB = ExplosionMagicRenderer.getSkyRingRadius(radius, rB) * skyScale * 0.84;
+                            double radA = ExplosionMagicRenderer.getSkyRingRadius(radius, rA) * 0.84;
+                            double radB = ExplosionMagicRenderer.getSkyRingRadius(radius, rB) * 0.84;
                             Vec3 pA = targetRel.add(Math.cos(angA) * radA, ExplosionMagicRenderer.getSkyRingY(radius, rA), Math.sin(angA) * radA);
                             Vec3 pB = targetRel.add(Math.cos(angB) * radB, ExplosionMagicRenderer.getSkyRingY(radius, rB), Math.sin(angB) * radB);
                             double boltW = (0.38 + 0.34 * hb2) * (0.75 + 0.25 * cfg.particleScale());
@@ -464,15 +482,20 @@ public final class ExplosionChargeRenderer {
                             );
                         }
                     }
-                    float skyBloomA = ExplosionMagicRenderer.smoothstep((p - 0.12F) / 0.25F) * fade * (shadersActive ? 0.16F : 0.20F);
-                    if (skyBloomA > 0.008F) {
+                    // Per-ring soft crimson bloom backdrop (strictly synced to each ring's appearStart & ringReveal)
+                    float skyBloomBase = (firedRelease ? 1.0F : fade) * (shadersActive ? 0.16F : 0.20F);
+                    if (skyBloomBase > 0.008F) {
                         int nRings = ExplosionMagicRenderer.SKY_RING_HEIGHT_FACTORS.length;
+                        float denom = Math.max(1.0F, nRings - 1.0F);
                         for (int i = 0; i < nRings; i++) {
+                            float appearStart = 0.12F + i * (0.36F / denom);
+                            float ringReveal = ExplosionMagicRenderer.smoothstep((p - appearStart) / 0.14F);
+                            if (ringReveal <= 0.01F) continue;
                             double ry = ExplosionMagicRenderer.getSkyRingY(radius, i);
-                            double rr = ExplosionMagicRenderer.getSkyRingRadius(radius, i) * 1.15 * skyScale;
+                            double rr = ExplosionMagicRenderer.getSkyRingRadius(radius, i) * 1.15 * (0.76 + 0.24 * ringReveal);
                             ExplosionMagicRenderer.emitHorizDiscQuad(
                                     vortexVc, mat, targetRel.add(0.0, ry, 0.0), rr, 0.0,
-                                    0.48F, 0.10F, 0.98F, skyBloomA * (0.50F + 0.50F * (i / (float) Math.max(1, nRings - 1)))
+                                    0.48F, 0.10F, 0.98F, skyBloomBase * ringReveal * (0.50F + 0.50F * (i / denom))
                             );
                         }
                     }
@@ -685,7 +708,7 @@ public final class ExplosionChargeRenderer {
             MultiBufferSource.BufferSource buffers, Matrix4f mat,
             Vec3 casterPos, Vec3 staffRel, Vec3 targetRel, Vec3 camRight, Vec3 camUp,
             double radius, float p, float time, float fade,
-            boolean releasing, boolean firedRelease, float outroT, float op,
+            boolean releasing, boolean firedRelease, boolean skyRingsHandedOff, float outroT, float op,
             boolean isFpLocal, ChargeSettings cfg
     ) {
         VertexConsumer irisVc = buffers.getBuffer(ZoltraakRenderTypes.IRIS_EMISSIVE_QUAD);
@@ -719,14 +742,34 @@ public final class ExplosionChargeRenderer {
             );
         }
 
-        // Caster overhead thin rim rings
+        // Caster overhead thin rim rings (synced 1:1 with Phase 2 cRing1/cRing2 reveal & scale)
         double ringLift = releasing ? 0.65 * op : 0.0;
         double ringWiden = releasing ? (1.0 + 0.12 * op) : 1.0;
-        if (p > 0.14F) {
-            float ca = fade * (isFpLocal ? 0.18F : 0.56F);
-            float cg = ZoltraakRenderPass.irisFadeGuard(ca);
-            ZoltraakRenderPass.emitFeatheredRing(irisVc, mat, casterPos.add(0.0, 4.4 + ringLift * 0.7, 0.0), axU, axV, 1.85 * ringWiden, 2.20 * ringWiden, 2.55 * ringWiden, 22, 1.00F * cg, 0.44F * cg, 0.08F * cg, ca);
-            ZoltraakRenderPass.emitFeatheredRing(irisVc, mat, casterPos.add(0.0, 7.8 + ringLift, 0.0), axU, axV, 3.25 * ringWiden, 3.85 * ringWiden, 4.45 * ringWiden, 22, 1.00F * cg, 0.44F * cg, 0.08F * cg, ca);
+        if (p > 0.10F) {
+            float cRing1 = ExplosionMagicRenderer.smoothstep((p - 0.10F) / 0.18F);
+            float ca1 = cRing1 * fade * (isFpLocal ? 0.18F : 0.56F);
+            if (ca1 > 0.01F) {
+                float cg1 = ZoltraakRenderPass.irisFadeGuard(ca1);
+                double r1 = 2.5 * ringWiden * (0.72 + 0.28 * cRing1);
+                ZoltraakRenderPass.emitFeatheredRing(
+                        irisVc, mat, casterPos.add(0.0, 4.4 + ringLift * 0.7, 0.0), axU, axV,
+                        r1 * 0.75, r1 * 0.82, r1 * 0.89, 22,
+                        1.00F * cg1, 0.44F * cg1, 0.08F * cg1, ca1
+                );
+            }
+        }
+        if (p > 0.20F) {
+            float cRing2 = ExplosionMagicRenderer.smoothstep((p - 0.20F) / 0.20F);
+            float ca2 = cRing2 * fade * (isFpLocal ? 0.18F : 0.56F);
+            if (ca2 > 0.01F) {
+                float cg2 = ZoltraakRenderPass.irisFadeGuard(ca2);
+                double r2 = 4.2 * ringWiden * (0.72 + 0.28 * cRing2);
+                ZoltraakRenderPass.emitFeatheredRing(
+                        irisVc, mat, casterPos.add(0.0, 7.8 + ringLift, 0.0), axU, axV,
+                        r2 * 0.75, r2 * 0.82, r2 * 0.89, 22,
+                        1.00F * cg2, 0.44F * cg2, 0.08F * cg2, ca2
+                );
+            }
         }
 
         // Electric cyan-blue mana streams converging cleanly into staff orb (matches Phase 2 packet timing)
@@ -737,23 +780,28 @@ public final class ExplosionChargeRenderer {
             );
         }
 
-        // Target sky vortex column crisp thin double rim glow (skipped during outro when fired because ExplosionEntity takes over)
-        if (!firedRelease && p > 0.14F) {
-            float skyAlpha = ExplosionMagicRenderer.smoothstep((p - 0.14F) / 0.24F) * fade * 0.58F;
-            float g = ZoltraakRenderPass.irisFadeGuard(skyAlpha);
-            int ringCount = ExplosionMagicRenderer.SKY_RING_SCALE_FACTORS.length;
+        // Target sky vortex column crisp thin double rim glow (synced 1:1 with emitSkyVortexColumn reveal stagger, scale & handoff)
+        if (!skyRingsHandedOff && p > 0.12F) {
+            float skyFadeBase = firedRelease ? 1.0F : fade;
+            int ringCount = ExplosionMagicRenderer.SKY_RING_HEIGHT_FACTORS.length;
+            float denom = Math.max(1.0F, ringCount - 1.0F);
             for (int i = 0; i < ringCount; i++) {
+                float appearStart = 0.12F + i * (0.36F / denom);
+                float ringReveal = ExplosionMagicRenderer.smoothstep((p - appearStart) / 0.14F);
+                if (ringReveal <= 0.01F) continue;
+
+                float ringA = skyFadeBase * ringReveal * 0.56F * (0.52F + 0.48F * (i / denom));
+                float g = ZoltraakRenderPass.irisFadeGuard(ringA);
                 double ry = ExplosionMagicRenderer.getSkyRingY(radius, i);
-                double rr = ExplosionMagicRenderer.getSkyRingRadius(radius, i);
-                float ringA = skyAlpha * (0.55F + 0.45F * (i / (float) Math.max(1, ringCount - 1)));
+                double rr = ExplosionMagicRenderer.getSkyRingRadius(radius, i) * (0.76 + 0.24 * ringReveal);
                 ZoltraakRenderPass.emitFeatheredRing(
                         irisVc, mat, targetRel.add(0.0, ry, 0.0), axU, axV,
-                        rr * 0.76, rr * 0.83, rr * 0.90, 26,
+                        rr * 0.75, rr * 0.82, rr * 0.89, 26,
                         1.00F * g, 0.44F * g, 0.08F * g, ringA
                 );
                 ZoltraakRenderPass.emitFeatheredRing(
                         irisVc, mat, targetRel.add(0.0, ry, 0.0), axU, axV,
-                        rr * 0.32, rr * 0.37, rr * 0.42, 20,
+                        rr * 0.24, rr * 0.285, rr * 0.33, 20,
                         1.00F * g, 0.62F * g, 0.16F * g, ringA * 0.72F
                 );
             }

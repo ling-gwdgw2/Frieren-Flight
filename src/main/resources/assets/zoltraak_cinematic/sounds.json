@@ -3,8 +3,8 @@
     "subtitle": "subtitles.zoltraak_cinematic.zoltraak_charge",
     "sounds": [
       {
-        "name": "zoltraak_cinematic:cinematic_charge",
-        "stream": false
+        "name": "minecraft:block.beacon.activate",
+        "type": "event"
       }
     ]
   },
@@ -12,8 +12,8 @@
     "subtitle": "subtitles.zoltraak_cinematic.zoltraak_fire",
     "sounds": [
       {
-        "name": "zoltraak_cinematic:cinematic_fire",
-        "attenuation_distance": 48
+        "name": "zoltraak_cinematic:zoltraak_fire",
+        "attenuation_distance": 56
       }
     ]
   },
@@ -21,8 +21,8 @@
     "subtitle": "subtitles.zoltraak_cinematic.zoltraak_impact",
     "sounds": [
       {
-        "name": "zoltraak_cinematic:cinematic_impact",
-        "attenuation_distance": 48
+        "name": "zoltraak_cinematic:zoltraak_impact",
+        "attenuation_distance": 56
       }
     ]
   },
@@ -30,8 +30,8 @@
     "subtitle": "subtitles.zoltraak_cinematic.zoltraak_great_fire",
     "sounds": [
       {
-        "name": "zoltraak_cinematic:cinematic_great_fire",
-        "attenuation_distance": 80
+        "name": "zoltraak_cinematic:zoltraak_great_fire",
+        "attenuation_distance": 96
       }
     ]
   },
@@ -39,7 +39,9 @@
     "subtitle": "subtitles.zoltraak_cinematic.qual_spawn",
     "sounds": [
       {
-        "name": "zoltraak_cinematic:qual_spawn",
+        "name": "minecraft:entity.wither.spawn",
+        "type": "event",
+        "pitch": 0.85,
         "attenuation_distance": 64
       }
     ]
@@ -48,7 +50,9 @@
     "subtitle": "subtitles.zoltraak_cinematic.qual_ambient",
     "sounds": [
       {
-        "name": "zoltraak_cinematic:qual_ambient",
+        "name": "minecraft:entity.warden.ambient",
+        "type": "event",
+        "pitch": 0.85,
         "attenuation_distance": 32
       }
     ]
@@ -57,7 +61,9 @@
     "subtitle": "subtitles.zoltraak_cinematic.qual_hurt",
     "sounds": [
       {
-        "name": "zoltraak_cinematic:qual_hurt",
+        "name": "minecraft:entity.wither.hurt",
+        "type": "event",
+        "pitch": 0.85,
         "attenuation_distance": 32
       }
     ]
@@ -66,7 +72,9 @@
     "subtitle": "subtitles.zoltraak_cinematic.qual_death",
     "sounds": [
       {
-        "name": "zoltraak_cinematic:qual_death",
+        "name": "minecraft:entity.wither.death",
+        "type": "event",
+        "pitch": 0.82,
         "attenuation_distance": 64
       }
     ]
@@ -75,7 +83,9 @@
     "subtitle": "subtitles.zoltraak_cinematic.qual_phase_transition",
     "sounds": [
       {
-        "name": "zoltraak_cinematic:qual_phase_transition",
+        "name": "minecraft:entity.warden.roar",
+        "type": "event",
+        "pitch": 0.9,
         "attenuation_distance": 64
       }
     ]
@@ -84,7 +94,9 @@
     "subtitle": "subtitles.zoltraak_cinematic.qual_cataclysmic_charge",
     "sounds": [
       {
-        "name": "zoltraak_cinematic:qual_cataclysmic_charge",
+        "name": "minecraft:entity.warden.sonic_charge",
+        "type": "event",
+        "pitch": 0.85,
         "attenuation_distance": 64
       }
     ]
@@ -93,7 +105,9 @@
     "subtitle": "subtitles.zoltraak_cinematic.qual_teleport",
     "sounds": [
       {
-        "name": "zoltraak_cinematic:qual_teleport",
+        "name": "minecraft:entity.enderman.teleport",
+        "type": "event",
+        "pitch": 0.8,
         "attenuation_distance": 32
       }
     ]
@@ -102,7 +116,9 @@
     "subtitle": "subtitles.zoltraak_cinematic.singularity_charge",
     "sounds": [
       {
-        "name": "zoltraak_cinematic:astral_singularity_charge",
+        "name": "minecraft:entity.warden.sonic_charge",
+        "type": "event",
+        "pitch": 0.8,
         "attenuation_distance": 64
       }
     ]
@@ -111,7 +127,9 @@
     "subtitle": "subtitles.zoltraak_cinematic.singularity_active",
     "sounds": [
       {
-        "name": "zoltraak_cinematic:astral_singularity_active",
+        "name": "minecraft:block.respawn_anchor.ambient",
+        "type": "event",
+        "pitch": 0.65,
         "attenuation_distance": 64
       }
     ]
@@ -125,10 +143,44 @@
       }
     ]
   },
-  "tinnitus": {
-    "subtitle": "subtitles.zoltraak_cinematic.tinnitus",
+  "explosion_charge": {
+    "subtitle": "subtitles.zoltraak_cinematic.explosion_charge",
     "sounds": [
-      "zoltraak_cinematic:astral_singularity_tinnitus"
+      {
+        "name": "minecraft:block.respawn_anchor.charge",
+        "type": "event",
+        "pitch": 0.85,
+        "attenuation_distance": 64
+      }
+    ]
+  },
+  "explosion_launch": {
+    "subtitle": "subtitles.zoltraak_cinematic.explosion_launch",
+    "sounds": [
+      {
+        "name": "minecraft:block.beacon.activate",
+        "type": "event",
+        "attenuation_distance": 80
+      }
+    ]
+  },
+  "explosion_pillar": {
+    "subtitle": "subtitles.zoltraak_cinematic.explosion_pillar",
+    "sounds": [
+      {
+        "name": "minecraft:item.trident.thunder",
+        "type": "event",
+        "attenuation_distance": 96
+      }
+    ]
+  },
+  "explosion_detonate": {
+    "subtitle": "subtitles.zoltraak_cinematic.explosion_detonate",
+    "sounds": [
+      {
+        "name": "zoltraak_cinematic:explosion_detonate",
+        "attenuation_distance": 140
+      }
     ]
   }
 }

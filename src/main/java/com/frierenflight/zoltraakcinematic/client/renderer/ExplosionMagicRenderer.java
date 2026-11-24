@@ -57,6 +57,7 @@ public class ExplosionMagicRenderer extends EntityRenderer<ExplosionMagicEntity>
      * preserving the non-monotonic bulge-and-waist proportions and scaling with explosionSkyHeight.
      */
     public static final double SKY_RING_BASE_LIFT = 22.0;
+    public static final float SKY_COLUMN_SEED = 0.42F;
     public static final double[] SKY_RING_HEIGHT_FACTORS = { 0.22, 0.42, 0.64, 0.88, 1.14, 1.42, 1.72, 2.15 };
     public static final double[] SKY_RING_SCALE_FACTORS  = { 0.26, 0.20, 0.46, 0.72, 0.48, 0.38, 0.30, 1.18 };
 
@@ -113,6 +114,28 @@ public class ExplosionMagicRenderer extends EntityRenderer<ExplosionMagicEntity>
 
     public static void clearDeferred() {
         DEFERRED.clear();
+    }
+
+    public static boolean hasActiveEntityNear(Minecraft mc, Vec3 targetWorld) {
+        if (mc == null || mc.level == null || targetWorld == null) return false;
+        double maxDistSq = 24.0 * 24.0;
+        for (ExplosionMagicEntity exp : ACTIVE_ENTITIES) {
+            if (exp != null && !exp.isRemoved() && exp.level() == mc.level && exp.tickCount < 60) {
+                if (exp.position().distanceToSqr(targetWorld) <= maxDistSq
+                        || exp.getTargetPos().distanceToSqr(targetWorld) <= maxDistSq) {
+                    return true;
+                }
+            }
+        }
+        for (Entity e : mc.level.entitiesForRendering()) {
+            if (e instanceof ExplosionMagicEntity exp && !exp.isRemoved() && exp.tickCount < 60) {
+                if (exp.position().distanceToSqr(targetWorld) <= maxDistSq
+                        || exp.getTargetPos().distanceToSqr(targetWorld) <= maxDistSq) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     static List<ExplosionMagicEntity> getActiveClientEntities(Minecraft mc, float partial) {
@@ -244,7 +267,8 @@ public class ExplosionMagicRenderer extends EntityRenderer<ExplosionMagicEntity>
         Vec3 entPos = entity.getPosition(partial);
         Vec3 targetPos = entity.getTargetPos();
         Vec3 startPos = entity.getStartPos();
-        if (entity.tickCount == 0 && targetPos.distanceToSqr(entPos) > 16.0) {
+        boolean uninitializedSync = entity.tickCount == 0 && targetPos.distanceToSqr(entPos) > 16.0;
+        if (uninitializedSync) {
             targetPos = entPos;
         }
         if (startPos.distanceToSqr(targetPos) > 256.0 * 256.0) {
@@ -258,7 +282,9 @@ public class ExplosionMagicRenderer extends EntityRenderer<ExplosionMagicEntity>
         Vec3 camRight = new Vec3(new Vector3f(1.0F, 0.0F, 0.0F).rotate(mc.getEntityRenderDispatcher().cameraOrientation()));
         Vec3 camUp = new Vec3(new Vector3f(0.0F, 1.0F, 0.0F).rotate(mc.getEntityRenderDispatcher().cameraOrientation()));
 
-        double radius = entity.getRadius();
+        double radius = uninitializedSync
+                ? com.frierenflight.zoltraakcinematic.config.ZoltraakCinematicConfig.getExplosionRadius()
+                : entity.getRadius();
         int seed = entity.getSeed();
         float seedNorm = (Math.abs(seed % 1000)) / 1000.0F;
         float dt = t - ExplosionMagicEntity.DETONATE_TICK;
@@ -602,12 +628,12 @@ public class ExplosionMagicRenderer extends EntityRenderer<ExplosionMagicEntity>
 
         VertexConsumer vortexVc = buffers.getBuffer(ZoltraakRenderTypes.EXPLOSION_VORTEX_RING);
 
-        // 1. Inverted-cone sky rings holding, surging on convergence, then lingering majestically (t = 0 .. 50)
-        // Continuous worldTime * 0.055 matches ExplosionChargeRenderer for 100% uniform spin with zero speed jump
+        // 1. Inverted-cone sky rings holding steady at 1.0x until apex lock (t=7), smoothly converging 1.0 -> 0.72 (t=7..29), fading with pillar (t=26..50)
+        // Uses SKY_COLUMN_SEED (0.42F) and worldTime * 0.055 matching ExplosionChargeRenderer 1:1 for zero handoff snap!
         if (t < 50.0F && bloom > 0.004F) {
-            float collapseP = Mth.clamp((t - 7.0F) / 22.0F, 0.0F, 1.0F);
+            float collapseP = smoothstep((t - 7.0F) / 22.0F);
             float skyFade = 1.0F - smoothstep((t - 26.0F) / 24.0F);
-            emitSkyVortexColumn(vortexVc, mat, relTarget, radius, 1.0F, 1.0F - 0.28F * collapseP, skyFade, seedNorm, worldTime * 0.055);
+            emitSkyVortexColumn(vortexVc, mat, relTarget, radius, 1.0F, 1.0F - 0.28F * collapseP, skyFade, SKY_COLUMN_SEED, worldTime * 0.055);
         }
 
         // 2. Stage 1 (t = 0 .. 26): Soft-Blooming Diagonal Golden Beam + Tilted Launch Magic Ring & Ignition Flash
@@ -705,7 +731,7 @@ public class ExplosionMagicRenderer extends EntityRenderer<ExplosionMagicEntity>
             float arcFade = smoothstep((t - 4.0F) / 4.0F) * skyFade;
             int stepSeed = (int) (t * 0.72F);
             int nRings = SKY_RING_HEIGHT_FACTORS.length;
-            float collapseP = Mth.clamp((t - 7.0F) / 22.0F, 0.0F, 1.0F);
+            float collapseP = smoothstep((t - 7.0F) / 22.0F);
             float ringScale = 1.0F - 0.28F * collapseP;
 
             if (t < 46.0F) {
@@ -961,20 +987,26 @@ public class ExplosionMagicRenderer extends EntityRenderer<ExplosionMagicEntity>
             }
         }
 
-        // 3. Sky Vortex Rings thin rim HDR accent (t = 0..50)
+        // 3. Sky Vortex Rings thin double rim HDR accent (t = 0..50, matched 1:1 with ExplosionChargeRenderer Iris proxy)
         if (t < 50.0F) {
-            float collapseP = Mth.clamp((t - 7.0F) / 22.0F, 0.0F, 1.0F);
+            float collapseP = smoothstep((t - 7.0F) / 22.0F);
             float skyFade = (1.0F - smoothstep((t - 26.0F) / 24.0F)) * 0.56F;
-            float sg = ZoltraakRenderPass.irisFadeGuard(skyFade);
             int ringCount = SKY_RING_HEIGHT_FACTORS.length;
+            float denom = Math.max(1.0F, ringCount - 1.0F);
             for (int i = 0; i < ringCount; i++) {
                 double ry = getSkyRingY(radius, i);
                 double rr = getSkyRingRadius(radius, i) * (1.0 - 0.28 * collapseP);
-                float ringA = skyFade * (0.55F + 0.45F * (i / (float) Math.max(1, ringCount - 1)));
+                float ringA = skyFade * (0.52F + 0.48F * (i / denom));
+                float sg = ZoltraakRenderPass.irisFadeGuard(ringA);
                 ZoltraakRenderPass.emitFeatheredRing(
                         quadVc, mat, relTarget.add(0.0, ry, 0.0), axU, axV,
-                        rr * 0.78, rr * 0.85, rr * 0.92, 24,
-                        0.98F * sg, 0.44F * sg, 0.08F * sg, ringA
+                        rr * 0.75, rr * 0.82, rr * 0.89, 26,
+                        1.00F * sg, 0.44F * sg, 0.08F * sg, ringA
+                );
+                ZoltraakRenderPass.emitFeatheredRing(
+                        quadVc, mat, relTarget.add(0.0, ry, 0.0), axU, axV,
+                        rr * 0.24, rr * 0.285, rr * 0.33, 20,
+                        1.00F * sg, 0.62F * sg, 0.16F * sg, ringA * 0.72F
                 );
             }
         }

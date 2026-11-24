@@ -21,7 +21,7 @@ import java.util.Set;
  * Handles full-screen post-processing overlays and acoustic drama:
  * - Act 1: Spacetime rupture flash & chromatic edge dispersion
  * - Act 3: Acoustic vacuum silence & atmospheric darkness vignette
- * - Act 4: Supernova blinding white flash, proximity blast & tinnitus
+ * - Act 4: Supernova blinding white flash & proximity blast
  */
 public final class GargantuaScreenFx {
 
@@ -71,22 +71,12 @@ public final class GargantuaScreenFx {
             // Act 3 vignette darkening is now rendered smoothly & radially inside gargantua_composite.fsh
             // (eliminates flat HUD rectangle edges over the horizon)
 
-            // Act 4: Supernova Detonation (Crisp 5-tick Impact Glint + Acoustic Tinnitus — full explosion remains visible in HDR shader)
+            // Act 4: Supernova Detonation (Crisp 5-tick Impact Glint — full explosion remains visible in HDR shader)
             if (g.isBlasting(0.0f) && !BLAST_OBSERVED_ENTITIES.contains(id)) {
                 BLAST_OBSERVED_ENTITIES.add(id);
                 if (visualAge <= (float) blastTick + 15.0f && dist <= 240.0d) {
                     float distFactor = (float) Mth.clamp(1.0 - dist / 240.0d, 0.15, 1.0);
                     triggerFlash(5, 0.16f * distFactor);
-
-                    // Play explosion ear ringing sound
-                    if (ZoltraakCinematicClientConfig.isEarRingingEnabled()) {
-                        float vol = ZoltraakCinematicClientConfig.getEarRingingVolume();
-                        mc.getSoundManager().play(SimpleSoundInstance.forUI(
-                                ModCinematicSounds.TINNITUS.get(),
-                                1.0f,
-                                0.85f * vol * distFactor
-                        ));
-                    }
                 }
             }
         }

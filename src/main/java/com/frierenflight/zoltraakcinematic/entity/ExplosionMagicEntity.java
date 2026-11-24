@@ -15,6 +15,7 @@ import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
 import net.minecraft.world.damagesource.DamageSource;
@@ -185,7 +186,30 @@ public class ExplosionMagicEntity extends Entity implements TraceableEntity, Own
     public void tick() {
         super.tick();
         if (!this.level().isClientSide && this.level() instanceof ServerLevel serverLevel) {
+            float timeScale = getTimeScale();
+            float pitchScale = Mth.clamp(1.0f / timeScale, 0.55f, 1.65f);
+            int skyLockTick = Math.max(2, Math.round(7.0f * timeScale));
+            int pillarDropTick = Math.max(skyLockTick + 2, Math.round(15.0f * timeScale));
             int detonateTick = getDetonateTick();
+
+            // Stage 1 (t = 1): Vanilla fiery launch + beacon resonance along diagonal sky beam
+            if (this.tickCount == 1) {
+                Vec3 s = getStartPos();
+                serverLevel.playSound(null, s.x, s.y, s.z, SoundEvents.FIRECHARGE_USE, SoundSource.PLAYERS, 2.2f, 0.85f * pitchScale);
+                serverLevel.playSound(null, s.x, s.y, s.z, ModCinematicSounds.EXPLOSION_LAUNCH.get(), SoundSource.PLAYERS, 2.4f, 1.35f * pitchScale);
+            }
+            // Stage 2 (t = 7): Sky apex horizontal lens-flare lock (vanilla beacon chime)
+            if (this.tickCount == skyLockTick) {
+                Vec3 tPos = getTargetPos();
+                double apexY = tPos.y + 22.0 + getRadius() * 2.15;
+                serverLevel.playSound(null, tPos.x, apexY, tPos.z, SoundEvents.BEACON_POWER_SELECT, SoundSource.PLAYERS, 2.8f, 1.55f);
+            }
+            // Stage 3 (t = 15..28): Vanilla thunder pillar slam + warden sonic charge compression into custom detonation
+            if (this.tickCount == pillarDropTick) {
+                Vec3 tPos = getTargetPos();
+                serverLevel.playSound(null, tPos.x, tPos.y, tPos.z, ModCinematicSounds.EXPLOSION_PILLAR.get(), SoundSource.PLAYERS, 3.2f, 0.88f * pitchScale);
+                serverLevel.playSound(null, tPos.x, tPos.y, tPos.z, SoundEvents.WARDEN_SONIC_CHARGE, SoundSource.PLAYERS, 2.6f, 1.50f * pitchScale);
+            }
 
             if (this.tickCount >= detonateTick && !this.blastResolved) {
                 this.blastResolved = true;
@@ -203,8 +227,8 @@ public class ExplosionMagicEntity extends Entity implements TraceableEntity, Own
         double radius = getRadius();
         Entity owner = getOwner();
 
-        // Single clean explosion detonation sound
-        level.playSound(null, center.x, center.y, center.z, ModCinematicSounds.SINGULARITY_EXPLODE.get(), SoundSource.PLAYERS, 4.2f, 0.68f);
+        // Dedicated Megumin-style anime Explosion detonation sound
+        level.playSound(null, center.x, center.y, center.z, ModCinematicSounds.EXPLOSION_DETONATE.get(), SoundSource.PLAYERS, 5.0f, 1.0f);
 
         applyBlastDamage(level, center, radius, owner);
 

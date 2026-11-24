@@ -513,34 +513,6 @@ public class ZoltraakSodiumConfig implements ConfigEntryPoint {
                 .setName(Component.translatable("config.zoltraak_cinematic.page.audio"))
                 .addOptionGroup(builder.createOptionGroup()
                         .setName(Component.translatable("config.zoltraak_cinematic.group.audio"))
-                        .addOption(builder.createBooleanOption(id("ear_ringing"))
-                                .setName(Component.translatable("config.zoltraak_cinematic.option.ear_ringing"))
-                                .setTooltip(Component.translatable("config.zoltraak_cinematic.option.ear_ringing.tooltip"))
-                                .setImpact(OptionImpact.LOW)
-                                .setStorageHandler(STORAGE)
-                                .setDefaultValue(true)
-                                .setBinding(
-                                        val -> {
-                                            if (ZoltraakCinematicClientConfig.SPEC.isLoaded()) {
-                                                ZoltraakCinematicClientConfig.EAR_RINGING.set(val);
-                                            }
-                                        },
-                                        ZoltraakCinematicClientConfig::isEarRingingEnabled))
-                        .addOption(builder.createIntegerOption(id("ear_ringing_volume"))
-                                .setName(Component.translatable("config.zoltraak_cinematic.option.ear_ringing_volume"))
-                                .setTooltip(Component.translatable("config.zoltraak_cinematic.option.ear_ringing_volume.tooltip"))
-                                .setRange(0, 100, 5)
-                                .setValueFormatter(v -> Component.literal(v + "%"))
-                                .setImpact(OptionImpact.LOW)
-                                .setStorageHandler(STORAGE)
-                                .setDefaultValue(80)
-                                .setBinding(
-                                        val -> {
-                                            if (ZoltraakCinematicClientConfig.SPEC.isLoaded()) {
-                                                ZoltraakCinematicClientConfig.EAR_RINGING_VOLUME.set(val / 100.0d);
-                                            }
-                                        },
-                                        () -> snapToRange(ZoltraakCinematicClientConfig.getEarRingingVolume() * 100.0f, 0, 100, 5)))
                         .addOption(builder.createIntegerOption(id("mod_sound_volume"))
                                 .setName(Component.translatable("config.zoltraak_cinematic.option.mod_audio_volume"))
                                 .setTooltip(Component.translatable("config.zoltraak_cinematic.option.mod_audio_volume.tooltip"))

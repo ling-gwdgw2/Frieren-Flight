@@ -89,10 +89,6 @@ public class ZoltraakCinematicClientEvents {
         if (original == null) return;
         net.minecraft.resources.ResourceLocation loc = original.getLocation();
         if (loc != null && loc.getNamespace().equals(ZoltraakCinematicMod.MODID)) {
-            if (loc.getPath().equals("tinnitus") && !com.frierenflight.zoltraakcinematic.config.ZoltraakCinematicClientConfig.isEarRingingEnabled()) {
-                event.setSound(null);
-                return;
-            }
             float masterVol = com.frierenflight.zoltraakcinematic.config.ZoltraakCinematicClientConfig.getModSoundVolume();
             if (masterVol <= 0.001f) {
                 event.setSound(null);
@@ -379,19 +375,6 @@ public class ZoltraakCinematicClientEvents {
         // Subtle golden HUD flash accent; primary Nakamura impact frames & god rays render in ExplosionPostProcessor
         float flashScale = mc.options.getCameraType().isFirstPerson() ? 0.34F : 0.22F;
         triggerFlash(6, flashScale * factor, 0xFFE8A0);
-
-        double earMaxDist = Math.max(40.0, exp.getRadius() * 2.2);
-        if (dist < earMaxDist && com.frierenflight.zoltraakcinematic.config.ZoltraakCinematicClientConfig.isEarRingingEnabled()) {
-            float earVol = com.frierenflight.zoltraakcinematic.config.ZoltraakCinematicClientConfig.getEarRingingVolume();
-            if (earVol > 0.005F) {
-                float earFactor = (float) Math.pow(Math.max(0.0, 1.0 - dist / earMaxDist), 1.3);
-                mc.getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(
-                        com.frierenflight.zoltraakcinematic.registry.ModCinematicSounds.TINNITUS.get(),
-                        1.0f,
-                        Math.min(1.0f, 0.85f * earVol * earFactor)
-                ));
-            }
-        }
     }
 
     /**

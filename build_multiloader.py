@@ -14,7 +14,7 @@ import zipfile
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MOD_ID = 'zoltraak_cinematic'
-MOD_VERSION = '2.0.1'
+MOD_VERSION = '2.0.2'
 
 CORE_SHADER_NAMES = [
     'barrage_fx',

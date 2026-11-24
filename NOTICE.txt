@@ -88,14 +88,10 @@ Original Image & Audio Assets (Freely Permitted for Use As Desired):
     * qual_boss.png, qual_boss_glowmask.png, qual_sealing_stone.png
     * zoltraak_glow.png, zoltraak_magic_circle.png, zoltraak_white.png,
       noise_tile.png, defense.png, and all spell/item icons
-  - Synthesized Sound Effects (15 OGG Files under sounds/):
-    * astral_singularity_active.ogg, astral_singularity_charge.ogg,
-      astral_singularity_collapse.ogg, astral_singularity_tinnitus.ogg
-    * cinematic_charge.ogg, cinematic_fire.ogg, cinematic_great_fire.ogg,
-      cinematic_impact.ogg
-    * qual_ambient.ogg, qual_cataclysmic_charge.ogg, qual_death.ogg,
-      qual_hurt.ogg, qual_phase_transition.ogg, qual_spawn.ogg,
-      qual_teleport.ogg
+  - Synthesized Custom Beam & Explosion Audio (5 OGG Files under sounds/):
+    * zoltraak_fire.ogg, zoltraak_great_fire.ogg, zoltraak_impact.ogg,
+      explosion_detonate.ogg, astral_singularity_collapse.ogg
+    * (All other charge, launch, and boss sound events use vanilla Minecraft sound events.)
 
 
 3. ECOSYSTEM & HISTORICAL NOTE

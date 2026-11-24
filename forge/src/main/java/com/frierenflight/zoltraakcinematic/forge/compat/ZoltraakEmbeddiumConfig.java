@@ -532,22 +532,6 @@ public final class ZoltraakEmbeddiumConfig {
     private static OptionPage buildAudioPage() {
         OptionGroup audioGroup = OptionGroup.createBuilder()
                 .setId(id("group_audio"))
-                .add(boolOption(
-                        "ear_ringing",
-                        "config.zoltraak_cinematic.option.ear_ringing",
-                        OptionImpact.LOW,
-                        val -> safeSetBool(ZoltraakCinematicClientConfig.EAR_RINGING, val),
-                        ZoltraakCinematicClientConfig::isEarRingingEnabled
-                ))
-                .add(intOption(
-                        "ear_ringing_volume",
-                        "config.zoltraak_cinematic.option.ear_ringing_volume",
-                        0, 100, 5,
-                        v -> Component.literal(v + "%"),
-                        OptionImpact.LOW,
-                        val -> safeSetDouble(ZoltraakCinematicClientConfig.EAR_RINGING_VOLUME, val / 100.0d),
-                        () -> snapToRange(ZoltraakCinematicClientConfig.getEarRingingVolume() * 100.0f, 0, 100, 5)
-                ))
                 .add(intOption(
                         "mod_sound_volume",
                         "config.zoltraak_cinematic.option.mod_audio_volume",

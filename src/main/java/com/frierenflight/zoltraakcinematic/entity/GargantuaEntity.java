@@ -843,9 +843,8 @@ public class GargantuaEntity extends Entity implements TraceableEntity, OwnableE
         Vec3 center = centre(1.0f);
         LivingEntity caster = resolveCaster(level);
 
-        // Thunderous Apocalyptic Supernova Sound (100% Custom Mod Sounds)
+        // Thunderous Apocalyptic Supernova Sound (Custom Collapse Explosion)
         level.playSound(null, center.x, center.y, center.z, ModCinematicSounds.SINGULARITY_EXPLODE.get(), SoundSource.WEATHER, 8.0f, 0.85f);
-        level.playSound(null, center.x, center.y, center.z, ModCinematicSounds.TINNITUS.get(), SoundSource.WEATHER, 5.0f, 1.0f);
 
         double blastRadius = ZoltraakCinematicConfig.getBlastRadius();
         AABB blastBox = new AABB(center.x - blastRadius, center.y - blastRadius, center.z - blastRadius,

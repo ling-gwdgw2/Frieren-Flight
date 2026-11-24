@@ -579,16 +579,14 @@ public class ZoltraakCinematicBeamEntity extends Entity implements IZoltraakVisu
                 end = start.add(look.scale(currentLength));
 
                 boolean isLarge = mode() == ZoltraakMode.LARGE;
-                float boomPitch = isLarge ? 1.05f : (black() ? 1.25f : 1.45f);
                 float lightningPitch = isLarge ? 1.4f : (black() ? 1.6f : 1.9f);
 
-                // Origin / Caster discharge sounds
+                // Origin / Caster discharge sounds (custom synthesized Zoltraak beam + subtle lightning crack accent)
                 level().playSound(null, getX(), getY(), getZ(),
                         (isLarge ? ModCinematicSounds.ZOLTRAAK_GREAT_FIRE.get() : ModCinematicSounds.ZOLTRAAK_FIRE.get()),
-                        SoundSource.PLAYERS, isLarge ? 2.6f : 1.8f,
+                        SoundSource.PLAYERS, isLarge ? 2.8f : 2.0f,
                         isLarge ? (black() ? 0.9f : 1.0f) : (black() ? 0.78f : 1.0f));
-                level().playSound(null, getX(), getY(), getZ(), SoundEvents.WARDEN_SONIC_BOOM, SoundSource.PLAYERS, isLarge ? 2.5f : 1.8f, boomPitch);
-                level().playSound(null, getX(), getY(), getZ(), SoundEvents.LIGHTNING_BOLT_IMPACT, SoundSource.PLAYERS, isLarge ? 1.8f : 1.3f, lightningPitch);
+                level().playSound(null, getX(), getY(), getZ(), SoundEvents.LIGHTNING_BOLT_IMPACT, SoundSource.PLAYERS, isLarge ? 0.75f : 0.55f, lightningPitch);
 
                 boolean didImpact = this.entityData.get(DATA_DID_IMPACT);
                 float impactDist = this.entityData.get(DATA_IMPACT_DIST);
@@ -598,10 +596,9 @@ public class ZoltraakCinematicBeamEntity extends Entity implements IZoltraakVisu
                 if (didImpact) {
                     level().playSound(null, impactPos.x, impactPos.y, impactPos.z,
                             ModCinematicSounds.ZOLTRAAK_IMPACT.get(),
-                            SoundSource.PLAYERS, isLarge ? 2.5f : 1.3f,
-                            (black() ? 0.75f : 1.0f) * (isLarge ? 0.65f : 1.0f));
-                    level().playSound(null, impactPos.x, impactPos.y, impactPos.z, SoundEvents.GENERIC_EXPLODE, SoundSource.PLAYERS, isLarge ? 3.0f : 2.0f, isLarge ? 0.9f : 1.15f);
-                    level().playSound(null, impactPos.x, impactPos.y, impactPos.z, SoundEvents.WARDEN_SONIC_BOOM, SoundSource.PLAYERS, isLarge ? 2.5f : 1.8f, isLarge ? 0.95f : 1.25f);
+                            SoundSource.PLAYERS, isLarge ? 2.8f : 1.9f,
+                            (black() ? 0.75f : 1.0f) * (isLarge ? 0.78f : 1.0f));
+                    level().playSound(null, impactPos.x, impactPos.y, impactPos.z, SoundEvents.WARDEN_SONIC_BOOM, SoundSource.PLAYERS, isLarge ? 1.15f : 0.80f, isLarge ? 0.95f : 1.25f);
                 }
 
                 if (owner != null) {

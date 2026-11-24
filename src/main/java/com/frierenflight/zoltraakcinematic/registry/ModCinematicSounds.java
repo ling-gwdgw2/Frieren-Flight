@@ -71,9 +71,22 @@ public class ModCinematicSounds {
             SOUND_EVENTS.register("singularity_explode", () ->
                     SoundEvent.createVariableRangeEvent(ResourceLocation.fromNamespaceAndPath(ZoltraakCinematicMod.MODID, "singularity_explode")));
 
-    public static final DeferredHolder<SoundEvent, SoundEvent> TINNITUS =
-            SOUND_EVENTS.register("tinnitus", () ->
-                    SoundEvent.createVariableRangeEvent(ResourceLocation.fromNamespaceAndPath(ZoltraakCinematicMod.MODID, "tinnitus")));
+    // --- Explosion Magic (Crimson Demon Ultimate) Sound Events ---
+    public static final DeferredHolder<SoundEvent, SoundEvent> EXPLOSION_CHARGE =
+            SOUND_EVENTS.register("explosion_charge", () ->
+                    SoundEvent.createVariableRangeEvent(ResourceLocation.fromNamespaceAndPath(ZoltraakCinematicMod.MODID, "explosion_charge")));
+
+    public static final DeferredHolder<SoundEvent, SoundEvent> EXPLOSION_LAUNCH =
+            SOUND_EVENTS.register("explosion_launch", () ->
+                    SoundEvent.createVariableRangeEvent(ResourceLocation.fromNamespaceAndPath(ZoltraakCinematicMod.MODID, "explosion_launch")));
+
+    public static final DeferredHolder<SoundEvent, SoundEvent> EXPLOSION_PILLAR =
+            SOUND_EVENTS.register("explosion_pillar", () ->
+                    SoundEvent.createVariableRangeEvent(ResourceLocation.fromNamespaceAndPath(ZoltraakCinematicMod.MODID, "explosion_pillar")));
+
+    public static final DeferredHolder<SoundEvent, SoundEvent> EXPLOSION_DETONATE =
+            SOUND_EVENTS.register("explosion_detonate", () ->
+                    SoundEvent.createVariableRangeEvent(ResourceLocation.fromNamespaceAndPath(ZoltraakCinematicMod.MODID, "explosion_detonate")));
 
     public static void register(IEventBus eventBus) {
         SOUND_EVENTS.register(eventBus);

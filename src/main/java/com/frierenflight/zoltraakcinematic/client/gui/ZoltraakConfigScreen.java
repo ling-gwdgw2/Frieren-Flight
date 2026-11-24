@@ -364,22 +364,8 @@ public class ZoltraakConfigScreen extends Screen {
 
     // Tab 5: Audio
     private void buildAudioTab(int c1, int c2, int y, int w, int h) {
-        boolean ringing = ZoltraakCinematicClientConfig.isEarRingingEnabled();
-        CycleButton<Boolean> ringBtn = CycleButton.onOffBuilder(ringing)
-                .withTooltip(val -> Tooltip.create(Component.translatable("config.zoltraak_cinematic.option.ear_ringing.tooltip")))
-                .create(c1, y, w, h, Component.translatable("config.zoltraak_cinematic.option.ear_ringing"),
-                        (btn, val) -> safeSet(ZoltraakCinematicClientConfig.EAR_RINGING, val));
-        this.addRenderableWidget(ringBtn);
-
-        float ringVol = ZoltraakCinematicClientConfig.getEarRingingVolume();
-        ConfigSlider ringSlider = new ConfigSlider(c2, y, w, h, 0.0, 1.0, ringVol,
-                val -> Component.translatable("config.zoltraak_cinematic.option.ear_ringing_volume.value", Math.round(val * 100.0)),
-                val -> safeSet(ZoltraakCinematicClientConfig.EAR_RINGING_VOLUME, roundToStep(val, 100.0)));
-        ringSlider.setTooltip(Tooltip.create(Component.translatable("config.zoltraak_cinematic.option.ear_ringing_volume.tooltip")));
-        this.addRenderableWidget(ringSlider);
-
         float modVol = ZoltraakCinematicClientConfig.getModSoundVolume();
-        ConfigSlider modSlider = new ConfigSlider(c1, y + 26, w, h, 0.0, 2.0, modVol,
+        ConfigSlider modSlider = new ConfigSlider(c1, y, w, h, 0.0, 2.0, modVol,
                 val -> Component.translatable("config.zoltraak_cinematic.option.mod_audio_volume.value", Math.round(val * 100.0)),
                 val -> safeSet(ZoltraakCinematicClientConfig.MOD_SOUND_VOLUME, roundToStep(val, 100.0)));
         modSlider.setTooltip(Tooltip.create(Component.translatable("config.zoltraak_cinematic.option.mod_audio_volume.tooltip")));
@@ -409,8 +395,6 @@ public class ZoltraakConfigScreen extends Screen {
         ZoltraakCinematicClientConfig.COLOR_FRINGE.set(true);
         ZoltraakCinematicClientConfig.WORLD_GLOW.set("SHADERS_ONLY");
 
-        ZoltraakCinematicClientConfig.EAR_RINGING.set(true);
-        ZoltraakCinematicClientConfig.EAR_RINGING_VOLUME.set(0.8d);
         ZoltraakCinematicClientConfig.MOD_SOUND_VOLUME.set(1.0d);
         ZoltraakCinematicClientConfig.ZOLTRAAK_GLOW.set(1.0d);
         ZoltraakCinematicClientConfig.GREAT_ZOLTRAAK_GLOW.set(1.0d);

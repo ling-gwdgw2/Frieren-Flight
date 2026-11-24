@@ -6,6 +6,7 @@ import com.frierenflight.zoltraakcinematic.config.ZoltraakCinematicConfig;
 import com.frierenflight.zoltraakcinematic.entity.ExplosionMagicEntity;
 import com.frierenflight.zoltraakcinematic.entity.ZoltraakCinematicBeamEntity;
 import com.frierenflight.zoltraakcinematic.platform.Services;
+import com.frierenflight.zoltraakcinematic.registry.ModCinematicSounds;
 import io.redspace.ironsspellbooks.api.config.DefaultConfig;
 import io.redspace.ironsspellbooks.api.magic.MagicData;
 import io.redspace.ironsspellbooks.api.registry.SchoolRegistry;
@@ -83,7 +84,7 @@ public class ExplosionSpell extends AbstractSpell {
 
     @Override
     public Optional<SoundEvent> getCastStartSound() {
-        return Optional.empty();
+        return Optional.of(ModCinematicSounds.EXPLOSION_CHARGE.get());
     }
 
     @Override

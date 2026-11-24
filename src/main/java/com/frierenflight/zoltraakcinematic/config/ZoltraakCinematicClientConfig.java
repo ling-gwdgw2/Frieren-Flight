@@ -31,8 +31,6 @@ public class ZoltraakCinematicClientConfig {
     public static final ModConfigSpec.ConfigValue<String> WORLD_GLOW;
 
     // Audio
-    public static final ModConfigSpec.BooleanValue EAR_RINGING;
-    public static final ModConfigSpec.DoubleValue EAR_RINGING_VOLUME;
     public static final ModConfigSpec.DoubleValue MOD_SOUND_VOLUME;
 
     // Spell Glow Brightness (0.0 = 0%, 1.0 = 100%, 2.0 = 200%)
@@ -146,16 +144,8 @@ public class ZoltraakCinematicClientConfig {
 
         builder.comment("Sound Settings").push("audio");
 
-        EAR_RINGING = builder
-                .comment("Play a short ringing sound after close-range huge explosions.")
-                .define("earRinging", true);
-
-        EAR_RINGING_VOLUME = builder
-                .comment("Volume for the post-explosion ear ringing sound (0.0 = mute, 1.0 = full).")
-                .defineInRange("earRingingVolume", 0.8d, 0.0d, 1.0d);
-
         MOD_SOUND_VOLUME = builder
-                .comment("Master volume for all custom Zoltraak spells, beams, and black hole sounds.")
+                .comment("Master volume for all Zoltraak spells, beams, and black hole sounds.")
                 .defineInRange("modSoundVolume", 1.0d, 0.0d, 2.0d);
 
         builder.pop();
@@ -361,14 +351,6 @@ public class ZoltraakCinematicClientConfig {
             case "OFF" -> false;
             default -> shadersActive;
         };
-    }
-
-    public static boolean isEarRingingEnabled() {
-        return !SPEC.isLoaded() || EAR_RINGING.get();
-    }
-
-    public static float getEarRingingVolume() {
-        return SPEC.isLoaded() ? EAR_RINGING_VOLUME.get().floatValue() : 0.8f;
     }
 
     public static float getModSoundVolume() {
